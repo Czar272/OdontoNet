@@ -1,1 +1,5 @@
+odonto_venv
 venv
+api_tests.txt
+.env
+__pycache__/
