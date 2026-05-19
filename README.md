@@ -103,3 +103,34 @@ Backend FastAPI
        │
        ▼
 Microservicio IA
+```
+
+# Tecnologías del Proyecto
+
+| Tecnología  | Uso                       |
+| ----------- | ------------------------- |
+| React       | Frontend                  |
+| TypeScript  | Desarrollo frontend       |
+| TailwindCSS | Estilos                   |
+| FastAPI     | Backend API               |
+| PostgreSQL  | Base de datos             |
+| PyTorch     | Inteligencia Artificial   |
+| OpenCV      | Procesamiento de imágenes |
+| Docker      | Contenedores              |
+| JWT         | Autenticación             |
+
+# Estado del Proyecto
+
+Proyecto en desarrollo.
+
+Actualmente se encuentra en fase de diseño de arquitectura e implementación inicial del sistema clínico y módulos base.
+
+# Futuras Funcionalidades
+* Diagnóstico periodontal asistido
+* Aplicación móvil
+* Reportes inteligentes
+* Historial radiográfico
+* Integración con servicios en la nube
+* Módulos estadísticos
+* Multi-clínica
+* Soporte offline parcial
