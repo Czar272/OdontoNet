@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { getPatients } from "../../services/patientService";
+import type { Patient } from "../../types/patient";
 
 export default function PatientsPage() {
   const { data: patients, isLoading } = useQuery({
@@ -31,7 +32,7 @@ export default function PatientsPage() {
           </thead>
 
           <tbody>
-            {patients?.map((patient: any) => (
+            {patients?.map((patient: Patient) => (
               <tr key={patient.id} className="border-t">
                 <td className="p-4">
                   {patient.first_name} {patient.last_name}
