@@ -54,12 +54,7 @@ export default function PatientForm() {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-white p-6 rounded-2xl shadow mb-8"
-    >
-      <h2 className="text-2xl font-bold mb-6">New Patient</h2>
-
+    <form onSubmit={handleSubmit}>
       <div className="grid grid-cols-2 gap-4">
         <input
           name="first_name"

@@ -5,12 +5,17 @@ import LoadingSpinner from "../../components/basic/LoadingSpinner";
 import PageHeader from "../../components/basic/PageHeader";
 import Table from "../../components/basic/Table";
 import PatientForm from "../../components/patients/PatientForm";
+import { useState } from "react";
+import Button from "../../components/basic/Button";
+import Modal from "../../components/basic/Modal";
 
-export default function PatientsPage() {
+const PatientsPage: React.FC = () => {
   const { data: patients, isLoading } = useQuery({
     queryKey: ["patients"],
     queryFn: getPatients,
   });
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -18,9 +23,21 @@ export default function PatientsPage() {
 
   return (
     <div>
-      <PageHeader title="Patients" description="Manage clinic patients" />
+      <PageHeader
+        title="Patients"
+        description="Manage clinic patients"
+        action={
+          <Button onClick={() => setIsModalOpen(true)}>New Patient</Button>
+        }
+      />
 
-      <PatientForm />
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Create Patient"
+      >
+        <PatientForm />
+      </Modal>
 
       <Table>
         <thead className="bg-gray-100">
@@ -49,4 +66,6 @@ export default function PatientsPage() {
       </Table>
     </div>
   );
-}
+};
+
+export default PatientsPage;
