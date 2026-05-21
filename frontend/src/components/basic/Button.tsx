@@ -4,12 +4,12 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "danger";
 }
 
-export default function Button({
+const Button: React.FC<ButtonProps> = ({
   children,
   variant = "primary",
   className,
   ...props
-}: ButtonProps) {
+}) => {
   return (
     <button
       className={clsx(
@@ -30,4 +30,6 @@ export default function Button({
       {children}
     </button>
   );
-}
+};
+
+export default Button;

@@ -2,7 +2,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
 }
 
-export default function Input({ label, ...props }: InputProps) {
+const Input: React.FC<InputProps> = ({ label, ...props }) => {
   return (
     <div className="flex flex-col gap-2">
       {label && <label className="font-medium text-sm">{label}</label>}
@@ -20,4 +20,6 @@ export default function Input({ label, ...props }: InputProps) {
       />
     </div>
   );
-}
+};
+
+export default Input;
