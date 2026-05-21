@@ -12,3 +12,4 @@ class Patient(Base):
     phone = Column(String)
     email = Column(String, unique=True)
     address = Column(String)
+    assigned_doctor = Column(String, nullable=True)

@@ -10,6 +10,7 @@ class PatientCreate(BaseModel):
     phone: str | None = None
     email: str | None = None
     address: str | None = None
+    assigned_doctor: str | None = None
 
 
 class PatientResponse(BaseModel):
@@ -21,6 +22,7 @@ class PatientResponse(BaseModel):
     phone: str | None
     email: str | None
     address: str | None
+    assigned_doctor: str | None = None
 
     class Config:
         orm_mode = True
