@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { getPatients } from "../../services/patientService";
 import type { Patient } from "../../types/patient";
+import PatientForm from "../../components/patients/PatientForm";
 
 export default function PatientsPage() {
   const { data: patients, isLoading } = useQuery({
@@ -18,6 +19,8 @@ export default function PatientsPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-4xl font-bold">Patients</h1>
       </div>
+
+      <PatientForm />
 
       <div className="bg-white rounded-2xl shadow overflow-hidden">
         <table className="w-full">
