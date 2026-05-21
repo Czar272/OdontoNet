@@ -5,6 +5,7 @@ import DashboardPage from "../pages/Dashboard/DashboardPage";
 import PatientsPage from "../pages/Patients/PatientsPage";
 
 import MainLayout from "../layouts/MainLayout";
+import ProtectedRoute from "./ProtectedRoute";
 
 export default function AppRouter() {
   return (
@@ -14,7 +15,13 @@ export default function AppRouter() {
         <Route path="/" element={<LoginPage />} />
 
         {/* Protected routes */}
-        <Route element={<MainLayout />}>
+        <Route
+          element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route path="/dashboard" element={<DashboardPage />} />
 
           <Route path="/patients" element={<PatientsPage />} />
