@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Date
+from sqlalchemy import Column, Integer, String, Date, ForeignKey
 from app.database.connection import Base
+from sqlalchemy.orm import relationship
 
 
 class Patient(Base):
@@ -13,3 +14,5 @@ class Patient(Base):
     email = Column(String, unique=True)
     address = Column(String)
     assigned_doctor = Column(String, nullable=True)
+    doctor_id = Column(Integer, ForeignKey("doctors.id"), nullable=True)
+    doctor = relationship("Doctor", back_populates="patients")

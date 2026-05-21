@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from app.database.connection import Base, engine
 from app.models.user import User
 from app.models.patient import Patient
+from app.models.doctor import Doctor
 from app.api.auth_routes import router as auth_router
 from app.api.patient_routes import router as patient_router
 from fastapi.middleware.cors import CORSMiddleware
