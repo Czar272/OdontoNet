@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createPatient } from "../../services/patientService";
 import type { CreatePatientDTO } from "../../types/patient";
+import toast from "react-hot-toast";
 
 export default function PatientForm() {
   const queryClient = useQueryClient();
@@ -19,6 +20,7 @@ export default function PatientForm() {
     mutationFn: createPatient,
 
     onSuccess: () => {
+      toast.success("Patient Created");
       queryClient.invalidateQueries({
         queryKey: ["patients"],
       });
@@ -31,6 +33,10 @@ export default function PatientForm() {
         email: "",
         address: "",
       });
+    },
+
+    onError: () => {
+      toast.error("Error creando el paciente");
     },
   });
 

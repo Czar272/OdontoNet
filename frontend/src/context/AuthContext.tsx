@@ -2,6 +2,7 @@
 import { createContext, useContext, useState } from "react";
 
 import api from "../services/api";
+import toast from "react-hot-toast";
 
 interface AuthContextType {
   token: string | null;
@@ -27,9 +28,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setToken(token);
 
+      toast.success("Login Successful");
+
       return true;
     } catch (error) {
       console.error(error);
+
+      toast.error("Credenciales Invalidas");
 
       return false;
     }
