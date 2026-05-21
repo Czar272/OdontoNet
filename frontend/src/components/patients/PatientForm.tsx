@@ -14,6 +14,7 @@ export default function PatientForm() {
     phone: "",
     email: "",
     address: "",
+    assigned_doctor: "",
   });
 
   const mutation = useMutation({
@@ -32,6 +33,7 @@ export default function PatientForm() {
         phone: "",
         email: "",
         address: "",
+        assigned_doctor: "",
       });
     },
 
@@ -102,6 +104,14 @@ export default function PatientForm() {
           name="address"
           placeholder="Address"
           value={formData.address}
+          onChange={handleChange}
+          className="border p-3 rounded-lg"
+        />
+
+        <input
+          name="assigned_doctor"
+          placeholder="Assigned Doctor"
+          value={formData.assigned_doctor ?? ""}
           onChange={handleChange}
           className="border p-3 rounded-lg"
         />

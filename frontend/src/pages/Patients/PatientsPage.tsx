@@ -5,9 +5,10 @@ import LoadingSpinner from "../../components/basic/LoadingSpinner";
 import PageHeader from "../../components/basic/PageHeader";
 import Table from "../../components/basic/Table";
 import PatientForm from "../../components/patients/PatientForm";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Button from "../../components/basic/Button";
 import Modal from "../../components/basic/Modal";
+import Input from "../../components/basic/Input";
 
 const PatientsPage: React.FC = () => {
   const { data: patients, isLoading } = useQuery({
@@ -16,6 +17,30 @@ const PatientsPage: React.FC = () => {
   });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [doctorFilter, setDoctorFilter] = useState("");
+
+  const doctors = useMemo(() => {
+    if (!patients) return [];
+
+    return [
+      ...new Set(
+        patients.map((p: Patient) => p.assigned_doctor).filter(Boolean),
+      ),
+    ];
+  }, [patients]);
+
+  const filteredPatients = useMemo(() => {
+    if (!patients) return [];
+
+    return patients.filter((p: Patient) => {
+      const fullName = `${p.first_name} ${p.last_name}`.toLowerCase();
+      const matchesSearch = fullName.includes(search.toLowerCase());
+      const matchesDoctor = !doctorFilter || p.assigned_doctor === doctorFilter;
+
+      return matchesSearch && matchesDoctor;
+    });
+  }, [patients, search, doctorFilter]);
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -30,6 +55,30 @@ const PatientsPage: React.FC = () => {
           <Button onClick={() => setIsModalOpen(true)}>New Patient</Button>
         }
       />
+
+      <div className="flex gap-4 mb-6 ">
+        <div className="flex-1">
+          <Input
+            placeholder="Search patients..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+
+        <select
+          value={doctorFilter}
+          onChange={(e) => setDoctorFilter(e.target.value)}
+          className="border rounded-xl px-4 py-3 bg-white "
+        >
+          <option value="">All Doctors</option>
+
+          {doctors.map((doctor) => (
+            <option key={doctor} value={doctor ?? ""}>
+              {doctor}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <Modal
         isOpen={isModalOpen}
@@ -47,11 +96,13 @@ const PatientsPage: React.FC = () => {
             <th className="text-left p-4">Email</th>
 
             <th className="text-left p-4">Phone</th>
+
+            <th className="text-left p-4">Doctor</th>
           </tr>
         </thead>
 
         <tbody>
-          {patients?.map((patient: Patient) => (
+          {filteredPatients?.map((patient: Patient) => (
             <tr key={patient.id} className="border-t">
               <td className="p-4">
                 {patient.first_name} {patient.last_name}
@@ -60,6 +111,8 @@ const PatientsPage: React.FC = () => {
               <td className="p-4">{patient.email}</td>
 
               <td className="p-4">{patient.phone}</td>
+
+              <td className="p-4">{patient.assigned_doctor}</td>
             </tr>
           ))}
         </tbody>
