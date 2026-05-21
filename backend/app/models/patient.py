@@ -13,6 +13,5 @@ class Patient(Base):
     phone = Column(String)
     email = Column(String, unique=True)
     address = Column(String)
-    assigned_doctor = Column(String, nullable=True)
     doctor_id = Column(Integer, ForeignKey("doctors.id"), nullable=True)
     doctor = relationship("Doctor", back_populates="patients")

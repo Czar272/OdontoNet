@@ -7,9 +7,6 @@ from app.api.auth_routes import router as auth_router
 from app.api.patient_routes import router as patient_router
 from fastapi.middleware.cors import CORSMiddleware
 
-Base.metadata.create_all(bind=engine)
-
-
 app = FastAPI(title="OdontoNet API")
 
 app.include_router(auth_router)
