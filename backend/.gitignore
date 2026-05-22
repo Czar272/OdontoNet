@@ -3,3 +3,4 @@ venv
 api_tests.txt
 .env
 __pycache__/
+seed.py
