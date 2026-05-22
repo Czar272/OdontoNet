@@ -6,7 +6,7 @@ export interface Patient {
   phone?: string | null;
   email?: string | null;
   address?: string | null;
-  assigned_doctor?: string | null;
+  doctor_id?: number | null;
 }
 
 export interface CreatePatientDTO {
@@ -16,5 +16,5 @@ export interface CreatePatientDTO {
   phone?: string;
   email?: string;
   address?: string;
-  assigned_doctor?: string | null;
+  doctor_id?: number | null;
 }

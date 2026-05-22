@@ -3,9 +3,17 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createPatient } from "../../services/patientService";
 import type { CreatePatientDTO } from "../../types/patient";
 import toast from "react-hot-toast";
+import { useQuery } from "@tanstack/react-query";
+import { getDoctors } from "../../services/doctorService";
+import type { Doctor } from "../../types/doctor";
 
-export default function PatientForm() {
+const PatientForm: React.FC = () => {
   const queryClient = useQueryClient();
+
+  const { data: doctors } = useQuery({
+    queryKey: ["doctors"],
+    queryFn: getDoctors,
+  });
 
   const [formData, setFormData] = useState<CreatePatientDTO>({
     first_name: "",
@@ -14,7 +22,7 @@ export default function PatientForm() {
     phone: "",
     email: "",
     address: "",
-    assigned_doctor: "",
+    doctor_id: undefined,
   });
 
   const mutation = useMutation({
@@ -33,7 +41,7 @@ export default function PatientForm() {
         phone: "",
         email: "",
         address: "",
-        assigned_doctor: "",
+        doctor_id: undefined,
       });
     },
 
@@ -42,18 +50,25 @@ export default function PatientForm() {
     },
   });
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
-  }
+  };
 
-  function handleSubmit(e: React.FormEvent) {
+  const handleDoctorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFormData({
+      ...formData,
+      doctor_id: e.target.value ? Number(e.target.value) : undefined,
+    });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     mutation.mutate(formData);
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit}>
@@ -108,13 +123,20 @@ export default function PatientForm() {
           className="border p-3 rounded-lg"
         />
 
-        <input
-          name="assigned_doctor"
-          placeholder="Assigned Doctor"
-          value={formData.assigned_doctor ?? ""}
-          onChange={handleChange}
+        <select
+          name="doctor_id"
+          value={formData.doctor_id || ""}
+          onChange={handleDoctorChange}
           className="border p-3 rounded-lg"
-        />
+        >
+          <option value="">Select Doctor</option>
+
+          {doctors?.map((doctor: Doctor) => (
+            <option key={doctor.id} value={doctor.id}>
+              Doctor #{doctor.id}
+            </option>
+          ))}
+        </select>
       </div>
 
       <button
@@ -125,4 +147,6 @@ export default function PatientForm() {
       </button>
     </form>
   );
-}
+};
+
+export default PatientForm;

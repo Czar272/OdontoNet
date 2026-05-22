@@ -18,15 +18,13 @@ const PatientsPage: React.FC = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [doctorFilter, setDoctorFilter] = useState("");
+  const [doctorFilter, setDoctorFilter] = useState<number | undefined>();
 
   const doctors = useMemo(() => {
     if (!patients) return [];
 
     return [
-      ...new Set(
-        patients.map((p: Patient) => p.assigned_doctor).filter(Boolean),
-      ),
+      ...new Set(patients.map((p: Patient) => p.doctor_id).filter(Boolean)),
     ];
   }, [patients]);
 
@@ -36,7 +34,7 @@ const PatientsPage: React.FC = () => {
     return patients.filter((p: Patient) => {
       const fullName = `${p.first_name} ${p.last_name}`.toLowerCase();
       const matchesSearch = fullName.includes(search.toLowerCase());
-      const matchesDoctor = !doctorFilter || p.assigned_doctor === doctorFilter;
+      const matchesDoctor = !doctorFilter || p.doctor_id === doctorFilter;
 
       return matchesSearch && matchesDoctor;
     });
@@ -66,15 +64,17 @@ const PatientsPage: React.FC = () => {
         </div>
 
         <select
-          value={doctorFilter}
-          onChange={(e) => setDoctorFilter(e.target.value)}
-          className="border rounded-xl px-4 py-3 bg-white "
+          value={doctorFilter || ""}
+          onChange={(e) =>
+            setDoctorFilter(e.target.value ? Number(e.target.value) : undefined)
+          }
+          className="border rounded-xl px-4 py-3 bg-white"
         >
           <option value="">All Doctors</option>
 
-          {doctors.map((doctor) => (
-            <option key={doctor} value={doctor ?? ""}>
-              {doctor}
+          {doctors.map((doctorId) => (
+            <option key={doctorId} value={doctorId ?? 0}>
+              Doctor #{doctorId}
             </option>
           ))}
         </select>
@@ -112,7 +112,7 @@ const PatientsPage: React.FC = () => {
 
               <td className="p-4">{patient.phone}</td>
 
-              <td className="p-4">{patient.assigned_doctor}</td>
+              <td className="p-4">Doctor #{patient.doctor_id}</td>
             </tr>
           ))}
         </tbody>
