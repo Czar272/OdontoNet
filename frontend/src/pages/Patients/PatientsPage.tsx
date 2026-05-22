@@ -24,7 +24,12 @@ const PatientsPage: React.FC = () => {
     if (!patients) return [];
 
     return [
-      ...new Set(patients.map((p: Patient) => p.doctor_id).filter(Boolean)),
+      ...new Map(
+        patients
+          .filter((p: Patient) => p.doctor)
+
+          .map((p: Patient) => [p.doctor!.id, p.doctor]),
+      ).values(),
     ];
   }, [patients]);
 
@@ -34,7 +39,7 @@ const PatientsPage: React.FC = () => {
     return patients.filter((p: Patient) => {
       const fullName = `${p.first_name} ${p.last_name}`.toLowerCase();
       const matchesSearch = fullName.includes(search.toLowerCase());
-      const matchesDoctor = !doctorFilter || p.doctor_id === doctorFilter;
+      const matchesDoctor = !doctorFilter || p.doctor?.id === doctorFilter;
 
       return matchesSearch && matchesDoctor;
     });
@@ -72,9 +77,9 @@ const PatientsPage: React.FC = () => {
         >
           <option value="">All Doctors</option>
 
-          {doctors.map((doctorId) => (
-            <option key={doctorId} value={doctorId ?? 0}>
-              Doctor #{doctorId}
+          {doctors.map((doctor, i) => (
+            <option key={i} value={doctor ? doctor.id : 0}>
+              {doctor ? doctor.user.name : "No doctor"}
             </option>
           ))}
         </select>
@@ -112,7 +117,7 @@ const PatientsPage: React.FC = () => {
 
               <td className="p-4">{patient.phone}</td>
 
-              <td className="p-4">Doctor #{patient.doctor_id}</td>
+              <td className="p-4">Doctor #{patient.doctor?.user.name}</td>
             </tr>
           ))}
         </tbody>

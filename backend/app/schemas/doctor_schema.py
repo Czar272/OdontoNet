@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from app.schemas.user_schema import UserResponse
 
 
 class DoctorCreate(BaseModel):
@@ -14,6 +15,7 @@ class DoctorResponse(BaseModel):
     specialization: str | None
     license_number: str | None
     phone: str | None
+    user: UserResponse
 
     class Config:
         orm_mode = True

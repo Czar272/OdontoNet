@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.database.dependencies import get_db
 from app.models.patient import Patient
 from app.schemas.patient_schema import PatientCreate, PatientResponse
@@ -24,6 +24,8 @@ def create_patient(patient: PatientCreate, db: Session = Depends(get_db)):
 @router.get("/", response_model=list[PatientResponse])
 def get_patients(db: Session = Depends(get_db)):
 
-    patients = db.query(Patient).all()
+    patients = (
+        db.query(Patient).options(joinedload(Patient.doctor).joinedload("user")).all()
+    )
 
     return patients

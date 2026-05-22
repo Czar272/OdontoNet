@@ -1,3 +1,5 @@
+import type { Doctor } from "./doctor";
+
 export interface Patient {
   id: number;
   first_name: string;
@@ -7,6 +9,7 @@ export interface Patient {
   email?: string | null;
   address?: string | null;
   doctor_id?: number | null;
+  doctor?: Doctor;
 }
 
 export interface CreatePatientDTO {

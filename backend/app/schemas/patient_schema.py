@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import date
+from app.schemas.doctor_schema import DoctorResponse
 
 
 class PatientCreate(BaseModel):
@@ -23,6 +24,7 @@ class PatientResponse(BaseModel):
     email: str | None
     address: str | None
     doctor_id: int | None = None
+    doctor: DoctorResponse | None
 
     class Config:
         orm_mode = True
