@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.database.dependencies import get_db
 from app.models.patient import Patient
 from app.schemas.patient_schema import PatientCreate, PatientResponse
+from app.models.doctor import Doctor
 
 router = APIRouter(prefix="/patients", tags=["Patients"])
 
@@ -25,7 +26,9 @@ def create_patient(patient: PatientCreate, db: Session = Depends(get_db)):
 def get_patients(db: Session = Depends(get_db)):
 
     patients = (
-        db.query(Patient).options(joinedload(Patient.doctor).joinedload("user")).all()
+        db.query(Patient)
+        .options(joinedload(Patient.doctor).joinedload(Doctor.user))
+        .all()
     )
 
     return patients

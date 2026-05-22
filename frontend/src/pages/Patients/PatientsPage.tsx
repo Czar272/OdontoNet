@@ -117,7 +117,7 @@ const PatientsPage: React.FC = () => {
 
               <td className="p-4">{patient.phone}</td>
 
-              <td className="p-4">Doctor #{patient.doctor?.user.name}</td>
+              <td className="p-4">{patient.doctor?.user.name}</td>
             </tr>
           ))}
         </tbody>

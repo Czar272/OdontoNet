@@ -133,7 +133,7 @@ const PatientForm: React.FC = () => {
 
           {doctors?.map((doctor: Doctor) => (
             <option key={doctor.id} value={doctor.id}>
-              Doctor #{doctor.id}
+              {doctor.user.name}
             </option>
           ))}
         </select>
