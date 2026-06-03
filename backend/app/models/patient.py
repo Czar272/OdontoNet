@@ -15,3 +15,5 @@ class Patient(Base):
     address = Column(String)
     doctor_id = Column(Integer, ForeignKey("doctors.id"), nullable=True)
     doctor = relationship("Doctor", back_populates="patients")
+    clinic_id = Column(Integer, ForeignKey("clinics.id"), nullable=False)
+    clinic = relationship("Clinic", back_populates="patients")

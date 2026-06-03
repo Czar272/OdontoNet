@@ -1,8 +1,8 @@
 from sqlalchemy import Column, Integer, String, Boolean
-
 from sqlalchemy.orm import relationship
-
 from app.database.connection import Base
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship
 
 
 class User(Base):
@@ -15,3 +15,5 @@ class User(Base):
     role = Column(String, default="doctor")
     is_active = Column(Boolean, default=True)
     doctor_profile = relationship("Doctor", back_populates="user", uselist=False)
+    clinic_id = Column(Integer, ForeignKey("clinics.id"), nullable=False)
+    clinic = relationship("Clinic", back_populates="users")

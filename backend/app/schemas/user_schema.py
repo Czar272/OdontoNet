@@ -17,6 +17,7 @@ class UserResponse(BaseModel):
     name: str
     email: EmailStr
     role: str
+    clinic_id: int
 
     class Config:
         orm_mode = True

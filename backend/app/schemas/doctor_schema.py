@@ -16,6 +16,7 @@ class DoctorResponse(BaseModel):
     license_number: str | None
     phone: str | None
     user: UserResponse
+    clinic_id: int
 
     class Config:
         orm_mode = True

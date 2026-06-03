@@ -25,6 +25,7 @@ class PatientResponse(BaseModel):
     address: str | None
     doctor_id: int | None = None
     doctor: DoctorResponse | None
+    clinic_id: int
 
     class Config:
         orm_mode = True
