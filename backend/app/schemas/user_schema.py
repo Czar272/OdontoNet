@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr
+from app.schemas.clinic_schema import ClinicSimpleResponse
 
 
 class UserCreate(BaseModel):
@@ -18,6 +19,18 @@ class UserResponse(BaseModel):
     email: EmailStr
     role: str
     clinic_id: int
+
+    class Config:
+        orm_mode = True
+
+
+class CurrentUserResponse(BaseModel):
+
+    id: int
+    name: str
+    email: str
+    role: str
+    clinic: ClinicSimpleResponse
 
     class Config:
         orm_mode = True

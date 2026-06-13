@@ -19,3 +19,12 @@ class ClinicResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class ClinicSimpleResponse(BaseModel):
+
+    id: int
+    name: str
+
+    class Config:
+        orm_mode = True
