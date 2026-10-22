@@ -1,6 +1,27 @@
-odonto_venv
-venv
-api_tests.txt
+
+# Configuración local
 .env
+.env.*
+!.env.example
+
+# Entornos Python
+venv/
+.venv/
+odonto_venv/
+
+# Python
 __pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Archivos temporales
+api_tests.txt
+*.log
+
+# Datos privados
+uploads/
+backups/
+
+# Testing seed for users
 seed.py
