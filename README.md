@@ -1,136 +1,113 @@
 # 🦷 OdontoNet
 
-> Sistema inteligente de gestión odontológica con automatización clínica asistida por inteligencia artificial.
+> Plataforma web de gestión clínica odontológica, diseñada para evolucionar hacia el análisis periodontal asistido por inteligencia artificial.
 
----
+**Estado:** desarrollo activo · **Alcance actual:** base del sistema clínico · **IA:** prevista para una fase independiente.
 
 ## Descripción
 
-**OdontoNet** es una plataforma de gestión clínica odontológica diseñada para optimizar y modernizar los procesos clínicos y administrativos dentro de consultorios dentales. El sistema integra herramientas de administración de pacientes, historiales clínicos, almacenamiento de imágenes odontológicas y generación de periodontogramas, incorporando además módulos de inteligencia artificial para automatizar procesos de análisis periodontal.
+OdontoNet busca centralizar la administración de clínicas odontológicas: personal, pacientes, citas, expedientes, imágenes clínicas y periodontogramas. El proyecto se organiza como un monorepositorio con frontend React, API FastAPI y PostgreSQL. El servicio de inteligencia artificial se desarrollará por separado y se integrará mediante una API cuando esté validado.
 
-El objetivo principal del proyecto es desarrollar una solución escalable y multiplataforma que permita mejorar la eficiencia clínica, reducir tiempos de evaluación y facilitar el trabajo de los profesionales de odontología mediante herramientas digitales modernas.
+El modelo de datos ya contempla clínicas, usuarios, doctores y pacientes. **La existencia de `clinic_id` no implica todavía aislamiento efectivo:** la autorización por clínica y por rol está pendiente de implementación.
 
-Uno de los componentes más importantes de OdontoNet es la implementación de un modelo de visión por computadora capaz de analizar imágenes intraorales obtenidas desde dispositivos móviles para asistir en la generación automática de periodontogramas y futuras funcionalidades de diagnóstico asistido.
+## Estado de las funcionalidades
 
----
+| Área                                                  | Estado actual                                                  |
+| ----------------------------------------------------- | -------------------------------------------------------------- |
+| Interfaz React, rutas y componentes reutilizables     | Base implementada                                              |
+| Login JWT y `GET /auth/me`                            | Implementados; sesión frontend aún básica                      |
+| Clínicas, usuarios, doctores y pacientes              | Modelos relacionales y migración implementados                 |
+| Pacientes                                             | Listado y creación inicial; falta CRUD completo y autorización |
+| Doctores                                              | Listado y creación inicial; falta autorización y validaciones  |
+| Agenda, expedientes, imágenes, periodontograma manual | Pendientes                                                     |
+| IA periodontal                                        | Fuera del MVP inicial; servicio independiente futuro           |
 
-# Objetivos del Proyecto
+**Aviso:** no usar con datos clínicos reales ni desplegar públicamente hasta completar autorización, aislamiento entre clínicas, validaciones, auditoría, privacidad y pruebas de seguridad.
 
-## Objetivo General
+## Tecnologías
 
-Desarrollar un sistema inteligente de gestión odontológica que integre herramientas clínicas, administrativas y modelos de inteligencia artificial para automatizar procesos periodontales y mejorar la eficiencia operativa en clínicas dentales.
+- **Frontend:** React 19, TypeScript, Vite 8, Tailwind CSS 3, React Router 7, TanStack Query, Axios.
+- **Backend:** Python 3.11 recomendado, FastAPI, SQLAlchemy 2, Pydantic 1, Alembic, JWT.
+- **Base de datos:** PostgreSQL 16 en Docker Compose.
+- **Futuro módulo IA:** servicio independiente; tecnología y contratos pendientes de validación.
 
----
+Las versiones exactas de dependencias están en `frontend/package-lock.json` y `backend/requirements.txt`.
 
-## Objetivos Específicos
+## Estructura
 
-- Gestionar pacientes, historiales clínicos y registros odontológicos.
-- Permitir el almacenamiento y administración de imágenes clínicas.
-- Implementar un módulo digital de periodontograma.
-- Desarrollar un sistema de inteligencia artificial para automatizar mediciones periodontales mediante visión por computadora.
-- Facilitar futuras integraciones con aplicaciones móviles y de escritorio.
-- Diseñar una arquitectura escalable basada en microservicios.
-
----
-
-# Características Principales
-
-- Gestión de pacientes
-- Historial clínico odontológico
-- Gestión de imágenes clínicas
-- Periodontograma digital
-- Sistema de autenticación y roles
-- Dashboard administrativo
-- Integración con inteligencia artificial
-- Arquitectura modular y escalable
-- API REST
-- Compatibilidad multiplataforma
-
----
-
-# Arquitectura General
-
-OdontoNet estará dividido en dos componentes principales:
-
----
-
-## Sistema Clínico
-
-Encargado de:
-
-- Gestión administrativa
-- Pacientes
-- Usuarios
-- Imágenes clínicas
-- Historiales
-- Periodontogramas
-
-### Tecnologías previstas
-
-- React
-- TypeScript
-- TailwindCSS
-- FastAPI
-- PostgreSQL
-
----
-
-## Microservicio de Inteligencia Artificial
-
-Encargado de:
-
-- Procesamiento de imágenes
-- Detección periodontal
-- Análisis mediante redes neuronales
-- Automatización de mediciones clínicas
-
-### Tecnologías previstas
-
-- Python
-- PyTorch
-- OpenCV
-- FastAPI
-
----
-
-# Arquitectura de Comunicación
-
-```txt
-Frontend React
-       │
-       ▼
-Backend FastAPI
-       │
-       ▼
-Microservicio IA
+```text
+OdontoNet/
+├── frontend/                 # Aplicación React
+├── backend/                  # API FastAPI y migraciones Alembic
+│   ├── app/
+│   └── alembic/
+├── database/                 # Material auxiliar (no es la fuente de migraciones)
+├── docs/                     # Documentación técnica
+├── docker-compose.yml       # PostgreSQL para desarrollo
+├── .env.example              # Ejemplo de variables para Docker
+└── README.md
 ```
 
-# Tecnologías del Proyecto
+`ai-service/` es una carpeta prevista para una etapa futura; puede no estar incluida en el repositorio actual.
 
-| Tecnología  | Uso                       |
-| ----------- | ------------------------- |
-| React       | Frontend                  |
-| TypeScript  | Desarrollo frontend       |
-| TailwindCSS | Estilos                   |
-| FastAPI     | Backend API               |
-| PostgreSQL  | Base de datos             |
-| PyTorch     | Inteligencia Artificial   |
-| OpenCV      | Procesamiento de imágenes |
-| Docker      | Contenedores              |
-| JWT         | Autenticación             |
+## Inicio rápido (Windows / PowerShell)
 
-# Estado del Proyecto
+**Requisitos:** Git, Docker Desktop con Compose, Python 3.11, Node.js y npm compatibles con el `package.json` actual.
 
-Proyecto en desarrollo.
+Desde la raíz del repositorio:
 
-Actualmente se encuentra en fase de diseño de arquitectura e implementación inicial del sistema clínico y módulos base.
+```powershell
+Copy-Item .env.example .env
+Copy-Item backend/.env.example backend/.env
+```
 
-# Futuras Funcionalidades
-* Diagnóstico periodontal asistido
-* Aplicación móvil
-* Reportes inteligentes
-* Historial radiográfico
-* Integración con servicios en la nube
-* Módulos estadísticos
-* Multi-clínica
-* Soporte offline parcial
+Edita ambos archivos `.env` con credenciales locales consistentes y una clave JWT aleatoria. **No subas esos archivos a Git.**
+
+```powershell
+docker compose config --quiet
+docker compose up -d
+docker compose ps
+```
+
+En otra terminal:
+
+```powershell
+cd backend
+py -3.11 -m venv odonto_venv
+.\odonto_venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+alembic upgrade head
+uvicorn app.main:app --reload
+```
+
+En una tercera terminal:
+
+```powershell
+cd frontend
+npm ci
+npm run dev
+```
+
+- Frontend: http://localhost:5173
+- API: http://127.0.0.1:8000
+- Documentación de API: http://127.0.0.1:8000/docs
+
+El repositorio **no proporciona un aprovisionamiento de administrador listo para producción**. El inicio de sesión requiere un usuario existente en la base. No utilizar el endpoint público de registro actual para aprovisionamiento real hasta implementar los controles de clínica y permisos.
+
+Para instrucciones detalladas y resolución de problemas, consulta [Desarrollo](docs/DEVELOPMENT.md).
+
+## Documentación
+
+- [Arquitectura](docs/ARCHITECTURE.md)
+- [Entorno de desarrollo](docs/DEVELOPMENT.md)
+- [Convenciones](docs/CONVENTIONS.md)
+- [Estado técnico y Jira](docs/PROJECT_STATUS.md)
+
+## Planificación
+
+El trabajo se organiza en Jira bajo el proyecto `ODON`, con épicas, historias y subtareas. El objetivo inicial es un MVP clínico **sin IA**, seguido de una integración posterior del servicio de análisis periodontal.
+
+## Datos y licencia
+
+No incorporar datos identificables de pacientes a repositorios, issues, logs ni entornos de demostración. El esquema de licenciamiento del proyecto todavía no está definido; no se debe asumir que el código es de uso público o comercial libre.
