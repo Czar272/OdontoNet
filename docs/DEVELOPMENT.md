@@ -41,6 +41,17 @@ Espera a que `odontonet-db` aparezca como `healthy`. El puerto de PostgreSQL se 
 
 **No ejecutar `docker compose down -v` salvo que se quiera borrar deliberadamente el volumen de datos.**
 
+### Rotar la contraseña de PostgreSQL de desarrollo
+
+`POSTGRES_PASSWORD` solo se aplica al crear el volumen por primera vez; cambiarlo en `.env` no modifica una base existente. Para rotarla sin perder datos, con el contenedor en ejecución:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\dev\rotate-db-password.ps1 -DryRun
+powershell -ExecutionPolicy Bypass -File scripts\dev\rotate-db-password.ps1
+```
+
+El script ejecuta `ALTER USER` dentro del contenedor, verifica la conexión y actualiza `.env` y `backend/.env` (con respaldo `*.bak-<fecha>`, ignorado por Git). Después, reinicia el backend y comprueba con `alembic current`.
+
 ## 3. Backend
 
 En una nueva terminal, desde la raíz:
