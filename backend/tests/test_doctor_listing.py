@@ -33,9 +33,9 @@ def clinic(db, client):
         db.flush()
         return doctor
 
-    zoila = add_doctor(main.id, "Dra. Zoila Ruiz", "zoila@listado-clinica.com", "Periodoncia")
-    bruno = add_doctor(main.id, "Dr. Bruno Alvarado", "bruno@listado-clinica.com", "Ortodoncia")
-    retired = add_doctor(main.id, "Dr. Carlos Inactivo", "carlos@listado-clinica.com", "Endodoncia", active=False)
+    ana = add_doctor(main.id, "Dra. Ana Ruiz", "ana@listado-clinica.com", "Periodoncia")
+    beatriz = add_doctor(main.id, "Dra. Beatriz Alvarado", "beatriz@listado-clinica.com", "Ortodoncia")
+    retired = add_doctor(main.id, "Dra. Carla Inactiva", "carla@listado-clinica.com", "Endodoncia", active=False)
     foreign = add_doctor(other.id, "Dra. Vecina", "vecina@vecina-clinica.com", "General")
     db.add(User(
         name="Recepción",
@@ -47,7 +47,7 @@ def clinic(db, client):
     db.commit()
 
     return {
-        "ids": {"zoila": zoila.id, "bruno": bruno.id, "retired": retired.id, "foreign": foreign.id},
+        "ids": {"ana": ana.id, "beatriz": beatriz.id, "retired": retired.id, "foreign": foreign.id},
         "headers": auth_headers(client, "recepcion@listado-clinica.com"),
     }
 
@@ -57,13 +57,15 @@ def names(response):
 
 
 def test_list_includes_name_and_specialization_sorted_by_name(client, clinic):
+    # Mismo prefijo en los tres nombres: el orden no depende de la intercalación
+    # de PostgreSQL (C.UTF-8 ignora menos la puntuación que en_US.utf8).
     response = client.get("/doctors/", headers=clinic["headers"])
 
     assert response.status_code == 200
-    assert names(response) == ["Dr. Bruno Alvarado", "Dr. Carlos Inactivo", "Dra. Zoila Ruiz"]
-    zoila = next(d for d in response.json() if d["id"] == clinic["ids"]["zoila"])
-    assert zoila["specialization"] == "Periodoncia"
-    assert zoila["user"]["is_active"] is True
+    assert names(response) == ["Dra. Ana Ruiz", "Dra. Beatriz Alvarado", "Dra. Carla Inactiva"]
+    ana = next(d for d in response.json() if d["id"] == clinic["ids"]["ana"])
+    assert ana["specialization"] == "Periodoncia"
+    assert ana["user"]["is_active"] is True
 
 
 def test_list_never_exposes_password(client, clinic):
@@ -75,8 +77,8 @@ def test_active_filter(client, clinic):
     active = client.get("/doctors/", params={"active": "true"}, headers=clinic["headers"])
     inactive = client.get("/doctors/", params={"active": "false"}, headers=clinic["headers"])
 
-    assert names(active) == ["Dr. Bruno Alvarado", "Dra. Zoila Ruiz"]
-    assert names(inactive) == ["Dr. Carlos Inactivo"]
+    assert names(active) == ["Dra. Ana Ruiz", "Dra. Beatriz Alvarado"]
+    assert names(inactive) == ["Dra. Carla Inactiva"]
 
 
 def test_active_filter_rejects_invalid_value(client, clinic):
@@ -118,9 +120,9 @@ def test_cannot_assign_new_patient_to_inactive_doctor(client, clinic):
 
 @pytest.mark.patients
 def test_can_assign_new_patient_to_active_doctor(client, clinic):
-    payload = {"first_name": "Nora", "last_name": "Soto", "doctor_id": clinic["ids"]["zoila"]}
+    payload = {"first_name": "Nora", "last_name": "Soto", "doctor_id": clinic["ids"]["ana"]}
 
     response = client.post("/patients/", json=payload, headers=clinic["headers"])
 
     assert response.status_code == 201
-    assert response.json()["doctor"]["user"]["name"] == "Dra. Zoila Ruiz"
+    assert response.json()["doctor"]["user"]["name"] == "Dra. Ana Ruiz"
