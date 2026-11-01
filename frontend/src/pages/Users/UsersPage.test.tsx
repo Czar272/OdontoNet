@@ -1,5 +1,5 @@
-import { fireEvent, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderWithAuth } from "../../test/renderWithAuth";
 import type { User } from "../../types/user";
@@ -15,7 +15,13 @@ vi.mock("../../services/userService", () => ({
   getUsers: vi.fn(async () => users),
   createUser: vi.fn(),
   updateUser: vi.fn(),
+  deactivateUser: vi.fn(async (id: number) => ({ ...users.find((u) => u.id === id), is_active: false })),
+  activateUser: vi.fn(async (id: number) => ({ ...users.find((u) => u.id === id), is_active: true })),
 }));
+
+const { activateUser, deactivateUser } = await import("../../services/userService");
+
+beforeEach(() => vi.clearAllMocks());
 
 describe("UsersPage", () => {
   it("lista los usuarios con su rol y estado", async () => {
@@ -52,5 +58,59 @@ describe("UsersPage", () => {
 
     expect(screen.getByRole("dialog", { name: "Editar usuario" })).toBeInTheDocument();
     expect(screen.getByLabelText(/nombre completo/i)).toHaveValue("Ana López");
+  });
+
+  it("filtra por estado", async () => {
+    renderWithAuth(<UsersPage />, "admin");
+    await screen.findByText("Ana López");
+
+    fireEvent.change(screen.getByLabelText("Filtrar por estado"), { target: { value: "inactive" } });
+
+    expect(screen.getByText("Dr. Pérez")).toBeInTheDocument();
+    expect(screen.queryByText("Ana López")).not.toBeInTheDocument();
+  });
+
+  it("no ofrece desactivar la propia cuenta", async () => {
+    // fakeUser (la sesión) tiene id 1, igual que "Usuario admin".
+    renderWithAuth(<UsersPage />, "admin");
+    await screen.findByText("Ana López");
+
+    expect(screen.queryByRole("button", { name: "Desactivar Usuario admin" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Desactivar Ana López" })).toBeInTheDocument();
+  });
+
+  it("desactiva un usuario después de confirmar", async () => {
+    renderWithAuth(<UsersPage />, "admin");
+    await screen.findByText("Ana López");
+
+    fireEvent.click(screen.getByRole("button", { name: "Desactivar Ana López" }));
+    const dialog = screen.getByRole("dialog", { name: "Desactivar usuario" });
+    expect(deactivateUser).not.toHaveBeenCalled();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Desactivar" }));
+
+    await waitFor(() => expect(deactivateUser).toHaveBeenCalledWith(2));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("cancelar no cambia el estado", async () => {
+    renderWithAuth(<UsersPage />, "admin");
+    await screen.findByText("Ana López");
+
+    fireEvent.click(screen.getByRole("button", { name: "Desactivar Ana López" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    expect(deactivateUser).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("reactiva a un usuario inactivo", async () => {
+    renderWithAuth(<UsersPage />, "admin");
+    await screen.findByText("Dr. Pérez");
+
+    fireEvent.click(screen.getByRole("button", { name: "Activar Dr. Pérez" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Activar usuario" })).getByRole("button", { name: "Activar" }));
+
+    await waitFor(() => expect(activateUser).toHaveBeenCalledWith(3));
   });
 });

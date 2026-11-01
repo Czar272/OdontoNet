@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Pencil } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Pencil, UserCheck, UserX } from "lucide-react";
+import toast from "react-hot-toast";
 
 import Button from "../../components/basic/Button";
+import ConfirmDialog from "../../components/basic/ConfirmDialog";
 import Input from "../../components/basic/Input";
 import LoadingSpinner from "../../components/basic/LoadingSpinner";
 import Modal from "../../components/basic/Modal";
@@ -10,7 +12,9 @@ import PageHeader from "../../components/basic/PageHeader";
 import Select from "../../components/basic/Select";
 import Table from "../../components/basic/Table";
 import UserForm from "../../components/users/UserForm";
-import { getUsers } from "../../services/userService";
+import { useAuth } from "../../context/AuthContext";
+import { getApiErrorMessage } from "../../services/apiError";
+import { activateUser, deactivateUser, getUsers } from "../../services/userService";
 import { ROLE_LABELS, type Role } from "../../types/auth";
 import type { User } from "../../types/user";
 
@@ -19,15 +23,38 @@ const ROLES = Object.keys(ROLE_LABELS) as Role[];
 /** null: modal cerrado · "new": alta · User: edición. */
 type ModalState = null | "new" | User;
 
+type StatusFilter = "" | "active" | "inactive";
+
 const UsersPage: React.FC = () => {
   const { data: users, isLoading, isError } = useQuery({
     queryKey: ["users"],
     queryFn: () => getUsers(),
   });
 
+  const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
+
   const [modal, setModal] = useState<ModalState>(null);
+  const [toggling, setToggling] = useState<User | null>(null);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<Role | "">("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
+
+  const toggleMutation = useMutation({
+    mutationFn: (user: User) =>
+      user.is_active ? deactivateUser(user.id) : activateUser(user.id),
+
+    onSuccess: (updated) => {
+      toast.success(updated.is_active ? "Usuario activado" : "Usuario desactivado");
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["doctors"] });
+      setToggling(null);
+    },
+
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, "No se pudo cambiar el estado del usuario"));
+    },
+  });
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
@@ -38,10 +65,12 @@ const UsersPage: React.FC = () => {
       const matchesSearch =
         u.name.toLowerCase().includes(term) || u.email.toLowerCase().includes(term);
       const matchesRole = !roleFilter || u.role === roleFilter;
+      const matchesStatus =
+        !statusFilter || u.is_active === (statusFilter === "active");
 
-      return matchesSearch && matchesRole;
+      return matchesSearch && matchesRole && matchesStatus;
     });
-  }, [users, search, roleFilter]);
+  }, [users, search, roleFilter, statusFilter]);
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -81,6 +110,16 @@ const UsersPage: React.FC = () => {
             </option>
           ))}
         </Select>
+
+        <Select
+          aria-label="Filtrar por estado"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+        >
+          <option value="">Todos los estados</option>
+          <option value="active">Activos</option>
+          <option value="inactive">Inactivos</option>
+        </Select>
       </div>
 
       <Modal
@@ -91,6 +130,30 @@ const UsersPage: React.FC = () => {
         {/* key: reinicia el formulario al cambiar de usuario */}
         <UserForm key={editing?.id ?? "new"} user={editing} onSuccess={closeModal} />
       </Modal>
+
+      <ConfirmDialog
+        isOpen={toggling !== null}
+        title={toggling?.is_active ? "Desactivar usuario" : "Activar usuario"}
+        message={
+          toggling?.is_active ? (
+            <p>
+              <strong>{toggling.name}</strong> ya no podrá iniciar sesión y su sesión
+              actual se cerrará. Sus datos e historial se conservan y puedes volver a
+              activarlo cuando quieras.
+            </p>
+          ) : (
+            <p>
+              <strong>{toggling?.name}</strong> podrá volver a iniciar sesión con su
+              contraseña actual.
+            </p>
+          )
+        }
+        confirmLabel={toggling?.is_active ? "Desactivar" : "Activar"}
+        variant={toggling?.is_active ? "danger" : "primary"}
+        isPending={toggleMutation.isPending}
+        onConfirm={() => toggling && toggleMutation.mutate(toggling)}
+        onCancel={() => setToggling(null)}
+      />
 
       <Table>
         <thead className="bg-gray-100">
@@ -130,15 +193,32 @@ const UsersPage: React.FC = () => {
                 </span>
               </td>
 
-              <td className="p-4 text-right">
+              <td className="p-4 text-right whitespace-nowrap">
                 <button
                   type="button"
                   onClick={() => setModal(user)}
                   aria-label={`Editar ${user.name}`}
+                  title="Editar"
                   className="p-2 rounded-lg hover:bg-gray-100 transition"
                 >
                   <Pencil size={18} />
                 </button>
+
+                {user.id !== currentUser?.id && (
+                  <button
+                    type="button"
+                    onClick={() => setToggling(user)}
+                    aria-label={`${user.is_active ? "Desactivar" : "Activar"} ${user.name}`}
+                    title={user.is_active ? "Desactivar" : "Activar"}
+                    className={
+                      user.is_active
+                        ? "p-2 rounded-lg text-red-600 hover:bg-red-50 transition"
+                        : "p-2 rounded-lg text-green-700 hover:bg-green-50 transition"
+                    }
+                  >
+                    {user.is_active ? <UserX size={18} /> : <UserCheck size={18} />}
+                  </button>
+                )}
               </td>
             </tr>
           ))}

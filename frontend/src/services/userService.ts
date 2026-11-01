@@ -19,3 +19,15 @@ export async function updateUser(id: number, changes: UpdateUserDTO): Promise<Us
 
   return response.data;
 }
+
+export async function deactivateUser(id: number): Promise<User> {
+  const response = await api.post(`/users/${id}/deactivate`);
+
+  return response.data;
+}
+
+export async function activateUser(id: number): Promise<User> {
+  const response = await api.post(`/users/${id}/activate`);
+
+  return response.data;
+}
