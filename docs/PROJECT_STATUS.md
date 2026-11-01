@@ -27,7 +27,7 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 2. **Sesión:** resuelta en frontend (ODON-46, ODON-50). Pendiente para producción: refresh token rotativo en cookie `httpOnly`, CSP y revocación del lado del servidor (decisión ODON-52, ver `ARCHITECTURE.md`).
 3. **Gestión de personal:** sin edición/desactivación de usuarios ni alta de la primera clínica (ODON-86, ODON-94, ODON-74).
 4. **Frontend:** layout sin versión móvil.
-5. **Dependencias de desarrollo:** aviso moderado de `minimatch` (<11.0.1) vía ESLint, publicado después de ODON-15. Solo afecta herramientas de desarrollo (producción: 0 vulnerabilidades). No hay corrección compatible (ESLint 10.14 aún usa minimatch 10) y `npm audit fix --force` degradaría `typescript-eslint`: revisar al actualizar ESLint.
+5. **Dependencias de desarrollo:** aviso moderado de `minimatch` (<11.0.1) vía ESLint, publicado después de ODON-15; npm lo reporta como 12 moderadas porque cuenta cada paquete de la cadena de ESLint. Solo afecta herramientas de desarrollo (producción: 0 vulnerabilidades). No hay corrección compatible (ESLint 10.14 aún usa minimatch 10) y `npm audit fix --force` degradaría `typescript-eslint`: revisar al actualizar ESLint.
 6. **Dependencias:** `requirements.txt` es un `pip freeze` completo (incluye `pydantic-core`, que Pydantic 1 no usa); conviene separar dependencias directas.
 7. **Producción:** faltan auditoría, respaldos, endurecimiento y despliegue (épicas CAL y LAN).
 
@@ -43,10 +43,10 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 
 - Proyecto `ODON`: 13 épicas, 60 historias, 180 subtareas.
 - **ODON-1 Arquitectura e infraestructura — Done:** ODON-14, 18, 22, 26, 30, 34.
-- **ODON-3 Clínicas y autorización — In Progress:** ODON-62 y ODON-66 Done; ODON-70 Testing; pendientes ODON-58, 74.
+- **ODON-3 Clínicas y autorización — In Progress:** ODON-62, ODON-66 y ODON-70 Done; pendientes ODON-58, 74.
 - **ODON-5 Pacientes — In Progress:** ODON-106 Done.
 - **ODON-2 Autenticación — In Progress:** ODON-38, 42, 46 y 50 Done; pendiente ODON-54 (recuperación de contraseña).
-- **ODON-11 Calidad:** ODON-254 (categorías de pruebas backend) Testing.
+- **ODON-11 Calidad:** ODON-254 (categorías de pruebas backend) Done.
 
 ## Próximo paso
 
