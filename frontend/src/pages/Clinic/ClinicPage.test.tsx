@@ -35,15 +35,43 @@ describe("buildClinicChanges", () => {
 });
 
 describe("ClinicPage", () => {
-  it("administración edita y guarda solo los cambios", async () => {
+  it("administración ve los campos bloqueados hasta pulsar Editar datos", async () => {
     renderWithAuth(<ClinicPage />, "admin");
 
     const name = await screen.findByLabelText(/nombre de la clínica/i);
     expect(name).toHaveValue("Clínica Demo Norte");
+    expect(name).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Guardar cambios" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /editar datos/i }));
+
+    expect(name).toBeEnabled();
+    expect(screen.queryByRole("button", { name: /editar datos/i })).not.toBeInTheDocument();
+  });
+
+  it("guarda solo los cambios y vuelve a bloquear", async () => {
+    renderWithAuth(<ClinicPage />, "admin");
+    await screen.findByLabelText(/nombre de la clínica/i);
+
+    fireEvent.click(screen.getByRole("button", { name: /editar datos/i }));
     fireEvent.change(screen.getByLabelText(/teléfono/i), { target: { value: "2222-0000" } });
     fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
     await waitFor(() => expect(updateClinic).toHaveBeenCalledWith({ phone: "2222-0000" }));
+    await waitFor(() => expect(screen.getByLabelText(/teléfono/i)).toBeDisabled());
+  });
+
+  it("Cancelar descarta los cambios y bloquea de nuevo", async () => {
+    renderWithAuth(<ClinicPage />, "admin");
+    await screen.findByLabelText(/nombre de la clínica/i);
+
+    fireEvent.click(screen.getByRole("button", { name: /editar datos/i }));
+    fireEvent.change(screen.getByLabelText(/nombre de la clínica/i), { target: { value: "Otro nombre" } });
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    expect(screen.getByLabelText(/nombre de la clínica/i)).toHaveValue("Clínica Demo Norte");
+    expect(screen.getByLabelText(/nombre de la clínica/i)).toBeDisabled();
+    expect(updateClinic).not.toHaveBeenCalled();
   });
 
   it.each(["doctor", "receptionist"] as const)("%s solo consulta", async (role) => {
@@ -51,7 +79,7 @@ describe("ClinicPage", () => {
 
     const name = await screen.findByLabelText(/nombre de la clínica/i);
     expect(name).toBeDisabled();
-    expect(screen.queryByRole("button", { name: "Guardar cambios" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /editar datos/i })).not.toBeInTheDocument();
     expect(screen.getByText("Solo administración puede modificar los datos de la clínica.")).toBeInTheDocument();
   });
 });

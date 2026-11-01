@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Lock, Pencil } from "lucide-react";
 import toast from "react-hot-toast";
 
 import Button from "../../components/basic/Button";
@@ -19,9 +20,14 @@ interface ClinicFormProps {
   canManage: boolean;
 }
 
+/**
+ * Los campos empiezan bloqueados para todos. Administración debe pulsar
+ * "Editar datos" para desbloquearlos: un paso extra evita cambios accidentales.
+ */
 const ClinicForm: React.FC<ClinicFormProps> = ({ clinic, canManage }) => {
   const queryClient = useQueryClient();
   const { refreshUser } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<ClinicFormData>(() => initialClinicData(clinic));
 
   const mutation = useMutation({
@@ -29,6 +35,7 @@ const ClinicForm: React.FC<ClinicFormProps> = ({ clinic, canManage }) => {
 
     onSuccess: async (updated) => {
       toast.success("Datos de la clínica actualizados");
+      setIsEditing(false);
       queryClient.setQueryData(["clinic"], updated);
       // El nombre de la clínica aparece en el menú lateral (viene de /auth/me).
       await refreshUser();
@@ -41,6 +48,11 @@ const ClinicForm: React.FC<ClinicFormProps> = ({ clinic, canManage }) => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleCancel = () => {
+    setFormData(initialClinicData(clinic));
+    setIsEditing(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -56,7 +68,32 @@ const ClinicForm: React.FC<ClinicFormProps> = ({ clinic, canManage }) => {
 
   return (
     <form onSubmit={handleSubmit}>
-      <fieldset disabled={!canManage} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="flex items-center justify-between mb-6">
+        <p className="flex items-center gap-2 text-sm text-gray-500">
+          {isEditing ? (
+            <>
+              <Pencil size={16} /> Editando datos de la clínica
+            </>
+          ) : (
+            <>
+              <Lock size={16} /> Datos protegidos
+            </>
+          )}
+        </p>
+
+        {canManage && !isEditing && (
+          <Button variant="secondary" onClick={() => setIsEditing(true)}>
+            <span className="flex items-center gap-2">
+              <Pencil size={16} /> Editar datos
+            </span>
+          </Button>
+        )}
+      </div>
+
+      <fieldset
+        disabled={!isEditing || mutation.isPending}
+        className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+      >
         <Input
           name="name"
           label="Nombre de la clínica *"
@@ -92,13 +129,19 @@ const ClinicForm: React.FC<ClinicFormProps> = ({ clinic, canManage }) => {
         />
       </fieldset>
 
-      {canManage ? (
-        <div className="mt-6 flex justify-end">
+      {isEditing && (
+        <div className="mt-6 flex justify-end gap-3">
+          <Button variant="secondary" onClick={handleCancel} disabled={mutation.isPending}>
+            Cancelar
+          </Button>
+
           <Button type="submit" disabled={mutation.isPending}>
             {mutation.isPending ? "Guardando..." : "Guardar cambios"}
           </Button>
         </div>
-      ) : (
+      )}
+
+      {!canManage && (
         <p className="mt-6 text-sm text-gray-500">
           Solo administración puede modificar los datos de la clínica.
         </p>

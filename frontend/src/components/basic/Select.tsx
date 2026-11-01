@@ -27,6 +27,7 @@ const Select: React.FC<SelectProps> = ({
         id={selectId}
         className={clsx(
           "border rounded-xl p-3 bg-white outline-none focus:ring-2 focus:ring-gray-900",
+          "disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed",
           className,
         )}
         {...props}
