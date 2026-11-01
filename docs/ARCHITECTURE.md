@@ -24,10 +24,10 @@ PostgreSQL 16 (Docker Compose)
 ### Frontend
 
 - `src/pages/`: inicio de sesión, inicio (dashboard) y pacientes. Interfaz en español.
-- `src/routes/`: router, ruta protegida por presencia de token y ruta comodín.
-- `src/layouts/`: barra lateral con navegación activa y cierre de sesión (limpia token y caché).
-- `src/context/AuthContext.tsx`: login, logout y token en `localStorage`. **No** restaura todavía usuario/clínica con `/auth/me` ni reacciona a un `401` (AUT03/AUT04).
-- `src/services/`: cliente Axios (`VITE_API_URL`), servicios por recurso y `apiError.ts` para mostrar el `detail` de la API.
+- `src/routes/`: router, ruta protegida (espera la verificación de sesión y recuerda la ruta solicitada) y ruta comodín.
+- `src/layouts/`: barra lateral con clínica, usuario, rol, navegación activa y cierre de sesión.
+- `src/context/AuthContext.tsx`: sesión con estados `loading` / `authenticated` / `unauthenticated`; restaura usuario y clínica con `/auth/me` al cargar; login, logout y cierre automático ante un `401`.
+- `src/services/`: cliente Axios (`VITE_API_URL`) con interceptor de `401`, `session.ts` (token), servicios por recurso y `apiError.ts` para mostrar el `detail` de la API.
 - `src/components/basic/`: Button, Input, Select, Modal, Table, Card, PageHeader, LoadingSpinner (accesibles); `src/components/patients/`: formulario del dominio.
 - `src/types/`: contratos TypeScript mantenidos manualmente.
 
@@ -65,6 +65,20 @@ Doctor 1 ── * Patient (asignación opcional del paciente)
 6. **Separación de IA:** no acoplar PyTorch/OpenCV al backend clínico; definir posteriormente contratos versionados y controles de acceso.
 7. **Datos clínicos:** almacenamiento de imágenes, auditoría de accesos y políticas de retención siguen pendientes.
 
+## Sesión y tokens
+
+**Flujo:** `POST /auth/login` → JWT (expira en `ACCESS_TOKEN_EXPIRE_MINUTES`, 60 por defecto) → `GET /auth/me` carga usuario y clínica. Al recargar, la app muestra un cargador mientras verifica el token con `/auth/me`; si responde `401`, limpia la sesión. Cualquier `401` posterior (token expirado o usuario desactivado) cierra la sesión, avisa al usuario y redirige al login recordando la ruta; un cierre voluntario no la recuerda. Al cerrar sesión se vacía la caché de React Query. Ningún error de login se imprime en consola (el error de Axios incluye el cuerpo con la contraseña).
+
+**Evaluación de almacenamiento y refresh (ODON-52):**
+
+| Opción | Ventajas | Riesgos / costo |
+| --- | --- | --- |
+| A. JWT en `localStorage`, expiración corta, sin refresh (actual) | Simple; sin CSRF | Un XSS podría leer el token; el usuario reingresa cada 60 min |
+| B. JWT en cookie `httpOnly` + `Secure` + `SameSite` | El script no puede leer el token | Requiere protección CSRF y cambios de CORS/backend |
+| C. Access token en memoria + refresh token rotativo en cookie `httpOnly` | Mejor equilibrio de seguridad y experiencia; permite revocar sesiones | Mayor complejidad: rotación, tabla de sesiones, revocación |
+
+**Decisión:** mantener **A** durante el MVP y el desarrollo, con estas mitigaciones: React escapa el contenido por defecto, no se usa `dangerouslySetInnerHTML`, se auditan dependencias, la expiración es corta y un usuario desactivado pierde el acceso de inmediato. **Antes de producción** (CAL06 / ODON-230) migrar a **C**, agregar Content-Security-Policy y revocación del lado del servidor. Hoy el logout borra el token en el navegador, pero un token copiado sigue siendo válido hasta que expira.
+
 ## Contrato de la API
 
 - Documentación interactiva en `/docs` y especificación en `/openapi.json`. Todas las respuestas exitosas tienen un esquema Pydantic; una prueba lo verifica.
@@ -76,7 +90,7 @@ Doctor 1 ── * Patient (asignación opcional del paciente)
 
 - No existe todavía el alta segura de la primera clínica y su administrador (ODON-74); en desarrollo se usa `seed_dev.py`.
 - Faltan edición y desactivación de usuarios (ODON-86, ODON-94) y la navegación por rol en el frontend (ODON-70).
-- El frontend no restaura la sesión con `/auth/me` ni cierra la sesión ante un `401` (ODON-46, ODON-50).
+- Token en `localStorage` y sin revocación del lado del servidor hasta producción (ver "Sesión y tokens").
 - Sin auditoría de acciones clínicas, respaldos verificados ni endurecimiento para producción (épica CAL).
 - No hay mecanismo de importación validada de datos de clínicas existentes.
 
@@ -84,7 +98,7 @@ Estas limitaciones son **bloqueantes para un despliegue con datos reales**.
 
 ## Evolución prevista
 
-- Sesión completa en frontend y navegación por rol.
+- Navegación por rol en el frontend.
 - CRUD completo de pacientes y personal.
 - Agenda compartida por clínica, expedientes y periodontograma manual.
 - Gestión privada de imágenes clínicas.

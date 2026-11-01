@@ -16,7 +16,7 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 
 ## Estado verificado
 
-- **Calidad:** 75 pruebas backend (aislamiento entre clínicas, roles, contrato de API, seed) verificadas en Windows. Frontend: `lint` y `build` sin errores; 0 vulnerabilidades npm.
+- **Calidad:** 84 pruebas backend (login, `/auth/me`, aislamiento entre clínicas, roles, contrato de API, seed); 75 de ellas ya verificadas en Windows. Frontend: `lint` y `build` sin errores, 0 vulnerabilidades npm, pruebas E2E de sesión.
 - **Seguridad:** aislamiento por `clinic_id` del token (ODON-62); RBAC con `require_roles` (ODON-66); usuarios inactivos bloqueados; errores unificados en español sin trazas (ODON-22).
 - **Infraestructura:** Docker healthy, persistencia y puerto local verificados con `scripts/dev/verify-infra.ps1` (ODON-26). Migraciones lineales `e7aac1fc989e` → `4c1d2e8f9a10`, probadas desde base vacía (ODON-30).
 - **Datos de desarrollo:** `backend/scripts/seed_dev.py`, idempotente y solo local (ODON-34).
@@ -24,7 +24,7 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 ## Riesgos y deuda técnica
 
 1. **Historial de Git:** un `.env` antiguo (commit `7081a3d`) contiene la `DATABASE_URL` de desarrollo. Mitigado: la contraseña se rotó el 2026-10-31. No se reescribe el historial sin autorización.
-2. **Sesión en frontend:** sin restauración con `/auth/me` ni reacción a `401`; JWT en `localStorage` (ODON-46, ODON-50).
+2. **Sesión:** resuelta en frontend (ODON-46, ODON-50). Pendiente para producción: refresh token rotativo en cookie `httpOnly`, CSP y revocación del lado del servidor (decisión ODON-52, ver `ARCHITECTURE.md`).
 3. **Gestión de personal:** sin edición/desactivación de usuarios ni alta de la primera clínica (ODON-86, ODON-94, ODON-74).
 4. **Frontend:** layout sin versión móvil; navegación no adaptada al rol (ODON-70).
 5. **Dependencias:** `requirements.txt` es un `pip freeze` completo (incluye `pydantic-core`, que Pydantic 1 no usa); conviene separar dependencias directas.
@@ -44,11 +44,11 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 - **ODON-1 Arquitectura e infraestructura — Done:** ODON-14, 18, 22, 26, 30, 34.
 - **ODON-3 Clínicas y autorización — In Progress:** ODON-62 y ODON-66 Done; pendientes ODON-58, 70, 74.
 - **ODON-5 Pacientes — In Progress:** ODON-106 Done.
-- **ODON-2 Autenticación — To Do.**
+- **ODON-2 Autenticación — In Progress:** ODON-38, 42, 46 y 50 en Testing; pendiente ODON-54 (recuperación de contraseña).
 
 ## Próximo paso
 
-1. ODON-46 (AuthContext v2: restaurar sesión con `/auth/me`) y ODON-50 (logout y manejo de token expirado).
+1. Verificar localmente ODON-38/42/46/50 y cerrarlas.
 2. ODON-70 (navegación y rutas por rol en el frontend).
 
 ## Convenciones de colaboración
