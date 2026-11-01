@@ -85,11 +85,10 @@ docker exec odontonet-db createdb -U odontonet odontonet_test
 
 # En backend/, con odonto_venv activo
 python -m pip install -r requirements-dev.txt
-$env:TEST_DATABASE_URL = "postgresql://odontonet:<contraseña>@localhost:5432/odontonet_test"
 python -m pytest
 ```
 
-La contraseña es la de `POSTGRES_PASSWORD` en el `.env` de la raíz.
+La URL de pruebas se deriva de `DATABASE_URL` en `backend/.env` cambiando el nombre de la base a `<nombre>_test`; no hace falta escribir la contraseña. Para usar otra base, define `TEST_DATABASE_URL`. Si la conexión falla, pytest muestra el error completo y cómo crear la base.
 
 ## 4. Frontend
 

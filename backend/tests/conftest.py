@@ -1,27 +1,54 @@
 """Configuración de pruebas.
 
-Las pruebas usan una base PostgreSQL dedicada indicada en TEST_DATABASE_URL,
-cuyo nombre debe terminar en "_test". Las tablas se vacían antes de cada prueba,
-por lo que nunca deben apuntar a la base de desarrollo.
+Las pruebas usan una base PostgreSQL dedicada cuyo nombre debe terminar en
+"_test". Las tablas se vacían antes de cada prueba, por lo que nunca deben
+apuntar a la base de desarrollo.
+
+Por defecto la URL se deriva de DATABASE_URL en backend/.env cambiando el
+nombre de la base a "<nombre>_test". TEST_DATABASE_URL permite sobrescribirla.
 """
 import os
 from pathlib import Path
 
 import pytest
+from dotenv import dotenv_values
+from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 
-TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 
-if not TEST_DATABASE_URL:
+def _resolve_test_database_url() -> str:
+    explicit = os.getenv("TEST_DATABASE_URL")
+    if explicit:
+        return explicit
+
+    dev_url = dotenv_values(BACKEND_DIR / ".env").get("DATABASE_URL") or os.getenv("DATABASE_URL")
+    if not dev_url:
+        pytest.exit("No se encontró DATABASE_URL en backend/.env ni TEST_DATABASE_URL.", returncode=2)
+
+    url = make_url(dev_url)
+    return url.set(database=f"{url.database}_test").render_as_string(hide_password=False)
+
+
+TEST_DATABASE_URL = _resolve_test_database_url()
+_test_url = make_url(TEST_DATABASE_URL)
+
+if not (_test_url.database or "").endswith("_test"):
+    pytest.exit("La base de pruebas debe tener un nombre terminado en _test.", returncode=2)
+
+# Verificación previa con el error completo (pytest solo mostraría la primera línea).
+try:
+    with create_engine(TEST_DATABASE_URL).connect() as _conn:
+        _conn.execute(text("SELECT 1"))
+except Exception as exc:  # noqa: BLE001
     pytest.exit(
-        "Define TEST_DATABASE_URL apuntando a una base *_test (ver docs/DEVELOPMENT.md).",
+        f"No se pudo conectar a la base de pruebas {_test_url.render_as_string(hide_password=True)}\n"
+        f"{exc}\n"
+        f"¿Existe la base? Créala con: docker exec odontonet-db createdb -U {_test_url.username} {_test_url.database}\n"
+        "Si definiste TEST_DATABASE_URL a mano, elimínala con: Remove-Item Env:TEST_DATABASE_URL",
         returncode=2,
     )
-
-if not (make_url(TEST_DATABASE_URL).database or "").endswith("_test"):
-    pytest.exit("TEST_DATABASE_URL debe apuntar a una base cuyo nombre termine en _test.", returncode=2)
 
 # Debe definirse antes de importar la app: load_dotenv no sobrescribe variables existentes.
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
