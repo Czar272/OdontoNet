@@ -53,7 +53,7 @@ OdontoNet/
 
 ## Inicio rápido (Windows / PowerShell)
 
-**Requisitos:** Git, Docker Desktop con Compose, Python 3.11, Node.js y npm compatibles con `frontend/package.json`.
+**Requisitos:** Git, Docker Desktop con Compose, Python 3.11, Node.js 22.22.2+ (ver `engines` en `frontend/package.json`).
 
 ```powershell
 Copy-Item .env.example .env

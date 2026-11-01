@@ -4,7 +4,7 @@
 
 - Windows y PowerShell (comandos documentados); Linux/macOS requieren adaptar la activación del entorno virtual.
 - Python 3.11 disponible mediante `py -3.11`.
-- Node.js/npm compatibles con Vite 8 y las versiones indicadas en `frontend/package.json`; comprobar requisitos de Node antes de instalar.
+- Node.js 22.22.2 o superior dentro de la línea 22 (o 24.15+), según `engines` de `frontend/package.json`; jsdom, usado por las pruebas, no admite versiones anteriores. Verificar con `node -v`.
 - Docker Desktop con Docker Compose.
 - Git.
 
@@ -213,6 +213,9 @@ Comprobaciones manuales:
 | `alembic current` distinto de `heads` | Migraciones pendientes; revisar antes de aplicar.                            |
 | `IntegrityError` con `clinic_id`      | Base sin migrar: ejecutar `alembic upgrade head`; no desactivar la FK.       |
 | CORS bloqueado                        | Agregar el origen del frontend a `CORS_ORIGINS` en `backend/.env`.           |
+| `npm ci` → `EPERM ... unlink *.node`  | Un proceso usa `node_modules` (`npm run dev`, Vitest, VS Code). Detenerlo, cerrar esa terminal y repetir `npm ci`. |
+| `EBADENGINE` al instalar              | Node.js anterior a lo indicado en `engines`; actualizar Node (ver Requisitos). |
+| La salida de npm no aparece en `logs/terminal` | PowerShell 5.1 no transcribe lo que los programas externos escriben directo en consola; usar `npm test 2>&1 \| Out-Host`. |
 
 ## 9. Seguridad operativa
 
