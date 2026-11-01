@@ -7,6 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.api.auth_routes import router as auth_router
+from app.api.clinic_routes import router as clinic_router
 from app.api.doctor_routes import router as doctor_router
 from app.api.patient_routes import router as patient_router
 from app.api.user_routes import router as user_router
@@ -25,6 +26,7 @@ app = FastAPI(
 register_exception_handlers(app)
 
 app.include_router(auth_router)
+app.include_router(clinic_router)
 app.include_router(patient_router)
 app.include_router(doctor_router)
 app.include_router(user_router)

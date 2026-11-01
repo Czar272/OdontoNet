@@ -1,12 +1,26 @@
-from pydantic import BaseModel
+from typing import Optional
+
+from pydantic import BaseModel, EmailStr, constr, validator
+
+ClinicName = constr(strip_whitespace=True, min_length=1, max_length=120)
 
 
-class ClinicCreate(BaseModel):
+class ClinicUpdate(BaseModel):
+    """Edición parcial de la clínica del administrador autenticado (ODON-74).
 
-    name: str
-    address: str | None = None
-    phone: str | None = None
-    email: str | None = None
+    No incluye id: la clínica siempre es la de la sesión. Enviar "" o null en
+    dirección, teléfono o correo borra el dato; el nombre es obligatorio."""
+
+    name: Optional[ClinicName] = None
+    address: Optional[constr(strip_whitespace=True, max_length=255)] = None
+    phone: Optional[constr(strip_whitespace=True, max_length=30)] = None
+    email: Optional[EmailStr] = None
+
+    @validator("address", "phone", "email", pre=True)
+    def empty_string_to_none(cls, value):
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
 
 class ClinicResponse(BaseModel):
