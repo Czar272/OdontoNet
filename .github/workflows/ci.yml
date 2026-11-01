@@ -1,0 +1,80 @@
+# Pruebas automáticas en cada push y pull request (ODON-256).
+# Corren en servidores de GitHub: no usan tu máquina ni tu base local.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: odontonet
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: odontonet_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U odontonet -d odontonet_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Credenciales desechables, solo existen dentro de este job.
+      TEST_DATABASE_URL: postgresql://odontonet:ci-only-password@localhost:5432/odontonet_test
+      SECRET_KEY: ci-only-secret-key
+      BCRYPT_ROUNDS: "4"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+
+      - name: Instalar dependencias
+        run: pip install -r requirements-dev.txt
+
+      - name: Pruebas
+        run: python -m pytest -p no:cacheprovider
+
+  frontend:
+    name: Frontend (lint, test, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
