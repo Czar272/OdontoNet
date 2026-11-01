@@ -1,3 +1,4 @@
+import logging
 import os
 
 from fastapi import Depends, FastAPI, HTTPException, status
@@ -13,6 +14,15 @@ from app.api.patient_routes import router as patient_router
 from app.api.user_routes import router as user_router
 from app.core.errors import register_exception_handlers
 from app.database.dependencies import get_db
+
+# Loggers propios (odontonet.api, odontonet.audit): nivel INFO a la consola,
+# donde uvicorn ya escribe. La auditoría persistente se diseña en ODON-222.
+_app_logger = logging.getLogger("odontonet")
+if not _app_logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+    _app_logger.addHandler(_handler)
+    _app_logger.setLevel(logging.INFO)
 
 app = FastAPI(
     title="OdontoNet API",

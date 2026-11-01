@@ -1,13 +1,20 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, joinedload
 
-from app.auth.dependencies import get_current_clinic_id
+from app.auth.dependencies import get_current_clinic_id, get_current_user
 from app.auth.permissions import ALL_ROLES, require_roles
 from app.database.dependencies import get_db
 from app.models.doctor import Doctor
 from app.models.patient import Patient
-from app.schemas.patient_schema import PatientCreate, PatientResponse
+from app.models.user import User
+from app.schemas.patient_schema import PatientCreate, PatientResponse, PatientUpdate
+
+# Eventos de auditoría (sin datos personales: solo ids y nombres de campos).
+# La auditoría persistente se diseña en ODON-222.
+audit_logger = logging.getLogger("odontonet.audit")
 
 # Administración, doctores y recepción gestionan pacientes (docs/PERMISSIONS.md).
 router = APIRouter(
@@ -49,20 +56,8 @@ def _ensure_doctor_in_clinic(db: Session, doctor_id: int, clinic_id: int) -> Non
         )
 
 
-@router.post("/", response_model=PatientResponse, status_code=status.HTTP_201_CREATED)
-def create_patient(
-    patient: PatientCreate,
-    db: Session = Depends(get_db),
-    clinic_id: int = Depends(get_current_clinic_id),
-):
-
-    if patient.doctor_id is not None:
-        _ensure_doctor_in_clinic(db, patient.doctor_id, clinic_id)
-
-    new_patient = Patient(**patient.dict(), clinic_id=clinic_id)
-
-    db.add(new_patient)
-
+def _commit(db: Session) -> None:
+    """Guarda y traduce las restricciones de la base a errores de la API."""
     try:
         db.commit()
     except IntegrityError as exc:
@@ -78,6 +73,23 @@ def create_patient(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="El doctor seleccionado no pertenece a la clínica.",
         )
+
+
+@router.post("/", response_model=PatientResponse, status_code=status.HTTP_201_CREATED)
+def create_patient(
+    patient: PatientCreate,
+    db: Session = Depends(get_db),
+    clinic_id: int = Depends(get_current_clinic_id),
+):
+
+    if patient.doctor_id is not None:
+        _ensure_doctor_in_clinic(db, patient.doctor_id, clinic_id)
+
+    new_patient = Patient(**patient.dict(), clinic_id=clinic_id)
+
+    db.add(new_patient)
+
+    _commit(db)
 
     return _clinic_patients(db, clinic_id).filter(Patient.id == new_patient.id).one()
 
@@ -106,3 +118,55 @@ def get_patient(
         )
 
     return patient
+
+
+@router.patch("/{patient_id}", response_model=PatientResponse)
+def update_patient(
+    patient_id: int,
+    changes: PatientUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    clinic_id: int = Depends(get_current_clinic_id),
+):
+    """Edita datos del paciente o reasigna su doctor (ODON-118)."""
+    patient = _clinic_patients(db, clinic_id).filter(Patient.id == patient_id).first()
+
+    if not patient:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Paciente no encontrado."
+        )
+
+    data = changes.dict(exclude_unset=True)
+
+    for required in ("first_name", "last_name"):
+        if required in data and data[required] is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Nombres y apellidos son obligatorios.",
+            )
+
+    previous_doctor_id = patient.doctor_id
+    new_doctor_id = data.get("doctor_id", previous_doctor_id)
+    # Solo se valida si cambia: editar el teléfono de un paciente cuyo doctor
+    # se desactivó no debe fallar.
+    if new_doctor_id != previous_doctor_id and new_doctor_id is not None:
+        _ensure_doctor_in_clinic(db, new_doctor_id, clinic_id)
+
+    changed = [field for field, value in data.items() if getattr(patient, field) != value]
+    for field in changed:
+        setattr(patient, field, data[field])
+
+    if changed:
+        _commit(db)
+        audit_logger.info(
+            "patient.updated patient_id=%s user_id=%s clinic_id=%s fields=%s",
+            patient.id, current_user.id, clinic_id, ",".join(sorted(changed)),
+        )
+        if "doctor_id" in changed:
+            audit_logger.info(
+                "patient.doctor_changed patient_id=%s user_id=%s from=%s to=%s",
+                patient.id, current_user.id, previous_doctor_id, new_doctor_id,
+            )
+
+    db.expire_all()
+    return _clinic_patients(db, clinic_id).filter(Patient.id == patient_id).one()
