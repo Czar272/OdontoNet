@@ -28,13 +28,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setToken(token);
 
-      toast.success("Login Successful");
+      toast.success("Sesión iniciada");
 
       return true;
     } catch (error) {
       console.error(error);
 
-      toast.error("Credenciales Invalidas");
+      toast.error("Credenciales inválidas");
 
       return false;
     }

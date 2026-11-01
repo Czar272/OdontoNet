@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 
 import LoginPage from "../pages/Auth/LoginPage";
 import DashboardPage from "../pages/Dashboard/DashboardPage";
@@ -26,6 +26,9 @@ export default function AppRouter() {
 
           <Route path="/patients" element={<PatientsPage />} />
         </Route>
+
+        {/* Rutas desconocidas: login o dashboard según la sesión */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

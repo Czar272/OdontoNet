@@ -10,7 +10,7 @@ export default function ProtectedRoute({
   const { token } = useAuth();
 
   if (!token) {
-    return <Navigate to="/" />;
+    return <Navigate to="/" replace />;
   }
 
   return children;

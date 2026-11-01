@@ -1,57 +1,65 @@
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
+
+import Button from "../../components/basic/Button";
+import Input from "../../components/basic/Input";
 import { useAuth } from "../../context/AuthContext";
-import { useEffect, useState } from "react";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { token, login } = useAuth();
 
-  const { login } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
+  if (token) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
-  async function handleLogin() {
-    const succes = await login(email, password);
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setIsSubmitting(true);
 
-    if (succes) {
-      navigate("/dashboard");
-    } else {
-      alert("Invalid credentials");
+    const success = await login(email, password);
+
+    setIsSubmitting(false);
+
+    if (success) {
+      navigate("/dashboard", { replace: true });
     }
   }
 
-  useEffect(() => {
-    console.warn("Email: ", email, "Password: ", password);
-  }, [email, password]);
-
   return (
-    <div className="h-screen flex items-center justify-center bg-gray-900">
-      <div className="bg-white p-10 rounded-2xl shadow-lg w-96">
-        <h1 className="text-3xl font-bold mb-6 text-center">OdontoNet</h1>
+    <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white p-10 rounded-2xl shadow-lg w-full max-w-sm flex flex-col gap-4"
+      >
+        <h1 className="text-3xl font-bold mb-2 text-center">OdontoNet</h1>
 
-        <input
+        <Input
+          label="Correo electrónico"
           type="email"
-          placeholder="Email"
-          className="w-full border p-3 rounded-lg mb-4"
+          autoComplete="username"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          required
         />
 
-        <input
+        <Input
+          label="Contraseña"
           type="password"
-          placeholder="Password"
-          className="w-full border p-3 rounded-lg mb-6"
+          autoComplete="current-password"
           value={password}
-          onChange={(p) => setPassword(p.target.value)}
+          onChange={(e) => setPassword(e.target.value)}
+          required
         />
 
-        <button
-          className="w-full bg-gray-900 text-white p-3 rounded-lg hover:bg-gray-800"
-          onClick={handleLogin}
-        >
-          Login
-        </button>
-      </div>
+        <Button type="submit" disabled={isSubmitting} className="w-full mt-2">
+          {isSubmitting ? "Ingresando..." : "Iniciar sesión"}
+        </Button>
+      </form>
     </div>
   );
 }
