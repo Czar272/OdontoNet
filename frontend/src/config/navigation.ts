@@ -13,6 +13,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: "/patients", label: "Pacientes", permission: "patients:view" },
   { to: "/doctors", label: "Doctores", permission: "doctors:view" },
   { to: "/users", label: "Usuarios", permission: "users:manage" },
+  { to: "/clinic", label: "Clínica", permission: "clinic:view" },
 ];
 
 /** Opciones del menú visibles para un rol. */

@@ -28,6 +28,8 @@ export interface AuthContextType {
   loggedOutManually: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
   logout: () => void;
+  /** Vuelve a leer /auth/me (por ejemplo, tras renombrar la clínica). */
+  refreshUser: () => Promise<void>;
 }
 
 // Exportado para pruebas: permite simular una sesión sin llamar a la API.
@@ -120,8 +122,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     toast.success("Sesión cerrada");
   }, [clearSession]);
 
+  const refreshUser = useCallback(async () => {
+    // Un 401 aquí lo gestiona el interceptor; otros errores no cierran la sesión.
+    try {
+      setUser(await getCurrentUser());
+    } catch {
+      /* se conserva el usuario actual */
+    }
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ status, user, loggedOutManually, login, logout }}>
+    <AuthContext.Provider
+      value={{ status, user, loggedOutManually, login, logout, refreshUser }}
+    >
       {children}
     </AuthContext.Provider>
   );

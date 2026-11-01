@@ -13,6 +13,8 @@ export const PERMISSIONS = {
   "doctors:view": ["admin", "doctor", "receptionist"],
   "doctors:manage": ["admin"],
   "users:manage": ["admin"],
+  "clinic:view": ["admin", "doctor", "receptionist"],
+  "clinic:manage": ["admin"],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

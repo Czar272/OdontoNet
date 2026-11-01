@@ -26,6 +26,7 @@ export function renderWithAuth(ui: React.ReactElement, role: Role | null) {
     loggedOutManually: false,
     login: async () => true,
     logout: () => {},
+    refreshUser: async () => {},
   };
 
   const queryClient = new QueryClient({

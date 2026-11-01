@@ -10,6 +10,8 @@ const EXPECTED: Record<Permission, Record<Role, boolean>> = {
   "doctors:view": { admin: true, doctor: true, receptionist: true },
   "doctors:manage": { admin: true, doctor: false, receptionist: false },
   "users:manage": { admin: true, doctor: false, receptionist: false },
+  "clinic:view": { admin: true, doctor: true, receptionist: true },
+  "clinic:manage": { admin: true, doctor: false, receptionist: false },
 };
 
 describe("hasPermission", () => {

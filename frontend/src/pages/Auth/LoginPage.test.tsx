@@ -13,6 +13,7 @@ function renderLogin() {
     loggedOutManually: false,
     login,
     logout: () => {},
+    refreshUser: async () => {},
   };
 
   render(
