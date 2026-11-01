@@ -10,7 +10,7 @@ from app.auth.permissions import ALL_ROLES, Role, require_roles
 from app.database.dependencies import get_db
 from app.models.doctor import Doctor
 from app.models.user import User
-from app.schemas.doctor_schema import DoctorCreate, DoctorResponse
+from app.schemas.doctor_schema import DoctorCreate, DoctorResponse, DoctorUpdate
 
 # Todos los roles consultan doctores; solo administración crea perfiles (docs/PERMISSIONS.md).
 router = APIRouter(
@@ -50,6 +50,12 @@ def create_doctor(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="El usuario no pertenece a la clínica.",
+        )
+
+    if user.role != Role.DOCTOR.value:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="El usuario no tiene rol de doctor.",
         )
 
     if db.query(Doctor.id).filter(Doctor.user_id == user.id).first():
@@ -109,3 +115,31 @@ def get_doctor(
         )
 
     return doctor
+
+
+@router.patch(
+    "/{doctor_id}",
+    response_model=DoctorResponse,
+    dependencies=[Depends(require_roles(Role.ADMIN))],
+)
+def update_doctor(
+    doctor_id: int,
+    changes: DoctorUpdate,
+    db: Session = Depends(get_db),
+    clinic_id: int = Depends(get_current_clinic_id),
+):
+    """Edita especialidad, colegiado o teléfono. Solo cambian los campos
+    enviados; enviar null o "" borra ese dato."""
+
+    doctor = _clinic_doctors(db, clinic_id).filter(Doctor.id == doctor_id).first()
+
+    if not doctor:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Doctor no encontrado."
+        )
+
+    for field, value in changes.dict(exclude_unset=True).items():
+        setattr(doctor, field, value)
+    db.commit()
+
+    return _clinic_doctors(db, clinic_id).filter(Doctor.id == doctor_id).one()
