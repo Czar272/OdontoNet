@@ -127,12 +127,16 @@ npm run dev
 
 Abrir http://localhost:5173. Por defecto el frontend llama a la API en `http://127.0.0.1:8000`; para otra URL, copia `frontend/.env.example` a `frontend/.env` y ajusta `VITE_API_URL` (requiere reiniciar `npm run dev`).
 
-Para comprobar compilación y lint (verificados sin errores en ODON-18):
+Para comprobar pruebas, compilación y lint:
 
 ```powershell
-npm run build
+npm test            # pruebas unitarias (Vitest + Testing Library)
+npm run test:watch  # modo continuo mientras se desarrolla
 npm run lint
+npm run build
 ```
+
+Las pruebas viven junto al código (`*.test.ts(x)`); `src/test/renderWithAuth.tsx` permite renderizar componentes con una sesión simulada de cualquier rol.
 
 ## 5. Datos iniciales
 

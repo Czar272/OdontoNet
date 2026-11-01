@@ -30,7 +30,7 @@
 
 - Backend: `python -m pytest` en `backend/` contra una base PostgreSQL `*_test` (nunca la de desarrollo). Todo endpoint nuevo debe probar aislamiento entre clínicas y permisos por rol.
 - Cada prueba lleva al menos una categoría (`auth`, `patients`, `doctors`, `users`, `api`, `seed`, `isolation`, `rbac`); un módulo nuevo agrega su categoría en `pytest.ini` y en `TEST_CATEGORIES` de `tests/conftest.py`.
-- Frontend: `npm run lint` y `npm run build` sin errores antes de cada commit.
+- Frontend: `npm test`, `npm run lint` y `npm run build` sin errores antes de cada commit. Una pantalla restringida declara su permiso en `auth/permissions.ts` y se prueba con los tres roles.
 - Migraciones: seguir el checklist de `DEVELOPMENT.md` y `scripts/dev/verify-infra.ps1`.
 
 ## Seguridad y privacidad

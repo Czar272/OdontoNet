@@ -24,7 +24,8 @@ PostgreSQL 16 (Docker Compose)
 ### Frontend
 
 - `src/pages/`: inicio de sesión, inicio (dashboard) y pacientes. Interfaz en español.
-- `src/routes/`: router, ruta protegida (espera la verificación de sesión y recuerda la ruta solicitada) y ruta comodín.
+- `src/routes/`: router, ruta protegida (espera la verificación de sesión y recuerda la ruta solicitada), `RequirePermission` (página "Acceso denegado" si el rol no tiene permiso) y ruta comodín.
+- `src/auth/permissions.ts`, `src/config/navigation.ts`, `src/hooks/usePermission.ts`: permisos por rol reflejados de `PERMISSIONS.md`; el menú y las acciones se muestran según el rol. El backend sigue siendo la autoridad.
 - `src/layouts/`: barra lateral con clínica, usuario, rol, navegación activa y cierre de sesión.
 - `src/context/AuthContext.tsx`: sesión con estados `loading` / `authenticated` / `unauthenticated`; restaura usuario y clínica con `/auth/me` al cargar; login, logout y cierre automático ante un `401`.
 - `src/services/`: cliente Axios (`VITE_API_URL`) con interceptor de `401`, `session.ts` (token), servicios por recurso y `apiError.ts` para mostrar el `detail` de la API.
@@ -98,7 +99,6 @@ Estas limitaciones son **bloqueantes para un despliegue con datos reales**.
 
 ## Evolución prevista
 
-- Navegación por rol en el frontend.
 - CRUD completo de pacientes y personal.
 - Agenda compartida por clínica, expedientes y periodontograma manual.
 - Gestión privada de imágenes clínicas.
