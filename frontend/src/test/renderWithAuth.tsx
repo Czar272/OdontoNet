@@ -1,4 +1,5 @@
 import { render } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 
 import { AuthContext, type AuthContextType } from "../context/AuthContext";
@@ -14,7 +15,10 @@ export function fakeUser(role: Role): CurrentUser {
   };
 }
 
-/** Renderiza con una sesión simulada (sin llamadas a la API). */
+/**
+ * Renderiza con una sesión simulada y un QueryClient propio (sin reintentos).
+ * Las llamadas a la API se simulan en cada prueba con vi.mock.
+ */
 export function renderWithAuth(ui: React.ReactElement, role: Role | null) {
   const value: AuthContextType = {
     status: role ? "authenticated" : "unauthenticated",
@@ -24,9 +28,15 @@ export function renderWithAuth(ui: React.ReactElement, role: Role | null) {
     logout: () => {},
   };
 
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+
   return render(
-    <AuthContext.Provider value={value}>
-      <MemoryRouter>{ui}</MemoryRouter>
-    </AuthContext.Provider>,
+    <QueryClientProvider client={queryClient}>
+      <AuthContext.Provider value={value}>
+        <MemoryRouter>{ui}</MemoryRouter>
+      </AuthContext.Provider>
+    </QueryClientProvider>,
   );
 }

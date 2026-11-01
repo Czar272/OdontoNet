@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import LoginPage from "../pages/Auth/LoginPage";
 import DashboardPage from "../pages/Dashboard/DashboardPage";
 import PatientsPage from "../pages/Patients/PatientsPage";
+import UsersPage from "../pages/Users/UsersPage";
 
 import MainLayout from "../layouts/MainLayout";
 import ProtectedRoute from "./ProtectedRoute";
@@ -30,6 +31,15 @@ export default function AppRouter() {
             element={
               <RequirePermission permission="patients:view">
                 <PatientsPage />
+              </RequirePermission>
+            }
+          />
+
+          <Route
+            path="/users"
+            element={
+              <RequirePermission permission="users:manage">
+                <UsersPage />
               </RequirePermission>
             }
           />

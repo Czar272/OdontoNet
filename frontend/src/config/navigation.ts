@@ -11,6 +11,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { to: "/dashboard", label: "Inicio" },
   { to: "/patients", label: "Pacientes", permission: "patients:view" },
+  { to: "/users", label: "Usuarios", permission: "users:manage" },
 ];
 
 /** Opciones del menú visibles para un rol. */
