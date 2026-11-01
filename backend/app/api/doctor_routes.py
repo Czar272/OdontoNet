@@ -2,6 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi import Query as QueryParam
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, joinedload
 
 from app.auth.dependencies import get_current_clinic_id
@@ -59,7 +60,15 @@ def create_doctor(
 
     new_doctor = Doctor(**doctor.dict(), clinic_id=clinic_id)
     db.add(new_doctor)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Dos altas simultáneas: la restricción uq_doctors_user_id decide.
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="El usuario ya tiene un perfil de doctor.",
+        )
 
     return _clinic_doctors(db, clinic_id).filter(Doctor.id == new_doctor.id).one()
 
