@@ -31,13 +31,24 @@
 | --- | :---: | :---: | :---: |
 | `POST /auth/login` | público | público | público |
 | `GET /auth/me` | ✅ | ✅ | ✅ |
-| `POST /auth/register` (crear usuario en su clínica) | ✅ | ⛔ | ⛔ |
+| `POST /auth/register` (crear usuario en su clínica; equivale a `POST /users/`) | ✅ | ⛔ | ⛔ |
+| `GET /users/`, `GET /users/{id}` (personal de su clínica) | ✅ | ⛔ | ⛔ |
+| `POST /users/`, `PATCH /users/{id}` (alta y edición) | ✅ | ⛔ | ⛔ |
 | `GET /patients/`, `GET /patients/{id}` | ✅ | ✅ | ✅ |
 | `POST /patients/` | ✅ | ✅ | ✅ |
 | `GET /doctors/`, `GET /doctors/{id}` | ✅ | ✅ | ✅ |
 | `POST /doctors/` (crear perfil de doctor) | ✅ | ⛔ | ⛔ |
 
-Verificado por `backend/tests/test_rbac.py`.
+Verificado por `backend/tests/test_rbac.py` y `backend/tests/test_users.py`.
+
+### Reglas de gestión de usuarios (ODON-86)
+
+- La clínica del usuario creado es siempre la del administrador; un `clinic_id` enviado se ignora y no se puede cambiar al editar.
+- El correo es único en todo el sistema (identifica el inicio de sesión): `409` si ya existe.
+- Un administrador no puede cambiar su propio rol, para que la clínica no se quede sin administración.
+- El rol de un usuario con perfil de doctor no se puede cambiar mientras exista el perfil (`409`).
+- La contraseña nunca se devuelve; enviarla en `PATCH` la restablece.
+- Cambiar el correo de un usuario invalida su sesión actual (el token se identifica por correo), así que debe volver a iniciar sesión.
 
 ## Módulos futuros (decidido el 2026-10-31)
 
@@ -51,7 +62,7 @@ Se implementarán con esta matriz cuando se desarrolle cada módulo.
 | Expediente clínico (antecedentes, notas, tratamientos) | ✅ | ✅ | ⛔ |
 | Imágenes clínicas | ✅ | ✅ | ⛔ |
 | Periodontograma | ✅ | ✅ | ⛔ |
-| Usuarios, desactivación y configuración de clínica | ✅ | ⛔ | ⛔ |
+| Desactivación de usuarios y configuración de clínica | ✅ | ⛔ | ⛔ |
 | Reportes operativos | ✅ | ✅ | ✅ sin datos clínicos |
 
 **Decisiones:**

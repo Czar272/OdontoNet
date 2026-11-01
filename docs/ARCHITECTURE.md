@@ -29,13 +29,14 @@ PostgreSQL 16 (Docker Compose)
 - `src/layouts/`: barra lateral con clínica, usuario, rol, navegación activa y cierre de sesión.
 - `src/context/AuthContext.tsx`: sesión con estados `loading` / `authenticated` / `unauthenticated`; restaura usuario y clínica con `/auth/me` al cargar; login, logout y cierre automático ante un `401`.
 - `src/services/`: cliente Axios (`VITE_API_URL`) con interceptor de `401`, `session.ts` (token), servicios por recurso y `apiError.ts` para mostrar el `detail` de la API.
-- `src/components/basic/`: Button, Input, Select, Modal, Table, Card, PageHeader, LoadingSpinner (accesibles); `src/components/patients/`: formulario del dominio.
+- `src/components/basic/`: Button, Input, Select, Modal, Table, Card, PageHeader, LoadingSpinner (accesibles); `src/components/<dominio>/`: formularios de pacientes y usuarios.
 - `src/types/`: contratos TypeScript mantenidos manualmente.
 
 ### Backend
 
 - `app/main.py`: instancia FastAPI, routers, manejadores de error, CORS (`CORS_ORIGINS`) y `/health`.
-- `app/api/`: rutas `/auth`, `/patients`, `/doctors`.
+- `app/api/`: rutas `/auth`, `/patients`, `/doctors`, `/users`.
+- `app/services/`: reglas de negocio compartidas entre rutas (`user_service.py`: alta y edición de usuarios).
 - `app/auth/`: hash de contraseñas, JWT, usuario actual (`get_current_user`), clínica actual (`get_current_clinic_id`) y roles (`permissions.py`, `require_roles`).
 - `app/core/errors.py`: formato único de errores.
 - `app/models/`: Clinic, User, Doctor y Patient.

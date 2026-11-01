@@ -74,7 +74,7 @@ Si `odonto_venv` ya existe, omite su creación. `alembic current` y `alembic hea
 - Swagger: http://127.0.0.1:8000/docs
 - Estado de API y base de datos: http://127.0.0.1:8000/health
 
-Los endpoints `/auth/me`, `/patients/` y `/doctors/` **requieren** JWT y devuelven solo datos de la clínica del usuario autenticado. Para probarlo, usa `POST /auth/login`, copia `access_token`, presiona `Authorize` en Swagger y ejecuta `GET /auth/me`. Sin token, la API responde `401 {"detail": "No autenticado."}`; es lo esperado al abrir un endpoint protegido en el navegador.
+Los endpoints `/auth/me`, `/patients/`, `/doctors/` y `/users/` **requieren** JWT y devuelven solo datos de la clínica del usuario autenticado. Para probarlo, usa `POST /auth/login`, copia `access_token`, presiona `Authorize` en Swagger y ejecuta `GET /auth/me`. Sin token, la API responde `401 {"detail": "No autenticado."}`; es lo esperado al abrir un endpoint protegido en el navegador.
 
 ### Pruebas automatizadas del backend
 
@@ -98,7 +98,7 @@ Cada prueba pertenece al menos a una categoría (marcador de pytest), según el 
 | `auth` | Login, tokens, `/auth/me`, usuarios inactivos |
 | `patients` | Endpoints y validación de pacientes |
 | `doctors` | Endpoints de doctores |
-| `users` | Alta de usuarios por administración |
+| `users` | Gestión de usuarios por administración (`/users`, `/auth/register`) |
 | `api` | Contrato: OpenAPI, `/health`, formato de errores |
 | `seed` | Seed sintético de desarrollo |
 | `isolation` | Aislamiento entre clínicas (transversal) |
