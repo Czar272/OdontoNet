@@ -3,12 +3,18 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, joinedload
 
 from app.auth.dependencies import get_current_clinic_id
+from app.auth.permissions import ALL_ROLES, require_roles
 from app.database.dependencies import get_db
 from app.models.doctor import Doctor
 from app.models.patient import Patient
 from app.schemas.patient_schema import PatientCreate, PatientResponse
 
-router = APIRouter(prefix="/patients", tags=["Patients"])
+# Administración, doctores y recepción gestionan pacientes (docs/PERMISSIONS.md).
+router = APIRouter(
+    prefix="/patients",
+    tags=["Patients"],
+    dependencies=[Depends(require_roles(*ALL_ROLES))],
+)
 
 
 def _clinic_patients(db: Session, clinic_id: int) -> Query:
@@ -81,7 +87,7 @@ def get_patient(
 
     if not patient:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Paciente no encontrado"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Paciente no encontrado."
         )
 
     return patient

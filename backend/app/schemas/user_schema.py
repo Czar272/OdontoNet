@@ -1,11 +1,22 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, constr
+
+from app.auth.permissions import Role
 from app.schemas.clinic_schema import ClinicSimpleResponse
 
 
 class UserCreate(BaseModel):
-    name: str
+    """Alta de usuario por un administrador. La clínica se toma del
+    administrador autenticado; no forma parte del contrato."""
+
+    name: constr(strip_whitespace=True, min_length=1, max_length=120)
     email: EmailStr
-    password: str
+    password: constr(min_length=8, max_length=128)
+    role: Role = Role.DOCTOR
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
 
 
 class UserLogin(BaseModel):

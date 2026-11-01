@@ -5,32 +5,37 @@ from app.database.dependencies import get_db
 from app.auth.jwt_handler import decode_token
 from app.models.user import User
 
-security = HTTPBearer()
+# auto_error=False: la falta de token se responde con 401 (no 403).
+security = HTTPBearer(auto_error=False)
+
+
+def _unauthorized(detail: str) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=detail,
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: Session = Depends(get_db),
 ) -> User:
 
-    token = credentials.credentials
+    if credentials is None:
+        raise _unauthorized("No autenticado.")
 
-    payload = decode_token(token)
+    payload = decode_token(credentials.credentials)
 
     if not payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido o expirado"
-        )
+        raise _unauthorized("Token inválido o expirado.")
 
     email = payload.get("sub")
 
     user = db.query(User).filter(User.email == email).first()
 
     if not user or user.is_active is False:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Usuario no encontrado o inactivo",
-        )
+        raise _unauthorized("Usuario no encontrado o inactivo.")
 
     return user
 

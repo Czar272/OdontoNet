@@ -2,12 +2,18 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Query, Session, joinedload
 
 from app.auth.dependencies import get_current_clinic_id
+from app.auth.permissions import ALL_ROLES, Role, require_roles
 from app.database.dependencies import get_db
 from app.models.doctor import Doctor
 from app.models.user import User
 from app.schemas.doctor_schema import DoctorCreate, DoctorResponse
 
-router = APIRouter(prefix="/doctors", tags=["Doctors"])
+# Todos los roles consultan doctores; solo administración crea perfiles (docs/PERMISSIONS.md).
+router = APIRouter(
+    prefix="/doctors",
+    tags=["Doctors"],
+    dependencies=[Depends(require_roles(*ALL_ROLES))],
+)
 
 
 def _clinic_doctors(db: Session, clinic_id: int) -> Query:
@@ -18,7 +24,12 @@ def _clinic_doctors(db: Session, clinic_id: int) -> Query:
     )
 
 
-@router.post("/", response_model=DoctorResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=DoctorResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles(Role.ADMIN))],
+)
 def create_doctor(
     doctor: DoctorCreate,
     db: Session = Depends(get_db),
@@ -70,7 +81,7 @@ def get_doctor(
 
     if not doctor:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Doctor no encontrado"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Doctor no encontrado."
         )
 
     return doctor
