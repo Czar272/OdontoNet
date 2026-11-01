@@ -13,8 +13,13 @@ import { usePermission } from "../../hooks/usePermission";
 import { getDoctors } from "../../services/doctorService";
 import { getPatients } from "../../services/patientService";
 
+/** Minúsculas y sin tildes: "jose" encuentra a "José". */
+function normalize(text: string): string {
+  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 const PatientsPage: React.FC = () => {
-  const { data: patients, isLoading } = useQuery({
+  const { data: patients, isLoading, isError } = useQuery({
     queryKey: ["patients"],
     queryFn: getPatients,
   });
@@ -34,11 +39,12 @@ const PatientsPage: React.FC = () => {
   const filteredPatients = useMemo(() => {
     if (!patients) return [];
 
-    const term = search.trim().toLowerCase();
+    const term = normalize(search.trim());
 
     return patients.filter((p) => {
-      const fullName = `${p.first_name} ${p.last_name}`.toLowerCase();
-      const matchesSearch = fullName.includes(term);
+      const fullName = normalize(`${p.first_name} ${p.last_name}`);
+      const reversed = normalize(`${p.last_name} ${p.first_name}`);
+      const matchesSearch = fullName.includes(term) || reversed.includes(term);
       const matchesDoctor = !doctorFilter || p.doctor?.id === doctorFilter;
 
       return matchesSearch && matchesDoctor;
@@ -128,7 +134,25 @@ const PatientsPage: React.FC = () => {
           {filteredPatients.length === 0 && (
             <tr className="border-t">
               <td colSpan={4} className="p-6 text-center text-gray-500">
-                No hay pacientes que coincidan con la búsqueda.
+                {isError ? (
+                  "No se pudieron cargar los pacientes."
+                ) : patients && patients.length > 0 ? (
+                  <>
+                    No hay pacientes que coincidan con la búsqueda.{" "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearch("");
+                        setDoctorFilter(undefined);
+                      }}
+                      className="underline text-gray-700 hover:text-gray-900"
+                    >
+                      Limpiar filtros
+                    </button>
+                  </>
+                ) : (
+                  "Todavía no hay pacientes registrados en la clínica."
+                )}
               </td>
             </tr>
           )}
