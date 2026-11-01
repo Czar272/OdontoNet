@@ -65,7 +65,7 @@ Doctor 1 ── * Patient (asignación opcional del paciente)
 
 - Las rutas actuales de pacientes y doctores no requieren `get_current_user` ni aplican filtro por clínica.
 - `POST /auth/register` no incorpora todavía asignación segura de clínica ni restricciones de rol; con `clinic_id` obligatorio puede fallar.
-- `POST /patients/` no deriva `clinic_id` del usuario autenticado y puede fallar por integridad referencial.
+- `/patients/` y `/doctors/` exigen JWT y filtran por la clínica del usuario (ODON-62). Falta aplicar la matriz de roles (ODON-66).
 - La existencia de JWT no equivale a un sistema de permisos completo.
 - No se ha implementado aún un mecanismo de incorporación de clínicas ni importación validada de bases de datos externas.
 

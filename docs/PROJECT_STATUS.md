@@ -2,7 +2,7 @@
 
 > Documento de continuidad técnica. Jira es la fuente de verdad de los estados de los tickets y Git es la fuente de verdad del código.
 
-**Última actualización:** 2026-10-31 (cierre de ODON-14).
+**Última actualización:** 2026-10-31 (ODON-62 aislamiento por clínica).
 
 ## Alcance
 
@@ -32,20 +32,23 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre doctor
 
 ## Limitaciones y riesgos prioritarios
 
-1. **Bloqueante:** `/patients/` y `/doctors/` carecen de control de acceso y filtro por clínica.
-2. **Bloqueante:** `/auth/register` no aprovisiona una clínica de forma segura y puede fallar por `clinic_id` obligatorio.
-3. **Bloqueante:** la creación de pacientes no deriva `clinic_id` del usuario autenticado.
-4. **Seguridad:** el historial público de Git contiene un `.env` antiguo (commit `7081a3d`) con la `DATABASE_URL` de desarrollo, cuya contraseña sigue en uso. Riesgo bajo (base local). Script de rotación preparado en `scripts/dev/rotate-db-password.ps1`; pendiente de ejecutar. No se reescribe el historial sin autorización explícita.
+1. **Resuelto (ODON-62):** `/patients/` y `/doctors/` exigen JWT, filtran por la clínica del token y toman `clinic_id` de la sesión. Correo de paciente único por clínica (migración `4c1d2e8f9a10`). 23 pruebas cruzadas entre dos clínicas.
+2. **Bloqueante:** `/auth/register` no aprovisiona una clínica de forma segura y puede fallar por `clinic_id` obligatorio (ODON-86 / ODON-74).
+3. **Pendiente (ODON-66):** sin matriz de roles; cualquier usuario autenticado puede crear perfiles de doctor en su clínica.
+4. **Seguridad:** el historial público de Git contiene un `.env` antiguo (commit `7081a3d`) con la `DATABASE_URL` de desarrollo. **Mitigado:** la contraseña se rotó el 2026-10-31 con `scripts/dev/rotate-db-password.ps1`, por lo que la credencial del historial ya no es válida. No se reescribe el historial sin autorización explícita.
 5. **Deuda técnica:** `requirements.txt` es un `pip freeze` completo (incluye dependencias transitivas y `pydantic-core`, que no usa Pydantic 1). Conviene separar dependencias directas en una historia posterior.
-6. **Pendiente:** AuthContext v2 con `/auth/me`, verificación de sesión y usuario/clínica actuales.
-7. **Pendiente:** CRUD completo, agenda, expedientes, imágenes, periodontograma manual, pruebas y despliegue.
-8. **Decisión:** `seed.py` permanece local y excluido de Git; la importación de datos de clínicas será una funcionalidad independiente futura.
+6. **Deuda frontend:** sin manejo de token expirado (401) ni datos de usuario/clínica en sesión; interfaz unificada en español (decisión 2026-10-31); layout sin versión móvil; `PatientForm` no reutiliza `Input`/`Button`.
+7. **Pendiente:** AuthContext v2 con `/auth/me`, verificación de sesión y usuario/clínica actuales.
+8. **Pendiente:** CRUD completo, agenda, expedientes, imágenes, periodontograma manual, pruebas y despliegue.
+9. **Decisión:** `seed.py` permanece local y excluido de Git; la importación de datos de clínicas será una funcionalidad independiente futura.
 
 ## Jira — situación conocida
 
 - Proyecto `ODON`: 13 épicas, 60 historias, 180 subtareas importadas.
 - Épica `ODON-1`: arquitectura e infraestructura.
 - Historia `ODON-14`: estructura monorepositorio y convenciones — Done (`npm ci` y `npm run dev` verificados en Windows).
+- Historia `ODON-62`: aislamiento backend por `clinic_id` — Testing.
+- Historia `ODON-18`: frontend base — Testing. Corregido: registro de contraseña en consola en el login, formulario con Enter, logout, rutas comodín, NavLink activo, accesibilidad de Input/Modal, `strict` en TypeScript, `VITE_API_URL`. Verificado con lint, build y 19 pruebas E2E con API simulada.
 - `ODON-15`: auditoría de estructura — Done.
 - `ODON-16`: README y convenciones — Done.
 - `ODON-17`: `.gitignore` y configuración de secretos — Done.
@@ -53,8 +56,8 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre doctor
 
 ## Próximo paso
 
-1. Ejecutar `scripts/dev/rotate-db-password.ps1` y verificar el backend con `alembic current`.
-2. Continuar con la auditoría del frontend base (ODON-18).
+1. Aplicar `alembic upgrade head` en la base local, ejecutar `pytest` y crear un paciente desde la interfaz.
+2. Continuar con ODON-22 (backend FastAPI y contratos API) y ODON-66 (roles).
 
 ## Convenciones de colaboración
 

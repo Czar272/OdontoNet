@@ -73,7 +73,23 @@ Si `odonto_venv` ya existe, omite su creación. `alembic current` y `alembic hea
 - API: http://127.0.0.1:8000/
 - Swagger: http://127.0.0.1:8000/docs
 
-El endpoint `/auth/me` **requiere** JWT. Para probarlo, usa `POST /auth/login`, copia `access_token`, presiona `Authorize` en Swagger y ejecuta `GET /auth/me`. Un `403 Not authenticated` al abrirlo directamente en el navegador es esperado en la configuración actual.
+Los endpoints `/auth/me`, `/patients/` y `/doctors/` **requieren** JWT y devuelven solo datos de la clínica del usuario autenticado. Para probarlo, usa `POST /auth/login`, copia `access_token`, presiona `Authorize` en Swagger y ejecuta `GET /auth/me`. Un `403 Not authenticated` al abrirlo directamente en el navegador es esperado en la configuración actual.
+
+### Pruebas automatizadas del backend
+
+Las pruebas usan una base PostgreSQL separada cuyo nombre **debe terminar en `_test`**: vacían sus tablas antes de cada prueba y aplican las migraciones con Alembic. Nunca apuntes `TEST_DATABASE_URL` a la base de desarrollo.
+
+```powershell
+# Una sola vez: crear la base de pruebas en el contenedor
+docker exec odontonet-db createdb -U odontonet odontonet_test
+
+# En backend/, con odonto_venv activo
+python -m pip install -r requirements-dev.txt
+$env:TEST_DATABASE_URL = "postgresql://odontonet:<contraseña>@localhost:5432/odontonet_test"
+python -m pytest
+```
+
+La contraseña es la de `POSTGRES_PASSWORD` en el `.env` de la raíz.
 
 ## 4. Frontend
 
@@ -85,14 +101,14 @@ npm ci
 npm run dev
 ```
 
-Abrir http://localhost:5173. Para comprobar compilación y lint:
+Abrir http://localhost:5173. Por defecto el frontend llama a la API en `http://127.0.0.1:8000`; para otra URL, copia `frontend/.env.example` a `frontend/.env` y ajusta `VITE_API_URL` (requiere reiniciar `npm run dev`).
+
+Para comprobar compilación y lint (verificados sin errores en ODON-18):
 
 ```powershell
 npm run build
 npm run lint
 ```
-
-Los comandos son verificaciones recomendadas; **no se garantiza que todos pasen sin correcciones**, ya que no se ha ejecutado la batería completa en un entorno limpio.
 
 ## 5. Datos iniciales
 
@@ -138,7 +154,7 @@ Nunca asumir que `--autogenerate` detecta correctamente renombrados o migracione
 | `ModuleNotFoundError: app`            | Ejecutar Uvicorn/Alembic desde `backend/`.                                   |
 | `403 Not authenticated` en `/auth/me` | Falta encabezado `Authorization: Bearer <JWT>`.                              |
 | `alembic current` distinto de `heads` | Migraciones pendientes; revisar antes de aplicar.                            |
-| `IntegrityError` con `clinic_id`      | Endpoint no asigna clínica; limitación actual conocida, no desactivar la FK. |
+| `IntegrityError` con `clinic_id`      | Base sin migrar: ejecutar `alembic upgrade head`; no desactivar la FK.       |
 | CORS bloqueado                        | Verificar origen `http://localhost:5173` y configuración de `main.py`.       |
 
 ## 9. Seguridad operativa
