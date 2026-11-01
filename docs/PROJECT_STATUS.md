@@ -2,7 +2,7 @@
 
 > Documento de continuidad técnica. Jira es la fuente de verdad de los estados de los tickets y Git es la fuente de verdad del código.
 
-**Última actualización:** 2026-10-31 — ODON-86 (alta y edición de usuarios) en Testing.
+**Última actualización:** 2026-10-31 — ODON-86 (alta y edición de usuarios) cerrada.
 
 ## Alcance
 
@@ -46,18 +46,18 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 - **ODON-3 Clínicas y autorización — In Progress:** ODON-62, ODON-66 y ODON-70 Done; pendientes ODON-58, 74.
 - **ODON-5 Pacientes — In Progress:** ODON-106 Done.
 - **ODON-2 Autenticación — In Progress:** ODON-38, 42, 46 y 50 Done; pendiente ODON-54 (recuperación de contraseña).
-- **ODON-4 Personal y doctores — In Progress:** ODON-86 Testing; pendientes ODON-78, 82, 90, 94.
+- **ODON-4 Personal y doctores — In Progress:** ODON-86 Done; pendientes ODON-78, 82, 90, 94.
 - **ODON-11 Calidad:** ODON-254 (categorías de pruebas backend) Done.
 
 ## Próximo paso
 
-1. Verificar ODON-86 en Windows y cerrarla.
-2. ODON-94 (desactivación segura de personal) y ODON-90 (perfil clínico de doctores), que completan la gestión de personal.
-3. ODON-54 (recuperación de contraseña).
+1. ODON-94 (desactivación segura de personal) y ODON-90 (perfil clínico de doctores), que completan la gestión de personal.
+2. ODON-54 (recuperación de contraseña).
 
 ## Convenciones de colaboración
 
 - Encabezar respuestas técnicas con `ODON-<épica> → ODON-<historia> | ... — Estado`.
 - El asistente prepara los cambios y los mensajes de commit; el desarrollador realiza los commits y el push.
+- El board de Jira es Kanban con backlog y la API no permite mover tickets entre ambos: al empezar una épica, el asistente indica que se pase la épica completa del backlog al board; si se adelanta un ticket de otra épica, indica las claves a mover.
 - Mover a Done solo con evidencia: pruebas propias más verificación en el entorno local del desarrollador.
 - Al cerrar tickets, dejar un comentario de un párrafo en Jira.
