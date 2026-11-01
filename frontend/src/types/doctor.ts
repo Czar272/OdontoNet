@@ -7,4 +7,5 @@ export interface Doctor {
   license_number?: string | null;
   phone?: string | null;
   user: User;
+  clinic_id: number;
 }

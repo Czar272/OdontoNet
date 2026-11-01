@@ -1,13 +1,32 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
+
+import Button from "../basic/Button";
+import Input from "../basic/Input";
+import Select from "../basic/Select";
+import { getApiErrorMessage } from "../../services/apiError";
+import { getDoctors } from "../../services/doctorService";
 import { createPatient } from "../../services/patientService";
 import type { CreatePatientDTO } from "../../types/patient";
-import toast from "react-hot-toast";
-import { useQuery } from "@tanstack/react-query";
-import { getDoctors } from "../../services/doctorService";
-import type { Doctor } from "../../types/doctor";
 
-const PatientForm: React.FC = () => {
+interface PatientFormProps {
+  onSuccess?: () => void;
+}
+
+const emptyForm: CreatePatientDTO = {
+  first_name: "",
+  last_name: "",
+  birth_date: "",
+  phone: "",
+  email: "",
+  address: "",
+  doctor_id: undefined,
+};
+
+const today = new Date().toISOString().slice(0, 10);
+
+const PatientForm: React.FC<PatientFormProps> = ({ onSuccess }) => {
   const queryClient = useQueryClient();
 
   const { data: doctors } = useQuery({
@@ -15,46 +34,25 @@ const PatientForm: React.FC = () => {
     queryFn: getDoctors,
   });
 
-  const [formData, setFormData] = useState<CreatePatientDTO>({
-    first_name: "",
-    last_name: "",
-    birth_date: "",
-    phone: "",
-    email: "",
-    address: "",
-    doctor_id: undefined,
-  });
+  const [formData, setFormData] = useState<CreatePatientDTO>(emptyForm);
 
   const mutation = useMutation({
     mutationFn: createPatient,
 
     onSuccess: () => {
-      toast.success("Patient Created");
-      queryClient.invalidateQueries({
-        queryKey: ["patients"],
-      });
-
-      setFormData({
-        first_name: "",
-        last_name: "",
-        birth_date: "",
-        phone: "",
-        email: "",
-        address: "",
-        doctor_id: undefined,
-      });
+      toast.success("Paciente creado");
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      setFormData(emptyForm);
+      onSuccess?.();
     },
 
-    onError: () => {
-      toast.error("Error creando el paciente");
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, "No se pudo crear el paciente"));
     },
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleDoctorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -66,85 +64,81 @@ const PatientForm: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     mutation.mutate(formData);
   };
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="grid grid-cols-2 gap-4">
-        <input
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Input
           name="first_name"
-          placeholder="First Name"
+          label="Nombres *"
           value={formData.first_name}
           onChange={handleChange}
-          className="border p-3 rounded-lg"
           required
         />
 
-        <input
+        <Input
           name="last_name"
-          placeholder="Last Name"
+          label="Apellidos *"
           value={formData.last_name}
           onChange={handleChange}
-          className="border p-3 rounded-lg"
           required
         />
 
-        <input
+        <Input
           name="birth_date"
           type="date"
+          label="Fecha de nacimiento"
+          max={today}
           value={formData.birth_date}
           onChange={handleChange}
-          className="border p-3 rounded-lg"
         />
 
-        <input
+        <Input
           name="phone"
-          placeholder="Phone"
+          type="tel"
+          label="Teléfono"
           value={formData.phone}
           onChange={handleChange}
-          className="border p-3 rounded-lg"
         />
 
-        <input
+        <Input
           name="email"
-          placeholder="Email"
+          type="email"
+          label="Correo electrónico"
           value={formData.email}
           onChange={handleChange}
-          className="border p-3 rounded-lg"
         />
 
-        <input
+        <Input
           name="address"
-          placeholder="Address"
+          label="Dirección"
           value={formData.address}
           onChange={handleChange}
-          className="border p-3 rounded-lg"
         />
 
-        <select
+        <Select
           name="doctor_id"
-          value={formData.doctor_id || ""}
+          label="Doctor asignado"
+          value={formData.doctor_id ?? ""}
           onChange={handleDoctorChange}
-          className="border p-3 rounded-lg"
         >
-          <option value="">Select Doctor</option>
+          <option value="">Sin asignar</option>
 
-          {doctors?.map((doctor: Doctor) => (
+          {doctors?.map((doctor) => (
             <option key={doctor.id} value={doctor.id}>
               {doctor.user.name}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
-      <button
-        type="submit"
-        className="mt-6 bg-gray-900 text-white px-6 py-3 rounded-lg hover:bg-gray-800"
-      >
-        Create Patient
-      </button>
+      <div className="mt-6 flex justify-end">
+        <Button type="submit" disabled={mutation.isPending}>
+          {mutation.isPending ? "Guardando..." : "Guardar paciente"}
+        </Button>
+      </div>
     </form>
   );
 };

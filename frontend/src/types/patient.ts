@@ -9,7 +9,8 @@ export interface Patient {
   email?: string | null;
   address?: string | null;
   doctor_id?: number | null;
-  doctor?: Doctor;
+  doctor?: Doctor | null;
+  clinic_id: number;
 }
 
 export interface CreatePatientDTO {
