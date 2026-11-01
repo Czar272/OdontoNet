@@ -37,7 +37,7 @@
 | `POST /users/{id}/deactivate`, `POST /users/{id}/activate` | ✅ | ⛔ | ⛔ |
 | `GET /patients/`, `GET /patients/{id}` | ✅ | ✅ | ✅ |
 | `POST /patients/` | ✅ | ✅ | ✅ |
-| `GET /doctors/`, `GET /doctors/{id}` | ✅ | ✅ | ✅ |
+| `GET /doctors/` (filtro `?active=true/false`), `GET /doctors/{id}` | ✅ | ✅ | ✅ |
 | `POST /doctors/` (crear perfil de doctor) | ✅ | ⛔ | ⛔ |
 
 Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_users.py` y `backend/tests/test_user_deactivation.py`.
@@ -57,6 +57,7 @@ Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_users.py` y `ba
 - Un usuario inactivo no inicia sesión (`401 Credenciales inválidas.`, sin revelar el motivo) y su token deja de funcionar en la siguiente petición (`401`), porque el estado se lee de la base en cada petición.
 - Un administrador no puede desactivarse a sí mismo (`409`). Activar y desactivar son idempotentes.
 - `is_active` solo cambia con estos endpoints; `PATCH /users/{id}` lo ignora.
+- Un doctor inactivo sigue en el historial y en `GET /doctors/` sin filtro, pero no se le pueden asignar pacientes nuevos (`422 El doctor seleccionado está inactivo.`, ODON-82). El formulario de pacientes solo ofrece doctores activos.
 
 ## Módulos futuros (decidido el 2026-10-31)
 
