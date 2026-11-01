@@ -57,7 +57,7 @@ Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_users.py` y `ba
 - Un usuario inactivo no inicia sesión (`401 Credenciales inválidas.`, sin revelar el motivo) y su token deja de funcionar en la siguiente petición (`401`), porque el estado se lee de la base en cada petición.
 - Un administrador no puede desactivarse a sí mismo (`409`). Activar y desactivar son idempotentes.
 - `is_active` solo cambia con estos endpoints; `PATCH /users/{id}` lo ignora.
-- El perfil de doctor (especialidad, colegiado, teléfono) solo se crea para un usuario con rol `doctor` de la misma clínica (`422` si no) y es único por usuario (`409`). Su estado activo es el del usuario: se cambia en Usuarios (ODON-90).
+- El perfil de doctor (especialidad, colegiado, teléfono) solo se crea para un usuario con rol `doctor` o `admin` de la misma clínica (`422` si no; decisión del 2026-11-01: el administrador que atiende puede tener pacientes asignados) y es único por usuario (`409`). Su estado activo es el del usuario: se cambia en Usuarios (ODON-90).
 - Un doctor inactivo sigue en el historial y en `GET /doctors/` sin filtro, pero no se le pueden asignar pacientes nuevos (`422 El doctor seleccionado está inactivo.`, ODON-82). El formulario de pacientes solo ofrece doctores activos.
 
 ## Módulos futuros (decidido el 2026-10-31)
@@ -79,3 +79,21 @@ Se implementarán con esta matriz cuando se desarrolle cada módulo.
 
 - **El administrador tiene acceso clínico.** En clínicas pequeñas el administrador suele ser también odontólogo. Se mantiene un solo rol por usuario.
 - **Recepción no accede a datos clínicos:** ni expediente, ni imágenes, ni periodontograma. Gestiona datos demográficos y agenda.
+
+## Modelo de roles objetivo (propuesta del 2026-11-01, por confirmar)
+
+Recoge la visión del desarrollador sin cambiar lo implementado. Cada fila se aplica cuando llegue su módulo.
+
+| Nivel | Rol (clave) | Alcance | Cuándo |
+| --- | --- | --- | --- |
+| Plataforma | `superadmin` (nuevo) | Crear y administrar clínicas, soporte. No pertenece a una clínica; actúa sobre una clínica de forma explícita y auditada. Un solo usuario por ahora. | Con ODON-74 (alta de clínicas) |
+| Clínica | `admin` («Administración») | Toda su clínica: personal, configuración, pacientes y agenda. Puede tener perfil de doctor. | Implementado |
+| Clínica | `doctor` | Atención clínica completa. Edita su propio perfil; no gestiona usuarios ni roles y no puede desactivarse. | Implementado; falta «Mi perfil» |
+| Clínica | `receptionist` (etiqueta propuesta: «Asistente») | Pacientes (datos generales, doctor asignado), agenda e información médica básica. Sin periodontograma, diagnósticos ni notas clínicas. | Ajustar con el expediente (ODON-7) |
+| Externo | `patient` | Solo lectura de su propia información, con autenticación separada (portal). | Después del MVP |
+
+Pautas para no rehacer trabajo:
+
+- La clave del rol (`receptionist`) no cambia aunque cambie la etiqueta visible: se evita una migración de datos.
+- `superadmin` no será un `admin` con permisos extra: su `clinic_id` no aplica, y cada acción entre clínicas indicará la clínica destino y quedará auditada (ODON-222). Así el aislamiento por clínica sigue siendo la regla para todos los demás roles.
+- Los permisos finos (por ejemplo, qué campos médicos edita el asistente) se declaran por módulo en esta matriz y en `frontend/src/auth/permissions.ts`.

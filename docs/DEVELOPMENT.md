@@ -17,7 +17,7 @@ Copy-Item .env.example .env
 Copy-Item backend/.env.example backend/.env
 ```
 
-En `.env` de la raíz configura `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` y `POSTGRES_PORT`. En `backend/.env` configura `DATABASE_URL`, `SECRET_KEY`, `ALGORITHM=HS256` y `ACCESS_TOKEN_EXPIRE_MINUTES`.
+En `.env` de la raíz configura `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` y `POSTGRES_PORT`. En `backend/.env` configura `DATABASE_URL`, `SECRET_KEY`, `ALGORITHM=HS256`, `ACCESS_TOKEN_EXPIRE_MINUTES` y, opcionalmente, `REMEMBER_ME_EXPIRE_DAYS` (7 por defecto).
 
 La contraseña, usuario, base y puerto de `DATABASE_URL` deben coincidir con los de Docker. Si una contraseña contiene caracteres reservados de URL (`@`, `:`, `/`, `#`, etc.), codifícala en la URL.
 
@@ -40,6 +40,22 @@ docker compose ps
 Espera a que `odontonet-db` aparezca como `healthy`. El puerto de PostgreSQL se publica únicamente en `127.0.0.1`.
 
 **No ejecutar `docker compose down -v` salvo que se quiera borrar deliberadamente el volumen de datos.**
+
+### Ver la base de datos con un cliente gráfico
+
+No hace falta instalar PostgreSQL: ya corre en Docker. Solo se necesita un cliente que se conecte a él.
+
+| Campo | Valor |
+| --- | --- |
+| Host | `localhost` (o `127.0.0.1`) |
+| Puerto | `POSTGRES_PORT` del `.env` de la raíz (5432 por defecto) |
+| Usuario / contraseña | `POSTGRES_USER` / `POSTGRES_PASSWORD` del `.env` de la raíz |
+| Bases | `POSTGRES_DB` (desarrollo) y `<POSTGRES_DB>_test` (pruebas; se vacía en cada ejecución de pytest) |
+
+- **DBeaver Community** (recomendado para diagramas): Nueva conexión → PostgreSQL → datos de la tabla; en *PostgreSQL → Show all databases* para ver ambas bases. El diagrama entidad-relación está en *esquema `public` → View Diagram*, con claves primarias, foráneas y restricciones únicas.
+- **VS Code:** extensión *PostgreSQL* de Microsoft (`ms-ossdata.vscode-pgsql`), con los mismos datos de conexión, para consultar tablas sin salir del editor.
+- La tabla `alembic_version` guarda la migración aplicada; no se edita a mano.
+- Para cambiar datos usa la aplicación, el seed o una migración; modificar tablas desde el cliente puede dejar la base distinta de las migraciones.
 
 ### Rotar la contraseña de PostgreSQL de desarrollo
 
