@@ -65,11 +65,18 @@ def create_patient(
 
     try:
         db.commit()
-    except IntegrityError:
+    except IntegrityError as exc:
         db.rollback()
+        if "uq_patients_clinic_email" in str(exc.orig):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Ya existe un paciente con ese correo en la clínica.",
+            )
+        # Otra restricción (p. ej. fk_patients_doctor_clinic si el doctor cambió
+        # entre la validación y el guardado): mismo mensaje que la validación.
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Ya existe un paciente con ese correo en la clínica.",
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="El doctor seleccionado no pertenece a la clínica.",
         )
 
     return _clinic_patients(db, clinic_id).filter(Patient.id == new_patient.id).one()

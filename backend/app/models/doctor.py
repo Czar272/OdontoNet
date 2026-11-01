@@ -10,6 +10,8 @@ class Doctor(Base):
     __tablename__ = "doctors"
     __table_args__ = (
         UniqueConstraint("user_id", name="uq_doctors_user_id"),
+        # Permite que patients referencie (doctor_id, clinic_id) a la vez.
+        UniqueConstraint("id", "clinic_id", name="uq_doctors_id_clinic"),
         # El perfil pertenece a la misma clínica que su usuario.
         ForeignKeyConstraint(
             ["user_id", "clinic_id"],
@@ -28,5 +30,10 @@ class Doctor(Base):
     user = relationship("User", back_populates="doctor_profile", foreign_keys=[user_id])
     # passive_deletes="all": el ORM no pone doctor_id en NULL al borrar; la FK
     # lo impide y el historial de pacientes se conserva.
-    patients = relationship("Patient", back_populates="doctor", passive_deletes="all")
+    patients = relationship(
+        "Patient",
+        back_populates="doctor",
+        foreign_keys="Patient.doctor_id",
+        passive_deletes="all",
+    )
     clinic = relationship("Clinic", back_populates="doctors", foreign_keys=[clinic_id])

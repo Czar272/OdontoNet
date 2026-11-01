@@ -17,6 +17,12 @@ class Clinic(Base):
 
     # passive_deletes="all": una clínica con datos no se puede borrar; las FK
     # NOT NULL lo impiden y el ORM no intenta dejar registros sin clínica.
-    users = relationship("User", back_populates="clinic", passive_deletes="all")
-    doctors = relationship("Doctor", back_populates="clinic", passive_deletes="all")
-    patients = relationship("Patient", back_populates="clinic", passive_deletes="all")
+    users = relationship(
+        "User", back_populates="clinic", foreign_keys="User.clinic_id", passive_deletes="all"
+    )
+    doctors = relationship(
+        "Doctor", back_populates="clinic", foreign_keys="Doctor.clinic_id", passive_deletes="all"
+    )
+    patients = relationship(
+        "Patient", back_populates="clinic", foreign_keys="Patient.clinic_id", passive_deletes="all"
+    )
