@@ -80,7 +80,7 @@ Se implementarán con esta matriz cuando se desarrolle cada módulo.
 - **El administrador tiene acceso clínico.** En clínicas pequeñas el administrador suele ser también odontólogo. Se mantiene un solo rol por usuario.
 - **Recepción no accede a datos clínicos:** ni expediente, ni imágenes, ni periodontograma. Gestiona datos demográficos y agenda.
 
-## Modelo de roles objetivo (propuesta del 2026-11-01, por confirmar)
+## Modelo de roles objetivo (aprobado el 2026-11-01)
 
 Recoge la visión del desarrollador sin cambiar lo implementado. Cada fila se aplica cuando llegue su módulo.
 
@@ -89,11 +89,11 @@ Recoge la visión del desarrollador sin cambiar lo implementado. Cada fila se ap
 | Plataforma | `superadmin` (nuevo) | Crear y administrar clínicas, soporte. No pertenece a una clínica; actúa sobre una clínica de forma explícita y auditada. Un solo usuario por ahora. | Con ODON-74 (alta de clínicas) |
 | Clínica | `admin` («Administración») | Toda su clínica: personal, configuración, pacientes y agenda. Puede tener perfil de doctor. | Implementado |
 | Clínica | `doctor` | Atención clínica completa. Edita su propio perfil; no gestiona usuarios ni roles y no puede desactivarse. | Implementado; falta «Mi perfil» |
-| Clínica | `receptionist` (etiqueta propuesta: «Asistente») | Pacientes (datos generales, doctor asignado), agenda e información médica básica. Sin periodontograma, diagnósticos ni notas clínicas. | Ajustar con el expediente (ODON-7) |
+| Clínica | `receptionist` («Recepción») | Pacientes (datos generales, doctor asignado), agenda e información médica básica. Sin periodontograma, diagnósticos ni notas clínicas. | Ajustar con el expediente (ODON-7) |
 | Externo | `patient` | Solo lectura de su propia información, con autenticación separada (portal). | Después del MVP |
 
 Pautas para no rehacer trabajo:
 
-- La clave del rol (`receptionist`) no cambia aunque cambie la etiqueta visible: se evita una migración de datos.
+- La etiqueta visible sigue siendo «Recepción» (decisión del desarrollador); si algún día cambia, solo cambia `ROLE_LABELS`, no la clave guardada.
 - `superadmin` no será un `admin` con permisos extra: su `clinic_id` no aplica, y cada acción entre clínicas indicará la clínica destino y quedará auditada (ODON-222). Así el aislamiento por clínica sigue siendo la regla para todos los demás roles.
 - Los permisos finos (por ejemplo, qué campos médicos edita el asistente) se declaran por módulo en esta matriz y en `frontend/src/auth/permissions.ts`.

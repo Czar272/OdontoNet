@@ -33,6 +33,7 @@
 - Las pruebas no dependen de la intercalación de PostgreSQL: al verificar un orden alfabético, usar nombres que ordenen igual con `C.UTF-8` y `en_US.utf8` (por ejemplo, mismo prefijo). La base de Docker usa `en_US.utf8`, que ignora la puntuación al comparar.
 - Frontend: `npm test`, `npm run lint` y `npm run build` sin errores antes de cada commit. Una pantalla restringida declara su permiso en `auth/permissions.ts` y se prueba con los tres roles.
 - Migraciones: seguir el checklist de `DEVELOPMENT.md` y `scripts/dev/verify-infra.ps1`.
+- CI (`.github/workflows/ci.yml`) debe quedar en verde después de cada push; un fallo en CI se corrige antes de seguir con otro ticket.
 
 ## Seguridad y privacidad
 

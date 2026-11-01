@@ -131,6 +131,21 @@ Una prueba sin categoría o con un marcador mal escrito detiene la ejecución co
 
 La URL de pruebas se deriva de `DATABASE_URL` en `backend/.env` cambiando el nombre de la base a `<nombre>_test`; no hace falta escribir la contraseña. Para usar otra base, define `TEST_DATABASE_URL`. Si la conexión falla, pytest muestra el error completo y cómo crear la base.
 
+Las pruebas usan bcrypt con costo 4 (`BCRYPT_ROUNDS`, fijado en `tests/conftest.py`) para que la suite completa tarde segundos; la aplicación usa 12. Los hashes guardan su propio costo, así que ambos se verifican igual.
+
+### Integración continua (GitHub Actions)
+
+`.github/workflows/ci.yml` se ejecuta en cada push a `main` y en cada pull request, en servidores de GitHub: backend contra un PostgreSQL 16 temporal y frontend con `lint`, `test` y `build`. El resultado aparece como ✔ o ✖ junto al commit en GitHub (pestaña *Actions*). Se puede lanzar a mano con *Run workflow*. No usa secretos reales ni la base local.
+
+**Qué correr y cuándo:**
+
+| Momento | Quién | Qué |
+| --- | --- | --- |
+| Al entregar un ticket | Asistente | Suite completa, E2E y build |
+| Al verificar un ticket | Desarrollador | `python -m pytest` (segundos) y `npm test`; `lint`/`build` solo si cambió el frontend; prueba manual |
+| En cada push | GitHub Actions | Todo, automáticamente; revisar que quede en ✔ |
+| Al cerrar una épica | Desarrollador | Suite completa, `lint`, `build` y `verify-infra.ps1` |
+
 ## 4. Frontend
 
 En otra terminal desde la raíz:

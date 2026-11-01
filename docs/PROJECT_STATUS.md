@@ -2,7 +2,7 @@
 
 > Documento de continuidad técnica. Jira es la fuente de verdad de los estados de los tickets y Git es la fuente de verdad del código.
 
-**Última actualización:** 2026-11-01 — épica ODON-4 cerrada; ODON-255 («Recuérdame») en Testing; propuesta de modelo de roles en `PERMISSIONS.md`.
+**Última actualización:** 2026-11-01 — ODON-255 cerrada; modelo de roles aprobado; CI en GitHub Actions (ODON-256) y ODON-58 en Testing.
 
 ## Alcance
 
@@ -16,7 +16,7 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 
 ## Estado verificado
 
-- **Calidad:** 189 pruebas backend (login y «Recuérdame», `/auth/me`, aislamiento entre clínicas, roles, gestión y desactivación de usuarios, listado, integridad y perfiles de doctores, contrato de API, seed). Frontend: 65 pruebas unitarias (Vitest), `lint` y `build` sin errores, 0 vulnerabilidades npm en producción, pruebas E2E de sesión y de gestión de usuarios.
+- **Calidad:** 201 pruebas backend en unos 15 s (login y «Recuérdame», `/auth/me`, aislamiento y modelo de clínicas, roles, gestión y desactivación de usuarios, listado, integridad y perfiles de doctores, contrato de API, seed); CI en GitHub Actions en cada push. Frontend: 65 pruebas unitarias (Vitest), `lint` y `build` sin errores, 0 vulnerabilidades npm en producción, pruebas E2E de sesión y de gestión de usuarios.
 - **Seguridad:** aislamiento por `clinic_id` del token (ODON-62); RBAC con `require_roles` (ODON-66); usuarios inactivos bloqueados; errores unificados en español sin trazas (ODON-22).
 - **Infraestructura:** Docker healthy, persistencia y puerto local verificados con `scripts/dev/verify-infra.ps1` (ODON-26). Migraciones lineales `e7aac1fc989e` → `4c1d2e8f9a10` → `7b3e9d2c5a61`, probadas desde base vacía (ODON-30) y con `alembic check` sin diferencias.
 - **Datos de desarrollo:** `backend/scripts/seed_dev.py`, idempotente y solo local (ODON-34).
@@ -43,15 +43,16 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 
 - Proyecto `ODON`: 13 épicas, 60 historias, 180 subtareas.
 - **ODON-1 Arquitectura e infraestructura — Done:** ODON-14, 18, 22, 26, 30, 34.
-- **ODON-3 Clínicas y autorización — In Progress:** ODON-62, ODON-66 y ODON-70 Done; pendientes ODON-58, 74.
+- **ODON-3 Clínicas y autorización — In Progress:** ODON-62, 66 y 70 Done; ODON-58 Testing; pendiente ODON-74.
 - **ODON-5 Pacientes — In Progress:** ODON-106 Done.
-- **ODON-2 Autenticación — In Progress:** ODON-38, 42, 46, 50 y 52 Done; ODON-255 («Recuérdame») Testing; pendiente ODON-54 (recuperación de contraseña).
+- **ODON-2 Autenticación — In Progress:** ODON-38, 42, 46, 50 y 52 Done; ODON-255 («Recuérdame») Done; pendiente ODON-54 (recuperación de contraseña).
 - **ODON-4 Personal y doctores — Done:** ODON-78, 82, 86, 90 y 94.
-- **ODON-11 Calidad:** ODON-254 (categorías de pruebas backend) Done.
+- **ODON-11 Calidad:** ODON-254 (categorías de pruebas backend) Done; ODON-256 (pruebas rápidas y CI) Testing.
 
 ## Próximo paso
 
-1. Confirmar el modelo de roles objetivo (`PERMISSIONS.md`). Después, terminar ODON-3 (ODON-58 y ODON-74, alta de clínicas, donde entraría `superadmin`) o ODON-5 (pacientes).
+1. ODON-74 (administración básica de clínica), que cierra la épica ODON-3. El alta de clínicas por `superadmin` se planifica aparte según el modelo de roles aprobado.
+2. Épica ODON-5 (pacientes).
 2. ODON-54 (recuperación de contraseña).
 
 ## Convenciones de colaboración
