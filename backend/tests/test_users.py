@@ -259,6 +259,14 @@ def test_role_of_user_with_doctor_profile_cannot_change(client, staff):
     assert "perfil de doctor" in response.json()["detail"]
 
 
+@pytest.mark.doctors
+def test_user_with_doctor_profile_can_become_admin(client, staff):
+    response = client.patch(f"/users/{staff['ids']['doctor']}", json={"role": "admin"}, headers=admin(staff))
+
+    assert response.status_code == 200
+    assert response.json()["role"] == "admin"
+
+
 @pytest.mark.rbac
 def test_role_change_applies_to_existing_token(client, staff):
     receptionist_headers = staff["headers"]["receptionist"]

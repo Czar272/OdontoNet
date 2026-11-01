@@ -32,8 +32,13 @@ vi.mock("../../services/doctorService", () => ({
 const sinPerfil = { id: 200, name: "Dr. Sin Perfil", email: "sp@odontonet-demo.com", role: "doctor" as const, clinic_id: 1, is_active: true };
 
 vi.mock("../../services/userService", () => ({
-  // Usuarios con rol doctor: los tres con perfil más uno sin perfil.
-  getUsers: vi.fn(async () => [...doctors.map((d) => d.user), sinPerfil]),
+  // Los tres doctores con perfil, uno sin perfil, un admin sin perfil y una recepcionista.
+  getUsers: vi.fn(async () => [
+    ...doctors.map((d) => d.user),
+    sinPerfil,
+    { ...sinPerfil, id: 201, name: "Admin Clínico", role: "admin" as const },
+    { ...sinPerfil, id: 202, name: "Recepción", role: "receptionist" as const },
+  ]),
 }));
 
 const { getUsers } = await import("../../services/userService");
@@ -80,8 +85,9 @@ describe("DoctorsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cerrar" }));
 
     fireEvent.click(screen.getByRole("button", { name: "Nuevo perfil" }));
-    const options = await screen.findAllByRole("option", { name: /Dr\. Sin Perfil/ });
-    expect(options).toHaveLength(1);
+    const options = await screen.findAllByRole("option", { name: /Dr\. Sin Perfil|Admin Clínico/ });
+    expect(options).toHaveLength(2);
+    expect(screen.queryByRole("option", { name: /Recepción/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("option", { name: /Dra\. Ana Morales/ })).not.toBeInTheDocument();
   });
 

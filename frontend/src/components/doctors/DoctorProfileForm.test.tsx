@@ -49,7 +49,7 @@ describe("DoctorProfileForm", () => {
   it("sin usuarios disponibles explica qué hacer", () => {
     renderWithAuth(<DoctorProfileForm candidates={[]} />, "admin");
 
-    expect(screen.getByText(/No hay usuarios con rol doctor sin perfil/)).toBeInTheDocument();
+    expect(screen.getByText(/ya tienen perfil/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Crear perfil" })).not.toBeInTheDocument();
   });
 

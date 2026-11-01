@@ -18,7 +18,7 @@ import {
 interface DoctorProfileFormProps {
   /** Perfil a editar; sin él, el formulario crea uno nuevo. */
   doctor?: Doctor;
-  /** Usuarios con rol doctor que todavía no tienen perfil (solo en alta). */
+  /** Usuarios con rol doctor o administración sin perfil (solo en alta). */
   candidates?: User[];
   onSuccess?: () => void;
 }
@@ -77,8 +77,8 @@ const DoctorProfileForm: React.FC<DoctorProfileFormProps> = ({
   if (!isEdit && candidates.length === 0) {
     return (
       <p className="text-gray-600">
-        No hay usuarios con rol doctor sin perfil. Crea primero el usuario en la
-        sección Usuarios.
+        Todos los usuarios con rol doctor o administración ya tienen perfil. Crea
+        primero el usuario en la sección Usuarios.
       </p>
     );
   }

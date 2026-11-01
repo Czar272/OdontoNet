@@ -20,6 +20,10 @@ class Role(str, Enum):
 
 ALL_ROLES = (Role.ADMIN, Role.DOCTOR, Role.RECEPTIONIST)
 
+# Roles que pueden tener perfil de doctor y pacientes asignados. Administración
+# se incluye porque en clínicas pequeñas el administrador también atiende.
+CLINICAL_PROFILE_ROLES = frozenset({Role.ADMIN.value, Role.DOCTOR.value})
+
 
 def require_roles(*roles: Role):
     """Dependencia que permite el acceso solo a los roles indicados (403 si no)."""

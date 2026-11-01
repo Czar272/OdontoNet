@@ -13,6 +13,7 @@ import DoctorProfileForm from "../../components/doctors/DoctorProfileForm";
 import { usePermission } from "../../hooks/usePermission";
 import { getDoctors } from "../../services/doctorService";
 import { getUsers } from "../../services/userService";
+import { CLINICAL_PROFILE_ROLES } from "../../types/auth";
 import type { Doctor } from "../../types/doctor";
 
 type StatusFilter = "active" | "inactive" | "";
@@ -29,10 +30,11 @@ const DoctorsPage: React.FC = () => {
 
   const canManage = usePermission("doctors:manage");
 
-  // Usuarios con rol doctor, para ofrecer los que aún no tienen perfil.
-  const { data: doctorUsers } = useQuery({
-    queryKey: ["users", { role: "doctor" }],
-    queryFn: () => getUsers("doctor"),
+  // Usuarios que pueden tener perfil clínico (doctor o administración),
+  // para ofrecer los que aún no lo tienen.
+  const { data: users } = useQuery({
+    queryKey: ["users"],
+    queryFn: () => getUsers(),
     enabled: canManage,
   });
 
@@ -43,8 +45,10 @@ const DoctorsPage: React.FC = () => {
   const candidates = useMemo(() => {
     const withProfile = new Set(doctors?.map((d) => d.user_id));
 
-    return (doctorUsers ?? []).filter((u) => !withProfile.has(u.id));
-  }, [doctors, doctorUsers]);
+    return (users ?? []).filter(
+      (u) => CLINICAL_PROFILE_ROLES.includes(u.role) && !withProfile.has(u.id),
+    );
+  }, [doctors, users]);
 
   const filteredDoctors = useMemo(() => {
     if (!doctors) return [];

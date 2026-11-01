@@ -55,12 +55,22 @@ def test_create_profile_with_license_and_specialization(client, staff):
     assert (body["specialization"], body["license_number"], body["phone"]) == ("Ortodoncia", "COL-2", None)
 
 
-@pytest.mark.parametrize("role", ["admin", "receptionist"])
-def test_profile_requires_doctor_role(client, staff, role):
-    response = client.post("/doctors/", json={"user_id": staff["ids"][role]}, headers=admin(staff))
+def test_receptionist_cannot_have_profile(client, staff):
+    response = client.post("/doctors/", json={"user_id": staff["ids"]["receptionist"]}, headers=admin(staff))
 
     assert response.status_code == 422
-    assert response.json()["detail"] == "El usuario no tiene rol de doctor."
+    assert response.json()["detail"] == "Solo un usuario con rol doctor o administración puede tener perfil de doctor."
+
+
+def test_admin_can_have_profile(client, staff):
+    # En clínicas pequeñas el administrador también atiende pacientes.
+    response = client.post("/doctors/", json={"user_id": staff["ids"]["admin"], "specialization": "General"}, headers=admin(staff))
+
+    assert response.status_code == 201, response.text
+    profile_id = response.json()["id"]
+    patient = client.post("/patients/", json={"first_name": "Ida", "last_name": "Mora", "doctor_id": profile_id}, headers=admin(staff))
+    assert patient.status_code == 201
+    assert patient.json()["doctor"]["user"]["role"] == "admin"
 
 
 def test_profile_is_unique_per_user(client, staff):

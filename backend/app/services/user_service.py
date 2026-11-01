@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.auth.permissions import Role
+from app.auth.permissions import CLINICAL_PROFILE_ROLES
 from app.auth.security import hash_password
 from app.models.doctor import Doctor
 from app.models.user import User
@@ -63,8 +63,8 @@ def update_user(db: Session, user: User, data: UserUpdate, acting_admin: User) -
             # Evita que la clínica se quede sin administrador.
             raise _conflict("No puedes cambiar tu propio rol.")
         has_profile = db.query(Doctor.id).filter(Doctor.user_id == user.id).first() is not None
-        if has_profile and new_role != Role.DOCTOR.value:
-            raise _conflict("El usuario tiene un perfil de doctor; no se puede cambiar su rol.")
+        if has_profile and new_role not in CLINICAL_PROFILE_ROLES:
+            raise _conflict("El usuario tiene un perfil de doctor; solo puede tener rol doctor o administración.")
         user.role = new_role
 
     if "name" in changes:

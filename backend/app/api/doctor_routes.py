@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, joinedload
 
 from app.auth.dependencies import get_current_clinic_id
-from app.auth.permissions import ALL_ROLES, Role, require_roles
+from app.auth.permissions import ALL_ROLES, CLINICAL_PROFILE_ROLES, Role, require_roles
 from app.database.dependencies import get_db
 from app.models.doctor import Doctor
 from app.models.user import User
@@ -52,10 +52,10 @@ def create_doctor(
             detail="El usuario no pertenece a la clínica.",
         )
 
-    if user.role != Role.DOCTOR.value:
+    if user.role not in CLINICAL_PROFILE_ROLES:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="El usuario no tiene rol de doctor.",
+            detail="Solo un usuario con rol doctor o administración puede tener perfil de doctor.",
         )
 
     if db.query(Doctor.id).filter(Doctor.user_id == user.id).first():
