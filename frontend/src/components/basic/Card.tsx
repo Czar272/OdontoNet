@@ -1,17 +1,13 @@
+import clsx from "clsx";
+
 interface CardProps {
   children: React.ReactNode;
+  className?: string;
 }
 
-const Card: React.FC<CardProps> = ({ children }) => {
+const Card: React.FC<CardProps> = ({ children, className }) => {
   return (
-    <div
-      className="
-        bg-white
-        rounded-2xl
-        shadow-sm
-        p-6
-      "
-    >
+    <div className={clsx("bg-white rounded-2xl shadow-sm p-6", className)}>
       {children}
     </div>
   );
