@@ -1,24 +1,50 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Pencil } from "lucide-react";
 
+import Button from "../../components/basic/Button";
 import Input from "../../components/basic/Input";
 import LoadingSpinner from "../../components/basic/LoadingSpinner";
+import Modal from "../../components/basic/Modal";
 import PageHeader from "../../components/basic/PageHeader";
 import Select from "../../components/basic/Select";
 import Table from "../../components/basic/Table";
+import DoctorProfileForm from "../../components/doctors/DoctorProfileForm";
+import { usePermission } from "../../hooks/usePermission";
 import { getDoctors } from "../../services/doctorService";
+import { getUsers } from "../../services/userService";
+import type { Doctor } from "../../types/doctor";
 
 type StatusFilter = "active" | "inactive" | "";
 
-/** Profesionales de la clínica. Todos los roles consultan; el alta del perfil es ODON-90. */
+/** null: modal cerrado · "new": alta de perfil · Doctor: edición. */
+type ModalState = null | "new" | Doctor;
+
+/** Profesionales de la clínica. Todos los roles consultan; administración crea y edita perfiles. */
 const DoctorsPage: React.FC = () => {
   const { data: doctors, isLoading, isError } = useQuery({
     queryKey: ["doctors"],
     queryFn: () => getDoctors(),
   });
 
+  const canManage = usePermission("doctors:manage");
+
+  // Usuarios con rol doctor, para ofrecer los que aún no tienen perfil.
+  const { data: doctorUsers } = useQuery({
+    queryKey: ["users", { role: "doctor" }],
+    queryFn: () => getUsers("doctor"),
+    enabled: canManage,
+  });
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
+  const [modal, setModal] = useState<ModalState>(null);
+
+  const candidates = useMemo(() => {
+    const withProfile = new Set(doctors?.map((d) => d.user_id));
+
+    return (doctorUsers ?? []).filter((u) => !withProfile.has(u.id));
+  }, [doctors, doctorUsers]);
 
   const filteredDoctors = useMemo(() => {
     if (!doctors) return [];
@@ -38,12 +64,31 @@ const DoctorsPage: React.FC = () => {
     return <LoadingSpinner />;
   }
 
+  const closeModal = () => setModal(null);
+  const editing = modal !== null && modal !== "new" ? modal : undefined;
+
   return (
     <div>
       <PageHeader
         title="Doctores"
         description="Profesionales de la clínica y su especialidad"
+        action={
+          canManage && <Button onClick={() => setModal("new")}>Nuevo perfil</Button>
+        }
       />
+
+      <Modal
+        isOpen={modal !== null}
+        onClose={closeModal}
+        title={editing ? "Editar perfil" : "Nuevo perfil de doctor"}
+      >
+        <DoctorProfileForm
+          key={editing?.id ?? "new"}
+          doctor={editing}
+          candidates={candidates}
+          onSuccess={closeModal}
+        />
+      </Modal>
 
       <div className="flex gap-4 mb-6">
         <div className="flex-1">
@@ -80,6 +125,12 @@ const DoctorsPage: React.FC = () => {
             <th className="text-left p-4">Correo</th>
 
             <th className="text-left p-4">Estado</th>
+
+            {canManage && (
+              <th className="p-4">
+                <span className="sr-only">Acciones</span>
+              </th>
+            )}
           </tr>
         </thead>
 
@@ -107,12 +158,26 @@ const DoctorsPage: React.FC = () => {
                   {doctor.user.is_active ? "Activo" : "Inactivo"}
                 </span>
               </td>
+
+              {canManage && (
+                <td className="p-4 text-right">
+                  <button
+                    type="button"
+                    onClick={() => setModal(doctor)}
+                    aria-label={`Editar perfil de ${doctor.user.name}`}
+                    title="Editar perfil"
+                    className="p-2 rounded-lg hover:bg-gray-100 transition"
+                  >
+                    <Pencil size={18} />
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
 
           {filteredDoctors.length === 0 && (
             <tr className="border-t">
-              <td colSpan={6} className="p-6 text-center text-gray-500">
+              <td colSpan={canManage ? 7 : 6} className="p-6 text-center text-gray-500">
                 {isError
                   ? "No se pudieron cargar los doctores."
                   : "No hay doctores que coincidan con la búsqueda."}

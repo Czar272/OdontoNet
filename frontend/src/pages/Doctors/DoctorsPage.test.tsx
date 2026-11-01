@@ -25,7 +25,18 @@ const doctors = [
 
 vi.mock("../../services/doctorService", () => ({
   getDoctors: vi.fn(async () => doctors),
+  createDoctor: vi.fn(),
+  updateDoctor: vi.fn(),
 }));
+
+const sinPerfil = { id: 200, name: "Dr. Sin Perfil", email: "sp@odontonet-demo.com", role: "doctor" as const, clinic_id: 1, is_active: true };
+
+vi.mock("../../services/userService", () => ({
+  // Usuarios con rol doctor: los tres con perfil más uno sin perfil.
+  getUsers: vi.fn(async () => [...doctors.map((d) => d.user), sinPerfil]),
+}));
+
+const { getUsers } = await import("../../services/userService");
 
 describe("DoctorsPage", () => {
   it("muestra nombre y especialidad; por defecto solo activos", async () => {
@@ -57,5 +68,30 @@ describe("DoctorsPage", () => {
 
     expect(screen.getByText("Dra. Ana Morales")).toBeInTheDocument();
     expect(screen.queryByText("Dr. Luis Herrera")).not.toBeInTheDocument();
+  });
+
+  it("administración puede crear y editar perfiles", async () => {
+    renderWithAuth(<DoctorsPage />, "admin");
+    await screen.findByText("Dra. Ana Morales");
+
+    fireEvent.click(screen.getByRole("button", { name: "Editar perfil de Dra. Ana Morales" }));
+    expect(screen.getByRole("dialog", { name: "Editar perfil" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/especialidad/i)).toHaveValue("Periodoncia");
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Nuevo perfil" }));
+    const options = await screen.findAllByRole("option", { name: /Dr\. Sin Perfil/ });
+    expect(options).toHaveLength(1);
+    expect(screen.queryByRole("option", { name: /Dra\. Ana Morales/ })).not.toBeInTheDocument();
+  });
+
+  it.each(["doctor", "receptionist"] as const)("%s solo consulta", async (role) => {
+    vi.mocked(getUsers).mockClear();
+    renderWithAuth(<DoctorsPage />, role);
+    await screen.findByText("Dra. Ana Morales");
+
+    expect(screen.queryByRole("button", { name: "Nuevo perfil" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Editar perfil/ })).not.toBeInTheDocument();
+    expect(getUsers).not.toHaveBeenCalled();
   });
 });

@@ -11,7 +11,7 @@ export const PERMISSIONS = {
   "patients:view": ["admin", "doctor", "receptionist"],
   "patients:create": ["admin", "doctor", "receptionist"],
   "doctors:view": ["admin", "doctor", "receptionist"],
-  "doctors:create": ["admin"],
+  "doctors:manage": ["admin"],
   "users:manage": ["admin"],
 } as const satisfies Record<string, readonly Role[]>;
 
