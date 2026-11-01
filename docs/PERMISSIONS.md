@@ -31,6 +31,8 @@
 | --- | :---: | :---: | :---: |
 | `POST /auth/login` | público | público | público |
 | `GET /auth/me` | ✅ | ✅ | ✅ |
+| `GET /clinic` (datos de la propia clínica) | ✅ | ✅ | ✅ |
+| `PATCH /clinic` (editar la propia clínica) | ✅ | ⛔ | ⛔ |
 | `POST /auth/register` (crear usuario en su clínica; equivale a `POST /users/`) | ✅ | ⛔ | ⛔ |
 | `GET /users/`, `GET /users/{id}` (personal de su clínica) | ✅ | ⛔ | ⛔ |
 | `POST /users/`, `PATCH /users/{id}` (alta y edición) | ✅ | ⛔ | ⛔ |
@@ -72,7 +74,6 @@ Se implementarán con esta matriz cuando se desarrolle cada módulo.
 | Expediente clínico (antecedentes, notas, tratamientos) | ✅ | ✅ | ⛔ |
 | Imágenes clínicas | ✅ | ✅ | ⛔ |
 | Periodontograma | ✅ | ✅ | ⛔ |
-| Configuración de clínica | ✅ | ⛔ | ⛔ |
 | Reportes operativos | ✅ | ✅ | ✅ sin datos clínicos |
 
 **Decisiones:**

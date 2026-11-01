@@ -35,7 +35,7 @@ PostgreSQL 16 (Docker Compose)
 ### Backend
 
 - `app/main.py`: instancia FastAPI, routers, manejadores de error, CORS (`CORS_ORIGINS`) y `/health`.
-- `app/api/`: rutas `/auth`, `/patients`, `/doctors`, `/users`.
+- `app/api/`: rutas `/auth`, `/clinic`, `/patients`, `/doctors`, `/users`. `/clinic` no recibe id: siempre opera sobre la clínica de la sesión.
 - `app/services/`: reglas de negocio compartidas entre rutas (`user_service.py`: alta y edición de usuarios).
 - `app/auth/`: hash de contraseñas, JWT, usuario actual (`get_current_user`), clínica actual (`get_current_clinic_id`) y roles (`permissions.py`, `require_roles`).
 - `app/core/errors.py`: formato único de errores.
