@@ -1,0 +1,215 @@
+"""Seed sintético de desarrollo (ODON-34).
+
+Crea dos clínicas de demostración, cada una con administración, recepción,
+dos doctores y pacientes ficticios relacionados. Sirve para probar la
+aplicación y el aislamiento entre clínicas sin datos reales.
+
+Garantías:
+- Idempotente: se puede ejecutar varias veces sin duplicar registros.
+- No borra ni modifica datos existentes; solo agrega lo que falte.
+- Transaccional: si algo falla, no queda nada a medias.
+- Solo desarrollo: se niega a correr si la base no es local o si
+  APP_ENV es distinto de "development".
+- Sin credenciales en el código: la contraseña se toma de SEED_PASSWORD.
+
+Uso, desde backend/ con odonto_venv activo:
+
+    $env:SEED_PASSWORD = "<contraseña de al menos 8 caracteres>"
+    python -m scripts.seed_dev
+"""
+import os
+import random
+import sys
+from datetime import date, timedelta
+from pathlib import Path
+
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
+from sqlalchemy.engine import make_url  # noqa: E402
+from sqlalchemy.orm import Session  # noqa: E402
+
+from app.auth.security import hash_password  # noqa: E402
+from app.models import Clinic, Doctor, Patient, User  # noqa: E402
+
+LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
+EMAIL_DOMAIN = "odontonet-demo.com"
+PATIENTS_PER_CLINIC = 15
+
+CLINICS = [
+    {"slug": "norte", "name": "Clínica Demo Norte", "address": "Zona 1, Ciudad de Guatemala", "phone": "2200-0001"},
+    {"slug": "sur", "name": "Clínica Demo Sur", "address": "Zona 12, Ciudad de Guatemala", "phone": "2200-0002"},
+]
+
+# (prefijo de correo, nombre, rol, especialidad si es doctor)
+STAFF = [
+    ("admin", "Administración", "admin", None),
+    ("recepcion", "Recepción", "receptionist", None),
+    ("doctor1", "Dra. Ana Morales", "doctor", "Periodoncia"),
+    ("doctor2", "Dr. Luis Herrera", "doctor", "Odontología general"),
+]
+
+FIRST_NAMES = [
+    "María", "José", "Ana", "Carlos", "Lucía", "Jorge", "Sofía", "Diego", "Valeria",
+    "Andrés", "Gabriela", "Fernando", "Camila", "Ricardo", "Daniela", "Miguel",
+]
+LAST_NAMES = [
+    "García", "López", "Pérez", "Hernández", "Gómez", "Morales", "Castillo", "Ramírez",
+    "Méndez", "Ruiz", "Ortiz", "Cruz", "Reyes", "Flores", "Juárez", "Sandoval",
+]
+
+
+class SeedError(RuntimeError):
+    """Condición que impide ejecutar el seed de forma segura."""
+
+
+def ensure_development(database_url: str, environment: str) -> None:
+    if environment != "development":
+        raise SeedError(f"APP_ENV={environment!r}: el seed solo se ejecuta en desarrollo.")
+
+    host = make_url(database_url).host
+    if host not in LOCAL_HOSTS:
+        raise SeedError(f"La base está en {host!r}; el seed solo se ejecuta contra una base local.")
+
+
+def read_password(value: str | None) -> str:
+    if not value or len(value) < 8:
+        raise SeedError("Define SEED_PASSWORD con al menos 8 caracteres antes de ejecutar el seed.")
+    return value
+
+
+def staff_email(prefix: str, clinic_slug: str) -> str:
+    return f"{prefix}.{clinic_slug}@{EMAIL_DOMAIN}"
+
+
+def _patient_data(clinic_slug: str, index: int) -> dict:
+    # Semilla por paciente: los datos son siempre los mismos en cada ejecución.
+    rng = random.Random(f"{clinic_slug}-{index}")
+    first_name = rng.choice(FIRST_NAMES)
+    last_name = f"{rng.choice(LAST_NAMES)} {rng.choice(LAST_NAMES)}"
+    return {
+        "first_name": first_name,
+        "last_name": last_name,
+        "birth_date": date(1950, 1, 1) + timedelta(days=rng.randint(0, 365 * 65)),
+        "phone": f"5{rng.randint(1000000, 9999999)}",
+        "email": f"paciente{index:02d}.{clinic_slug}@{EMAIL_DOMAIN}",
+        "address": f"Zona {rng.randint(1, 21)}, Ciudad de Guatemala",
+    }
+
+
+def seed(db: Session, password: str) -> dict:
+    """Crea los datos que falten y devuelve cuántos registros nuevos agregó."""
+    created = {"clinics": 0, "users": 0, "doctors": 0, "patients": 0}
+    password_hash = None
+
+    for spec in CLINICS:
+        clinic = db.query(Clinic).filter(Clinic.name == spec["name"]).first()
+        if clinic is None:
+            clinic = Clinic(
+                name=spec["name"],
+                address=spec["address"],
+                phone=spec["phone"],
+                email=f"contacto.{spec['slug']}@{EMAIL_DOMAIN}",
+            )
+            db.add(clinic)
+            db.flush()
+            created["clinics"] += 1
+
+        doctors = []
+        for prefix, name, role, specialization in STAFF:
+            email = staff_email(prefix, spec["slug"])
+            user = db.query(User).filter(User.email == email).first()
+            if user is None:
+                password_hash = password_hash or hash_password(password)
+                user = User(
+                    name=name,
+                    email=email,
+                    hashed_password=password_hash,
+                    role=role,
+                    is_active=True,
+                    clinic_id=clinic.id,
+                )
+                db.add(user)
+                db.flush()
+                created["users"] += 1
+
+            if role == "doctor":
+                doctor = db.query(Doctor).filter(Doctor.user_id == user.id).first()
+                if doctor is None:
+                    doctor = Doctor(
+                        user_id=user.id,
+                        clinic_id=clinic.id,
+                        specialization=specialization,
+                        license_number=f"DEMO-{spec['slug'].upper()}-{prefix[-1]}",
+                    )
+                    db.add(doctor)
+                    db.flush()
+                    created["doctors"] += 1
+                doctors.append(doctor)
+
+        for index in range(1, PATIENTS_PER_CLINIC + 1):
+            data = _patient_data(spec["slug"], index)
+            exists = (
+                db.query(Patient.id)
+                .filter(Patient.clinic_id == clinic.id, Patient.email == data["email"])
+                .first()
+            )
+            if exists:
+                continue
+            # Cada tercer paciente queda sin doctor asignado.
+            doctor = None if index % 3 == 0 else doctors[index % len(doctors)]
+            db.add(Patient(**data, clinic_id=clinic.id, doctor_id=doctor.id if doctor else None))
+            created["patients"] += 1
+
+    db.flush()
+    validate_relations(db)
+    db.commit()
+    return created
+
+
+def validate_relations(db: Session) -> None:
+    """Comprueba que todos los registros demo pertenezcan a su propia clínica."""
+    names = [spec["name"] for spec in CLINICS]
+    clinics = db.query(Clinic).filter(Clinic.name.in_(names)).all()
+    if len(clinics) != len(CLINICS):
+        raise SeedError("Faltan clínicas de demostración tras el seed.")
+
+    for clinic in clinics:
+        for doctor in db.query(Doctor).filter(Doctor.clinic_id == clinic.id):
+            if doctor.user.clinic_id != clinic.id:
+                raise SeedError(f"El doctor {doctor.id} y su usuario pertenecen a clínicas distintas.")
+        for patient in db.query(Patient).filter(Patient.clinic_id == clinic.id):
+            if patient.doctor is not None and patient.doctor.clinic_id != clinic.id:
+                raise SeedError(f"El paciente {patient.id} tiene un doctor de otra clínica.")
+
+
+def main() -> int:
+    from app.database.connection import DATABASE_URL, SessionLocal
+
+    try:
+        ensure_development(DATABASE_URL, os.getenv("APP_ENV", "development"))
+        password = read_password(os.getenv("SEED_PASSWORD"))
+    except SeedError as exc:
+        print(f"Error: {exc}")
+        return 2
+
+    db = SessionLocal()
+    try:
+        created = seed(db, password)
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+    print("Seed completado. Registros nuevos:", ", ".join(f"{k}={v}" for k, v in created.items()))
+    print("Usuarios de demostración (contraseña: la de SEED_PASSWORD):")
+    for spec in CLINICS:
+        for prefix, _, role, _ in STAFF:
+            print(f"  {spec['name']:<20} {role:<13} {staff_email(prefix, spec['slug'])}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
