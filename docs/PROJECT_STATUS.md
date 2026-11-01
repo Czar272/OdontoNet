@@ -2,7 +2,7 @@
 
 > Documento de continuidad técnica. Jira es la fuente de verdad de los estados de los tickets y Git es la fuente de verdad del código.
 
-**Última actualización:** 2026-11-01 — épica ODON-3 cerrada; ODON-98, 102 y 110 cerradas; ODON-114 (ficha del paciente) y ODON-118 (edición y reasignación) en Testing.
+**Última actualización:** 2026-11-01 — épica ODON-3 cerrada; ODON-98, 102 y 110 cerradas; ODON-114 (ficha del paciente) y ODON-118 (edición y reasignación) cerradas.
 
 ## Alcance
 
@@ -44,7 +44,7 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 - Proyecto `ODON`: 13 épicas, 60 historias, 180 subtareas.
 - **ODON-1 Arquitectura e infraestructura — Done:** ODON-14, 18, 22, 26, 30, 34.
 - **ODON-3 Clínicas y autorización — Done:** ODON-58, 62, 66, 70 y 74.
-- **ODON-5 Pacientes — In Progress:** ODON-98, 102, 106 y 110 Done; ODON-114 y 118 Testing; pendientes ODON-122 (archivar) y 126 (paginación).
+- **ODON-5 Pacientes — In Progress:** ODON-98, 102, 106, 110, 114 y 118 Done; pendientes ODON-122 (archivar) y 126 (paginación).
 - **ODON-2 Autenticación — In Progress:** ODON-38, 42, 46, 50 y 52 Done; ODON-255 («Recuérdame») Done; pendiente ODON-54 (recuperación de contraseña).
 - **ODON-4 Personal y doctores — Done:** ODON-78, 82, 86, 90 y 94.
 - **ODON-11 Calidad:** ODON-254 (categorías de pruebas backend) Done; ODON-256 (pruebas rápidas y CI) Done.
