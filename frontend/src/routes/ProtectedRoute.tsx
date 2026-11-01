@@ -1,5 +1,6 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 
+import FullPageLoader from "../components/basic/FullPageLoader";
 import { useAuth } from "../context/AuthContext";
 
 export default function ProtectedRoute({
@@ -7,10 +8,17 @@ export default function ProtectedRoute({
 }: {
   children: React.ReactNode;
 }) {
-  const { token } = useAuth();
+  const { status, loggedOutManually } = useAuth();
+  const location = useLocation();
 
-  if (!token) {
-    return <Navigate to="/" replace />;
+  if (status === "loading") {
+    return <FullPageLoader />;
+  }
+
+  if (status !== "authenticated") {
+    // Se recuerda la ruta para volver a ella tras el login, salvo en un cierre voluntario.
+    const state = loggedOutManually ? undefined : { from: location.pathname };
+    return <Navigate to="/" replace state={state} />;
   }
 
   return children;

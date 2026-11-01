@@ -1,9 +1,9 @@
 import clsx from "clsx";
 import { LogOut } from "lucide-react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { NavLink, Outlet } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
+import { ROLE_LABELS } from "../types/auth";
 
 const navItems = [
   { to: "/dashboard", label: "Inicio" },
@@ -11,22 +11,19 @@ const navItems = [
 ];
 
 export default function MainLayout() {
-  const { logout } = useAuth();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-
-  function handleLogout() {
-    logout();
-    // Evita que datos en caché de una sesión queden visibles en la siguiente
-    queryClient.clear();
-    navigate("/", { replace: true });
-  }
+  const { user, logout } = useAuth();
 
   return (
     <div className="min-h-screen flex bg-gray-100">
       {/* Sidebar */}
       <aside className="w-64 shrink-0 bg-gray-900 text-white p-5 flex flex-col">
-        <h1 className="text-2xl font-bold mb-10">OdontoNet</h1>
+        <h1 className="text-2xl font-bold">OdontoNet</h1>
+
+        {user && (
+          <p className="text-sm text-gray-400 mt-1 mb-8" data-testid="clinic-name">
+            {user.clinic.name}
+          </p>
+        )}
 
         <nav className="flex flex-col gap-1">
           {navItems.map((item) => (
@@ -47,14 +44,23 @@ export default function MainLayout() {
           ))}
         </nav>
 
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="mt-auto flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition"
-        >
-          <LogOut size={18} />
-          Cerrar sesión
-        </button>
+        <div className="mt-auto flex flex-col gap-3">
+          {user && (
+            <div className="px-3" data-testid="current-user">
+              <p className="text-sm font-medium truncate">{user.name}</p>
+              <p className="text-xs text-gray-400">{ROLE_LABELS[user.role]}</p>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={logout}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition"
+          >
+            <LogOut size={18} />
+            Cerrar sesión
+          </button>
+        </div>
       </aside>
 
       {/* Content */}

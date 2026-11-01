@@ -1,20 +1,28 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 
 import Button from "../../components/basic/Button";
+import FullPageLoader from "../../components/basic/FullPageLoader";
 import Input from "../../components/basic/Input";
 import { useAuth } from "../../context/AuthContext";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { token, login } = useAuth();
+  const location = useLocation();
+  const { status, login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (token) {
-    return <Navigate to="/dashboard" replace />;
+  const from = (location.state as { from?: string } | null)?.from ?? "/dashboard";
+
+  if (status === "loading") {
+    return <FullPageLoader />;
+  }
+
+  if (status === "authenticated") {
+    return <Navigate to={from} replace />;
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -26,7 +34,9 @@ export default function LoginPage() {
     setIsSubmitting(false);
 
     if (success) {
-      navigate("/dashboard", { replace: true });
+      navigate(from, { replace: true });
+    } else {
+      setPassword("");
     }
   }
 
