@@ -1,24 +1,76 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Query, Session, joinedload
+
+from app.auth.dependencies import get_current_clinic_id
 from app.database.dependencies import get_db
 from app.models.doctor import Doctor
+from app.models.user import User
 from app.schemas.doctor_schema import DoctorCreate, DoctorResponse
 
 router = APIRouter(prefix="/doctors", tags=["Doctors"])
 
 
-@router.post("/", response_model=DoctorResponse)
-def create_doctor(doctor: DoctorCreate, db: Session = Depends(get_db)):
-    new_doctor = Doctor(**doctor.dict())
+def _clinic_doctors(db: Session, clinic_id: int) -> Query:
+    return (
+        db.query(Doctor)
+        .options(joinedload(Doctor.user))
+        .filter(Doctor.clinic_id == clinic_id)
+    )
+
+
+@router.post("/", response_model=DoctorResponse, status_code=status.HTTP_201_CREATED)
+def create_doctor(
+    doctor: DoctorCreate,
+    db: Session = Depends(get_db),
+    clinic_id: int = Depends(get_current_clinic_id),
+):
+
+    user = (
+        db.query(User)
+        .filter(User.id == doctor.user_id, User.clinic_id == clinic_id)
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="El usuario no pertenece a la clínica.",
+        )
+
+    if db.query(Doctor.id).filter(Doctor.user_id == user.id).first():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="El usuario ya tiene un perfil de doctor.",
+        )
+
+    new_doctor = Doctor(**doctor.dict(), clinic_id=clinic_id)
     db.add(new_doctor)
     db.commit()
-    db.refresh(new_doctor)
 
-    return new_doctor
+    return _clinic_doctors(db, clinic_id).filter(Doctor.id == new_doctor.id).one()
 
 
 @router.get("/", response_model=list[DoctorResponse])
-def get_doctors(db: Session = Depends(get_db)):
-    doctors = db.query(Doctor).all()
+def get_doctors(
+    db: Session = Depends(get_db),
+    clinic_id: int = Depends(get_current_clinic_id),
+):
 
-    return doctors
+    return _clinic_doctors(db, clinic_id).order_by(Doctor.id).all()
+
+
+@router.get("/{doctor_id}", response_model=DoctorResponse)
+def get_doctor(
+    doctor_id: int,
+    db: Session = Depends(get_db),
+    clinic_id: int = Depends(get_current_clinic_id),
+):
+
+    doctor = _clinic_doctors(db, clinic_id).filter(Doctor.id == doctor_id).first()
+
+    if not doctor:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Doctor no encontrado"
+        )
+
+    return doctor

@@ -13,5 +13,5 @@ class Doctor(Base):
     phone = Column(String)
     user = relationship("User", back_populates="doctor_profile")
     patients = relationship("Patient", back_populates="doctor")
-    clinic_id = Column(Integer, ForeignKey("clinics.id"), nullable=False)
+    clinic_id = Column(Integer, ForeignKey("clinics.id"), nullable=False, index=True)
     clinic = relationship("Clinic", back_populates="doctors")

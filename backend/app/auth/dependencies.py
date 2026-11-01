@@ -11,7 +11,7 @@ security = HTTPBearer()
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
-):
+) -> User:
 
     token = credentials.credentials
 
@@ -19,16 +19,26 @@ def get_current_user(
 
     if not payload:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido o expirado"
         )
 
     email = payload.get("sub")
 
     user = db.query(User).filter(User.email == email).first()
 
-    if not user:
+    if not user or user.is_active is False:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario no encontrado o inactivo",
         )
 
     return user
+
+
+def get_current_clinic_id(current_user: User = Depends(get_current_user)) -> int:
+    """Clínica del usuario autenticado.
+
+    Es la única fuente válida de clinic_id: nunca se toma del cuerpo,
+    la URL ni los parámetros enviados por el cliente.
+    """
+    return current_user.clinic_id
