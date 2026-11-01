@@ -66,6 +66,21 @@ from app.models import Clinic, Doctor, User  # noqa: E402
 
 PASSWORD = "Test-Password-123"
 
+TEST_CATEGORIES = {"auth", "patients", "doctors", "users", "api", "seed", "isolation", "rbac"}
+
+
+def pytest_collection_modifyitems(config, items):
+    """Exige que cada prueba declare al menos una categoría (marcador)."""
+    uncategorized = [
+        item.nodeid
+        for item in items
+        if not TEST_CATEGORIES & {marker.name for marker in item.iter_markers()}
+    ]
+    if uncategorized:
+        raise pytest.UsageError(
+            "Pruebas sin categoría (agrega un marcador de pytest.ini):\n  " + "\n  ".join(uncategorized)
+        )
+
 
 @pytest.fixture(scope="session", autouse=True)
 def migrated_database():

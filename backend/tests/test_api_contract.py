@@ -1,9 +1,12 @@
 """Contrato de la API: OpenAPI, health y formato único de errores (ODON-22)."""
+import pytest
 from fastapi import APIRouter
 from fastapi.testclient import TestClient
 
 from app.main import app
 from tests.conftest import PASSWORD, create_clinic_with_doctor
+
+pytestmark = [pytest.mark.api]
 
 
 def test_openapi_and_docs_respond(client):
@@ -32,6 +35,7 @@ def test_health_checks_database(client):
     assert response.json() == {"status": "ok", "database": "ok"}
 
 
+@pytest.mark.auth
 def test_login_returns_typed_token(client, db):
     create_clinic_with_doctor(db, "Clinica Token", "token@clinica.com")
     response = client.post("/auth/login", json={"email": "token@clinica.com", "password": PASSWORD})
@@ -41,6 +45,7 @@ def test_login_returns_typed_token(client, db):
     assert body["token_type"] == "bearer"
 
 
+@pytest.mark.auth
 def test_missing_token_is_401_with_bearer_challenge(client):
     response = client.get("/patients/")
     assert response.status_code == 401

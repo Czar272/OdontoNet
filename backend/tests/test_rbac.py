@@ -5,6 +5,9 @@ from app.auth.security import hash_password
 from app.models import Clinic, Doctor, User
 from tests.conftest import PASSWORD, auth_headers
 
+pytestmark = [pytest.mark.rbac]
+
+
 ROLES = ("admin", "doctor", "receptionist")
 
 
@@ -57,6 +60,11 @@ MATRIX = [
 ]
 
 
+@pytest.mark.patients
+@pytest.mark.doctors
+@pytest.mark.doctors
+@pytest.mark.users
+@pytest.mark.users
 @pytest.mark.parametrize("role", ROLES)
 @pytest.mark.parametrize("method,path,body,allowed", MATRIX)
 def test_shared_endpoints_by_role(client, clinic_staff, role, method, path, body, allowed):
@@ -86,11 +94,15 @@ def test_only_admin_registers_users(client, clinic_staff, role, expected):
     assert response.status_code == expected, response.text
 
 
+@pytest.mark.users
+@pytest.mark.auth
 def test_register_requires_authentication(client):
     payload = {"name": "X", "email": "x@rbac-clinica.com", "password": "Segura-123"}
     assert client.post("/auth/register", json=payload).status_code in (401, 403)
 
 
+@pytest.mark.users
+@pytest.mark.isolation
 def test_registered_user_belongs_to_admin_clinic(client, clinic_staff):
     payload = {"name": "Recep", "email": "recep2@rbac-clinica.com", "password": "Segura-123", "role": "receptionist", "clinic_id": 999}
 
@@ -117,12 +129,14 @@ def test_register_rejects_invalid_data(client, clinic_staff, payload):
     assert response.status_code == 422
 
 
+@pytest.mark.users
 def test_register_duplicate_email_conflicts(client, clinic_staff):
     payload = {"name": "Dup", "email": "doctor@rbac-clinica.com", "password": "Segura-123"}
     response = client.post("/auth/register", json=payload, headers=clinic_staff["headers"]["admin"])
     assert response.status_code == 409
 
 
+@pytest.mark.auth
 def test_unknown_role_in_database_is_denied(client, db, clinic_staff):
     user = User(
         name="Rol raro",
@@ -139,6 +153,7 @@ def test_unknown_role_in_database_is_denied(client, db, clinic_staff):
     assert client.get("/patients/", headers=headers).status_code == 403
 
 
+@pytest.mark.auth
 def test_role_change_takes_effect_without_new_token(client, db, clinic_staff):
     headers = clinic_staff["headers"]["admin"]
     admin = db.query(User).filter(User.email == "admin@rbac-clinica.com").one()
@@ -150,6 +165,7 @@ def test_role_change_takes_effect_without_new_token(client, db, clinic_staff):
     assert response.status_code == 403
 
 
+@pytest.mark.auth
 def test_inactive_user_cannot_log_in(client, db, clinic_staff):
     user = db.query(User).filter(User.email == "doctor@rbac-clinica.com").one()
     user.is_active = False

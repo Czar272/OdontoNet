@@ -15,6 +15,9 @@ from scripts.seed_dev import (
 )
 from tests.conftest import create_clinic_with_doctor
 
+pytestmark = [pytest.mark.seed]
+
+
 PASSWORD = "Demo-Password-123"
 
 
@@ -58,6 +61,7 @@ def test_seed_does_not_touch_existing_data(db):
     assert db.query(User).filter(User.id == user.id).one().email == "existente@clinica.com"
 
 
+@pytest.mark.isolation
 def test_seeded_users_log_in_and_see_only_their_clinic(client, db):
     seed(db, PASSWORD)
 
@@ -71,6 +75,7 @@ def test_seeded_users_log_in_and_see_only_their_clinic(client, db):
         assert all(spec["slug"] in p["email"] for p in patients)
 
 
+@pytest.mark.rbac
 def test_seeded_roles_match_permissions(client, db):
     seed(db, PASSWORD)
     slug = CLINICS[0]["slug"]

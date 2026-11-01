@@ -1,4 +1,5 @@
 """Login (ODON-38) y usuario actual /auth/me (ODON-42)."""
+import pytest
 from datetime import datetime, timedelta, timezone
 
 from jose import jwt
@@ -7,6 +8,8 @@ from app.auth.jwt_handler import ALGORITHM, SECRET_KEY, decode_token
 from app.auth.security import verify_password
 from app.models import User
 from tests.conftest import PASSWORD, create_clinic_with_doctor
+
+pytestmark = [pytest.mark.auth]
 
 
 def login(client, email, password=PASSWORD):

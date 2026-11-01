@@ -89,6 +89,30 @@ python -m pip install -r requirements-dev.txt
 python -m pytest
 ```
 
+#### Categorías
+
+Cada prueba pertenece al menos a una categoría (marcador de pytest), según el objeto que prueba. `python -m pytest` corre todas; con `-m` se elige una categoría o una combinación:
+
+| Categoría | Qué prueba |
+| --- | --- |
+| `auth` | Login, tokens, `/auth/me`, usuarios inactivos |
+| `patients` | Endpoints y validación de pacientes |
+| `doctors` | Endpoints de doctores |
+| `users` | Alta de usuarios por administración |
+| `api` | Contrato: OpenAPI, `/health`, formato de errores |
+| `seed` | Seed sintético de desarrollo |
+| `isolation` | Aislamiento entre clínicas (transversal) |
+| `rbac` | Permisos por rol (transversal) |
+
+```powershell
+python -m pytest -m auth                      # solo autenticación
+python -m pytest -m "patients and isolation"  # pacientes entre clínicas
+python -m pytest -m "not seed"                # todo excepto el seed
+python -m pytest --markers                    # listar categorías
+```
+
+Una prueba sin categoría o con un marcador mal escrito detiene la ejecución con un error.
+
 La URL de pruebas se deriva de `DATABASE_URL` en `backend/.env` cambiando el nombre de la base a `<nombre>_test`; no hace falta escribir la contraseña. Para usar otra base, define `TEST_DATABASE_URL`. Si la conexión falla, pytest muestra el error completo y cómo crear la base.
 
 ## 4. Frontend
