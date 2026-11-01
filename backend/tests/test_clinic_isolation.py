@@ -29,9 +29,11 @@ def test_invalid_token_is_rejected(client):
     assert response.status_code == 401
 
 
-def test_inactive_user_is_rejected(client, db):
-    create_clinic_with_doctor(db, "Clinica C", "inactive@test.com", active=False)
+def test_token_of_deactivated_user_is_rejected(client, db):
+    _, user, _ = create_clinic_with_doctor(db, "Clinica C", "inactive@test.com")
     token = client.post("/auth/login", json={"email": "inactive@test.com", "password": PASSWORD}).json()["access_token"]
+    user.is_active = False
+    db.commit()
     response = client.get("/patients/", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 401
 
@@ -138,8 +140,14 @@ def test_doctor_of_other_clinic_is_not_found(client, two_clinics):
     assert client.get(f"/doctors/{b['doctor']}", headers=a["headers"]).status_code == 404
 
 
+def promote_to_admin(db, user_id):
+    db.query(User).filter(User.id == user_id).update({"role": "admin"})
+    db.commit()
+
+
 def test_create_doctor_profile_for_own_clinic_user(client, db, two_clinics):
     a = two_clinics["a"]
+    promote_to_admin(db, a["user"])
     user = User(name="Nuevo", email="nuevo@test.com", hashed_password=hash_password(PASSWORD), role="doctor", clinic_id=a["clinic"])
     db.add(user)
     db.commit()
@@ -154,6 +162,7 @@ def test_create_doctor_profile_for_own_clinic_user(client, db, two_clinics):
 
 def test_cannot_create_doctor_profile_for_user_of_other_clinic(client, db, two_clinics):
     a, b = two_clinics["a"], two_clinics["b"]
+    promote_to_admin(db, a["user"])
     user = User(name="Ajeno", email="ajeno@test.com", hashed_password=hash_password(PASSWORD), role="doctor", clinic_id=b["clinic"])
     db.add(user)
     db.commit()
