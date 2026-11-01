@@ -1,0 +1,114 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AxiosError, AxiosHeaders } from "axios";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { AuthContext, type AuthContextType } from "../../context/AuthContext";
+import { fakeUser } from "../../test/renderWithAuth";
+import type { Role } from "../../types/auth";
+import type { Doctor } from "../../types/doctor";
+import type { Patient } from "../../types/patient";
+import PatientDetailPage from "./PatientDetailPage";
+
+function doctor(id: number, name: string, isActive = true): Doctor {
+  return {
+    id, user_id: id + 100, specialization: null, license_number: null, phone: null, clinic_id: 1,
+    user: { id: id + 100, name, email: `d${id}@x.com`, role: "doctor", clinic_id: 1, is_active: isActive },
+  };
+}
+
+const retired = doctor(3, "Dr. Retirado", false);
+const ana = doctor(1, "Dra. Ana Morales");
+
+const eva: Patient = {
+  id: 5, first_name: "Eva", last_name: "Luna", birth_date: null, phone: "5555-0000",
+  email: null, address: null, doctor_id: 3, doctor: retired, clinic_id: 1,
+};
+
+vi.mock("../../services/patientService", () => ({
+  getPatient: vi.fn(async (id: number) => {
+    if (id === 5) return eva;
+    throw new AxiosError("404", "ERR", undefined, undefined, {
+      status: 404, statusText: "Not Found", data: { detail: "Paciente no encontrado." },
+      headers: {}, config: { headers: new AxiosHeaders() },
+    });
+  }),
+  updatePatient: vi.fn(async (_id: number, changes: object) => ({ ...eva, ...changes })),
+}));
+
+vi.mock("../../services/doctorService", () => ({ getDoctors: vi.fn(async () => [ana]) }));
+
+vi.mock("react-hot-toast", () => {
+  const toast = Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() });
+  return { default: toast };
+});
+
+const { updatePatient } = await import("../../services/patientService");
+
+function renderAt(path: string, role: Role = "receptionist") {
+  const value: AuthContextType = {
+    status: "authenticated", user: fakeUser(role), loggedOutManually: false,
+    login: async () => true, logout: () => {}, refreshUser: async () => {},
+  };
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+  return render(
+    <QueryClientProvider client={client}>
+      <AuthContext.Provider value={value}>
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route path="/patients/:patientId" element={<PatientDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>
+    </QueryClientProvider>,
+  );
+}
+
+beforeEach(() => vi.clearAllMocks());
+
+describe("PatientDetailPage", () => {
+  it("muestra la ficha bloqueada con el doctor actual aunque esté inactivo", async () => {
+    renderAt("/patients/5");
+
+    expect(await screen.findByRole("heading", { name: "Eva Luna" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/nombres/i)).toBeDisabled();
+    expect(screen.getByLabelText(/doctor asignado/i)).toHaveDisplayValue("Dr. Retirado (inactivo)");
+    expect(screen.getByText("Historial clínico")).toBeInTheDocument();
+  });
+
+  it("recepción edita en dos pasos y reasigna doctor", async () => {
+    renderAt("/patients/5");
+    await screen.findByRole("heading", { name: "Eva Luna" });
+
+    fireEvent.click(screen.getByRole("button", { name: /editar datos/i }));
+    await screen.findByRole("option", { name: "Dra. Ana Morales" });
+    expect(screen.getByRole("option", { name: "Dr. Retirado (inactivo)" })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/teléfono/i), { target: { value: "5555-1111" } });
+    fireEvent.change(screen.getByLabelText(/doctor asignado/i), { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    await waitFor(() => expect(updatePatient).toHaveBeenCalledWith(5, { phone: "5555-1111", doctor_id: 1 }));
+  });
+
+  it("Cancelar descarta los cambios", async () => {
+    renderAt("/patients/5", "doctor");
+    await screen.findByRole("heading", { name: "Eva Luna" });
+
+    fireEvent.click(screen.getByRole("button", { name: /editar datos/i }));
+    fireEvent.change(screen.getByLabelText(/nombres/i), { target: { value: "Otra" } });
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    expect(screen.getByLabelText(/nombres/i)).toHaveValue("Eva");
+    expect(updatePatient).not.toHaveBeenCalled();
+  });
+
+  it.each(["/patients/999", "/patients/abc"])("%s muestra Paciente no encontrado", async (path) => {
+    renderAt(path, "admin");
+
+    expect(await screen.findByRole("heading", { name: "Paciente no encontrado" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Volver a pacientes" })).toHaveAttribute("href", "/patients");
+  });
+});

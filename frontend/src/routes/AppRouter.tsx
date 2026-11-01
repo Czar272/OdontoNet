@@ -4,6 +4,7 @@ import LoginPage from "../pages/Auth/LoginPage";
 import DashboardPage from "../pages/Dashboard/DashboardPage";
 import ClinicPage from "../pages/Clinic/ClinicPage";
 import DoctorsPage from "../pages/Doctors/DoctorsPage";
+import PatientDetailPage from "../pages/Patients/PatientDetailPage";
 import PatientsPage from "../pages/Patients/PatientsPage";
 import UsersPage from "../pages/Users/UsersPage";
 
@@ -33,6 +34,15 @@ export default function AppRouter() {
             element={
               <RequirePermission permission="patients:view">
                 <PatientsPage />
+              </RequirePermission>
+            }
+          />
+
+          <Route
+            path="/patients/:patientId"
+            element={
+              <RequirePermission permission="patients:view">
+                <PatientDetailPage />
               </RequirePermission>
             }
           />

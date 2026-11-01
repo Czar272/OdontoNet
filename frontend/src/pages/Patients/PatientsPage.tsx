@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 
 import Button from "../../components/basic/Button";
 import Input from "../../components/basic/Input";
@@ -120,7 +121,12 @@ const PatientsPage: React.FC = () => {
           {filteredPatients.map((patient) => (
             <tr key={patient.id} className="border-t">
               <td className="p-4">
-                {patient.first_name} {patient.last_name}
+                <Link
+                  to={`/patients/${patient.id}`}
+                  className="font-medium hover:underline"
+                >
+                  {patient.first_name} {patient.last_name}
+                </Link>
               </td>
 
               <td className="p-4">{patient.email ?? "—"}</td>

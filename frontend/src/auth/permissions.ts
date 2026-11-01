@@ -10,6 +10,7 @@ import type { Role } from "../types/auth";
 export const PERMISSIONS = {
   "patients:view": ["admin", "doctor", "receptionist"],
   "patients:create": ["admin", "doctor", "receptionist"],
+  "patients:edit": ["admin", "doctor", "receptionist"],
   "doctors:view": ["admin", "doctor", "receptionist"],
   "doctors:manage": ["admin"],
   "users:manage": ["admin"],
