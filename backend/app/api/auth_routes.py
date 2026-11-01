@@ -9,10 +9,11 @@ from app.schemas.user_schema import (
     UserLogin,
     UserResponse,
 )
-from app.auth.security import hash_password, verify_password
+from app.auth.security import verify_password
 from app.auth.jwt_handler import create_access_token
 from app.auth.dependencies import get_current_user
 from app.auth.permissions import Role, require_roles
+from app.services import user_service
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -27,31 +28,11 @@ def register_user(
     db: Session = Depends(get_db),
     admin: User = Depends(require_roles(Role.ADMIN)),
 ):
-    """Un administrador crea un usuario en su propia clínica."""
+    """Un administrador crea un usuario en su propia clínica.
 
-    existing_user = db.query(User).filter(User.email == user.email).first()
+    Equivale a POST /users/, que es la ruta que usa el frontend."""
 
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Ya existe un usuario con ese correo.",
-        )
-
-    new_user = User(
-        name=user.name,
-        email=user.email,
-        hashed_password=hash_password(user.password),
-        role=user.role.value,
-        clinic_id=admin.clinic_id,
-    )
-
-    db.add(new_user)
-
-    db.commit()
-
-    db.refresh(new_user)
-
-    return new_user
+    return user_service.create_user(db, user, admin.clinic_id)
 
 
 @router.post("/login", response_model=TokenResponse)
