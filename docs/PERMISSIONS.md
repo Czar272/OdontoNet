@@ -39,6 +39,7 @@
 | `POST /users/{id}/deactivate`, `POST /users/{id}/activate` | ✅ | ⛔ | ⛔ |
 | `GET /patients/`, `GET /patients/{id}` | ✅ | ✅ | ✅ |
 | `POST /patients/` | ✅ | ✅ | ✅ |
+| `PATCH /patients/{id}` (editar datos y reasignar doctor) | ✅ | ✅ | ✅ |
 | `GET /doctors/` (filtro `?active=true/false`), `GET /doctors/{id}` | ✅ | ✅ | ✅ |
 | `POST /doctors/` (crear perfil de doctor), `PATCH /doctors/{id}` (editar perfil) | ✅ | ⛔ | ⛔ |
 
@@ -68,7 +69,7 @@ Se implementarán con esta matriz cuando se desarrolle cada módulo.
 
 | Recurso | admin | doctor | receptionist |
 | --- | :---: | :---: | :---: |
-| Editar / archivar pacientes | ✅ | ✅ | ✅ datos demográficos |
+| Archivar pacientes | ✅ | ✅ | ✅ |
 | Citas y agenda | ✅ | ✅ | ✅ |
 | Disponibilidad de doctores | ✅ | ✅ la propia | ✅ |
 | Expediente clínico (antecedentes, notas, tratamientos) | ✅ | ✅ | ⛔ |

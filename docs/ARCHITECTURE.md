@@ -39,6 +39,7 @@ PostgreSQL 16 (Docker Compose)
 - `app/services/`: reglas de negocio compartidas entre rutas (`user_service.py`: alta y edición de usuarios).
 - `app/auth/`: hash de contraseñas, JWT, usuario actual (`get_current_user`), clínica actual (`get_current_clinic_id`) y roles (`permissions.py`, `require_roles`).
 - `app/core/errors.py`: formato único de errores.
+- Registro: los loggers `odontonet.*` escriben en la consola de uvicorn. `odontonet.audit` anota cambios relevantes (p. ej. `patient.updated`, `patient.doctor_changed`) solo con ids y nombres de campos, nunca datos personales. Es provisional: la auditoría persistente se diseña en ODON-222.
 - `app/models/`: Clinic, User, Doctor y Patient.
 - `app/schemas/`: modelos de entrada/salida Pydantic.
 - `app/database/`: motor SQLAlchemy, sesiones y dependencia de sesión.
