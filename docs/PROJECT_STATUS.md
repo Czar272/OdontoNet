@@ -28,7 +28,7 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 3. **Gestión de personal:** alta y edición listas (ODON-86); faltan desactivación (ODON-94), perfil de doctor desde la interfaz (ODON-90) y alta de la primera clínica (ODON-74). El token se identifica por correo: cambiar el correo cierra la sesión de ese usuario; evaluar usar el id en `sub` junto con ODON-230.
 4. **Frontend:** layout sin versión móvil.
 5. **Dependencias de desarrollo:** aviso moderado de `minimatch` (<11.0.1) vía ESLint, publicado después de ODON-15; npm lo reporta como 12 moderadas porque cuenta cada paquete de la cadena de ESLint. Solo afecta herramientas de desarrollo (producción: 0 vulnerabilidades). No hay corrección compatible (ESLint 10.14 aún usa minimatch 10) y `npm audit fix --force` degradaría `typescript-eslint`: revisar al actualizar ESLint.
-6. **Dependencias:** `requirements.txt` es un `pip freeze` completo (incluye `pydantic-core`, que Pydantic 1 no usa); conviene separar dependencias directas.
+6. **Dependencias:** `requirements.txt` es un `pip freeze` completo (incluye `pydantic-core`, que Pydantic 1 no usa); conviene separar dependencias directas. FastAPI 0.103/Starlette usan el atajo `app=` de httpx y el módulo `multipart` antiguo: esos dos avisos se silencian en `pytest.ini` hasta actualizar FastAPI. `passlib` usa el módulo `crypt` (se elimina en Python 3.13; solo se ve en Linux): revisar antes de cambiar de versión de Python.
 7. **Producción:** faltan auditoría, respaldos, endurecimiento y despliegue (épicas CAL y LAN).
 
 ## Decisiones vigentes
