@@ -1,4 +1,7 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import Query as QueryParam
 from sqlalchemy.orm import Query, Session, joinedload
 
 from app.auth.dependencies import get_current_clinic_id
@@ -63,11 +66,23 @@ def create_doctor(
 
 @router.get("/", response_model=list[DoctorResponse])
 def get_doctors(
+    active: Optional[bool] = QueryParam(
+        None,
+        description="true: solo doctores activos; false: solo inactivos; sin valor: todos.",
+    ),
     db: Session = Depends(get_db),
     clinic_id: int = Depends(get_current_clinic_id),
 ):
+    """Doctores de la clínica con su nombre y especialidad, ordenados por nombre.
 
-    return _clinic_doctors(db, clinic_id).order_by(Doctor.id).all()
+    Sin filtro se incluyen los inactivos, porque siguen apareciendo en el
+    historial de pacientes; para asignar pacientes se usa active=true."""
+    query = _clinic_doctors(db, clinic_id).join(Doctor.user)
+    if active is True:
+        query = query.filter(User.is_active.isnot(False))
+    elif active is False:
+        query = query.filter(User.is_active.is_(False))
+    return query.order_by(User.name, Doctor.id).all()
 
 
 @router.get("/{doctor_id}", response_model=DoctorResponse)

@@ -27,17 +27,25 @@ def _clinic_patients(db: Session, clinic_id: int) -> Query:
 
 
 def _ensure_doctor_in_clinic(db: Session, doctor_id: int, clinic_id: int) -> None:
-    exists = (
-        db.query(Doctor.id)
+    doctor = (
+        db.query(Doctor)
+        .options(joinedload(Doctor.user))
         .filter(Doctor.id == doctor_id, Doctor.clinic_id == clinic_id)
         .first()
     )
 
-    if not exists:
+    if not doctor:
         # Mismo mensaje si no existe o si es de otra clínica: no se revela nada.
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="El doctor seleccionado no pertenece a la clínica.",
+        )
+
+    if doctor.user.is_active is False:
+        # Los pacientes ya asignados lo conservan (ODON-94); no se asignan nuevos.
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="El doctor seleccionado está inactivo.",
         )
 
 
