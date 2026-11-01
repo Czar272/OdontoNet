@@ -59,3 +59,25 @@ def update_user(
     """Edita nombre, correo, rol o contraseña de un usuario de la misma clínica."""
     user = user_service.get_clinic_user(db, user_id, admin.clinic_id)
     return user_service.update_user(db, user, data, acting_admin=admin)
+
+
+@router.post("/{user_id}/deactivate", response_model=UserResponse)
+def deactivate_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_roles(Role.ADMIN)),
+):
+    """Retira el acceso de un usuario conservando su historial."""
+    user = user_service.get_clinic_user(db, user_id, admin.clinic_id)
+    return user_service.set_user_active(db, user, False, acting_admin=admin)
+
+
+@router.post("/{user_id}/activate", response_model=UserResponse)
+def activate_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_roles(Role.ADMIN)),
+):
+    """Devuelve el acceso a un usuario desactivado."""
+    user = user_service.get_clinic_user(db, user_id, admin.clinic_id)
+    return user_service.set_user_active(db, user, True, acting_admin=admin)

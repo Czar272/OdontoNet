@@ -76,3 +76,19 @@ def update_user(db: Session, user: User, data: UserUpdate, acting_admin: User) -
     db.commit()
     db.refresh(user)
     return user
+
+
+def set_user_active(db: Session, user: User, active: bool, acting_admin: User) -> User:
+    """Activa o desactiva un usuario sin borrar nada (ODON-94).
+
+    Un usuario inactivo no inicia sesión y su token deja de funcionar en la
+    siguiente petición, porque get_current_user revisa is_active cada vez.
+    Sus registros (pacientes asignados, perfil de doctor) se conservan."""
+    if not active and user.id == acting_admin.id:
+        raise _conflict("No puedes desactivar tu propia cuenta.")
+
+    if user.is_active is not active:
+        user.is_active = active
+        db.commit()
+        db.refresh(user)
+    return user
