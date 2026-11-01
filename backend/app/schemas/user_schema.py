@@ -33,11 +33,15 @@ class UserUpdate(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    # Segundos de validez del token, para que el cliente sepa cuánto dura la sesión.
+    expires_in: int
 
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+    # "Recuérdame": token de larga duración (REMEMBER_ME_EXPIRE_DAYS).
+    remember_me: bool = False
 
 
 class UserResponse(BaseModel):

@@ -17,6 +17,7 @@ Uso, desde backend/ con odonto_venv activo:
     $env:SEED_PASSWORD = "<contraseña de al menos 8 caracteres>"
     python -m scripts.seed_dev
 """
+
 import os
 import random
 import sys
@@ -38,8 +39,18 @@ EMAIL_DOMAIN = "odontonet-demo.com"
 PATIENTS_PER_CLINIC = 15
 
 CLINICS = [
-    {"slug": "norte", "name": "Clínica Demo Norte", "address": "Zona 1, Ciudad de Guatemala", "phone": "2200-0001"},
-    {"slug": "sur", "name": "Clínica Demo Sur", "address": "Zona 12, Ciudad de Guatemala", "phone": "2200-0002"},
+    {
+        "slug": "norte",
+        "name": "Clínica Demo Norte",
+        "address": "Zona 1, Ciudad de Guatemala",
+        "phone": "2200-0001",
+    },
+    {
+        "slug": "sur",
+        "name": "Clínica Demo Sur",
+        "address": "Zona 12, Ciudad de Guatemala",
+        "phone": "2200-0002",
+    },
 ]
 
 # (prefijo de correo, nombre, rol, especialidad si es doctor)
@@ -51,12 +62,40 @@ STAFF = [
 ]
 
 FIRST_NAMES = [
-    "María", "José", "Ana", "Carlos", "Lucía", "Jorge", "Sofía", "Diego", "Valeria",
-    "Andrés", "Gabriela", "Fernando", "Camila", "Ricardo", "Daniela", "Miguel",
+    "María",
+    "José",
+    "Ana",
+    "Carlos",
+    "Lucía",
+    "Jorge",
+    "Sofía",
+    "Diego",
+    "Valeria",
+    "Andrés",
+    "Gabriela",
+    "Fernando",
+    "Camila",
+    "Ricardo",
+    "Daniela",
+    "Miguel",
 ]
 LAST_NAMES = [
-    "García", "López", "Pérez", "Hernández", "Gómez", "Morales", "Castillo", "Ramírez",
-    "Méndez", "Ruiz", "Ortiz", "Cruz", "Reyes", "Flores", "Juárez", "Sandoval",
+    "García",
+    "López",
+    "Pérez",
+    "Hernández",
+    "Gómez",
+    "Morales",
+    "Castillo",
+    "Ramírez",
+    "Méndez",
+    "Ruiz",
+    "Ortiz",
+    "Cruz",
+    "Reyes",
+    "Flores",
+    "Juárez",
+    "Sandoval",
 ]
 
 
@@ -66,16 +105,22 @@ class SeedError(RuntimeError):
 
 def ensure_development(database_url: str, environment: str) -> None:
     if environment != "development":
-        raise SeedError(f"APP_ENV={environment!r}: el seed solo se ejecuta en desarrollo.")
+        raise SeedError(
+            f"APP_ENV={environment!r}: el seed solo se ejecuta en desarrollo."
+        )
 
     host = make_url(database_url).host
     if host not in LOCAL_HOSTS:
-        raise SeedError(f"La base está en {host!r}; el seed solo se ejecuta contra una base local.")
+        raise SeedError(
+            f"La base está en {host!r}; el seed solo se ejecuta contra una base local."
+        )
 
 
 def read_password(value: str | None) -> str:
     if not value or len(value) < 8:
-        raise SeedError("Define SEED_PASSWORD con al menos 8 caracteres antes de ejecutar el seed.")
+        raise SeedError(
+            "Define SEED_PASSWORD con al menos 8 caracteres antes de ejecutar el seed."
+        )
     return value
 
 
@@ -159,7 +204,11 @@ def seed(db: Session, password: str) -> dict:
                 continue
             # Cada tercer paciente queda sin doctor asignado.
             doctor = None if index % 3 == 0 else doctors[index % len(doctors)]
-            db.add(Patient(**data, clinic_id=clinic.id, doctor_id=doctor.id if doctor else None))
+            db.add(
+                Patient(
+                    **data, clinic_id=clinic.id, doctor_id=doctor.id if doctor else None
+                )
+            )
             created["patients"] += 1
 
     db.flush()
@@ -178,10 +227,14 @@ def validate_relations(db: Session) -> None:
     for clinic in clinics:
         for doctor in db.query(Doctor).filter(Doctor.clinic_id == clinic.id):
             if doctor.user.clinic_id != clinic.id:
-                raise SeedError(f"El doctor {doctor.id} y su usuario pertenecen a clínicas distintas.")
+                raise SeedError(
+                    f"El doctor {doctor.id} y su usuario pertenecen a clínicas distintas."
+                )
         for patient in db.query(Patient).filter(Patient.clinic_id == clinic.id):
             if patient.doctor is not None and patient.doctor.clinic_id != clinic.id:
-                raise SeedError(f"El paciente {patient.id} tiene un doctor de otra clínica.")
+                raise SeedError(
+                    f"El paciente {patient.id} tiene un doctor de otra clínica."
+                )
 
 
 def main() -> int:
@@ -203,11 +256,16 @@ def main() -> int:
     finally:
         db.close()
 
-    print("Seed completado. Registros nuevos:", ", ".join(f"{k}={v}" for k, v in created.items()))
+    print(
+        "Seed completado. Registros nuevos:",
+        ", ".join(f"{k}={v}" for k, v in created.items()),
+    )
     print("Usuarios de demostración (contraseña: la de SEED_PASSWORD):")
     for spec in CLINICS:
         for prefix, _, role, _ in STAFF:
-            print(f"  {spec['name']:<20} {role:<13} {staff_email(prefix, spec['slug'])}")
+            print(
+                f"  {spec['name']:<20} {role:<13} {staff_email(prefix, spec['slug'])}"
+            )
     return 0
 
 

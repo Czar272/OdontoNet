@@ -26,7 +26,7 @@ export interface AuthContextType {
   user: CurrentUser | null;
   /** true si la sesión terminó por un cierre voluntario (no se recuerda la ruta anterior). */
   loggedOutManually: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
   logout: () => void;
 }
 
@@ -94,10 +94,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string, rememberMe = false) => {
     try {
-      const { access_token } = await loginRequest(email, password);
-      setToken(access_token);
+      const { access_token } = await loginRequest(email, password, rememberMe);
+      setToken(access_token, rememberMe);
 
       const currentUser = await getCurrentUser();
       setUser(currentUser);

@@ -10,7 +10,7 @@ from app.schemas.user_schema import (
     UserResponse,
 )
 from app.auth.security import verify_password
-from app.auth.jwt_handler import create_access_token
+from app.auth.jwt_handler import create_access_token, token_lifetime
 from app.auth.dependencies import get_current_user
 from app.auth.permissions import Role, require_roles
 from app.services import user_service
@@ -49,9 +49,15 @@ def login_user(user: UserLogin, db: Session = Depends(get_db)):
     if not valid_password or db_user.is_active is False:
         raise HTTPException(status_code=401, detail="Credenciales inválidas.")
 
-    access_token = create_access_token({"sub": db_user.email, "role": db_user.role})
+    access_token = create_access_token(
+        {"sub": db_user.email, "role": db_user.role}, remember_me=user.remember_me
+    )
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "expires_in": int(token_lifetime(user.remember_me).total_seconds()),
+    }
 
 
 @router.get("/me", response_model=CurrentUserResponse)

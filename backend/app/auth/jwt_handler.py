@@ -12,6 +12,8 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+# Duración de la sesión cuando el usuario marca "Recuérdame" (ODON-255).
+REMEMBER_ME_EXPIRE_DAYS = int(os.getenv("REMEMBER_ME_EXPIRE_DAYS", "7"))
 
 if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY no está configurada. Revisa backend/.env")
@@ -27,11 +29,17 @@ def decode_token(token: str):
         return None
 
 
-def create_access_token(data: dict):
+def token_lifetime(remember_me: bool = False) -> timedelta:
+    if remember_me:
+        return timedelta(days=REMEMBER_ME_EXPIRE_DAYS)
+    return timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+
+
+def create_access_token(data: dict, remember_me: bool = False):
 
     to_encode = data.copy()
 
-    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + token_lifetime(remember_me)
 
     to_encode.update({"exp": expire})
 

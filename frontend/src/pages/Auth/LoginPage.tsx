@@ -13,6 +13,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const from = (location.state as { from?: string } | null)?.from ?? "/dashboard";
@@ -29,7 +30,7 @@ export default function LoginPage() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const success = await login(email, password);
+    const success = await login(email, password, rememberMe);
 
     setIsSubmitting(false);
 
@@ -65,6 +66,16 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+
+        <label className="flex items-center gap-2 text-sm text-gray-700 select-none">
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 accent-gray-900"
+          />
+          Recuérdame
+        </label>
 
         <Button type="submit" disabled={isSubmitting} className="w-full mt-2">
           {isSubmitting ? "Ingresando..." : "Iniciar sesión"}
