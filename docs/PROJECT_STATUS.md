@@ -40,7 +40,7 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre doctor
 6. **Deuda frontend:** sin manejo de token expirado (401) ni datos de usuario/clínica en sesión; interfaz unificada en español (decisión 2026-10-31); layout sin versión móvil; `PatientForm` no reutiliza `Input`/`Button`.
 7. **Pendiente:** AuthContext v2 con `/auth/me`, verificación de sesión y usuario/clínica actuales.
 8. **Pendiente:** CRUD completo, agenda, expedientes, imágenes, periodontograma manual, pruebas y despliegue.
-9. **Decisión:** `seed.py` permanece local y excluido de Git; la importación de datos de clínicas será una funcionalidad independiente futura.
+9. **Decisión (actualizada 2026-10-31):** el seed versionado es `backend/scripts/seed_dev.py` (idempotente, solo local, contraseña por `SEED_PASSWORD`). El `seed.py` personal sigue fuera de Git. La importación de datos de clínicas será una funcionalidad independiente futura.
 
 ## Jira — situación conocida
 
@@ -50,7 +50,8 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre doctor
 - Historia `ODON-62`: aislamiento backend por `clinic_id` — Done (23 pruebas verificadas en Windows).
 - Historia `ODON-18`: frontend base — Done. `ODON-106` (crear paciente) — Done.
 - Historia `ODON-66`: matriz RBAC y guards backend — Done.
-- Historia `ODON-22`: contratos API y errores unificados — Testing (63 pruebas backend). Corregido: registro de contraseña en consola en el login, formulario con Enter, logout, rutas comodín, NavLink activo, accesibilidad de Input/Modal, `strict` en TypeScript, `VITE_API_URL`. Verificado con lint, build y 19 pruebas E2E con API simulada.
+- Historias `ODON-22`, `ODON-26` y `ODON-30`: contratos API, Docker/PostgreSQL y migraciones — Done.
+- Historia `ODON-34`: seed sintético de desarrollo — Testing (75 pruebas backend). Corregido: registro de contraseña en consola en el login, formulario con Enter, logout, rutas comodín, NavLink activo, accesibilidad de Input/Modal, `strict` en TypeScript, `VITE_API_URL`. Verificado con lint, build y 19 pruebas E2E con API simulada.
 - `ODON-15`: auditoría de estructura — Done.
 - `ODON-16`: README y convenciones — Done.
 - `ODON-17`: `.gitignore` y configuración de secretos — Done.
@@ -58,8 +59,8 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre doctor
 
 ## Próximo paso
 
-1. ODON-26 / ODON-30: auditoría de PostgreSQL, Docker y migraciones.
-2. AUT04 (ODON-50): cerrar sesión en el frontend ante un 401.
+1. Cerrar ODON-34 y la épica ODON-1 con una revisión general de documentación.
+2. AUT03/AUT04 (ODON-46, ODON-50): AuthContext v2 y cierre de sesión ante un 401.
 
 ## Convenciones de colaboración
 

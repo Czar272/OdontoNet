@@ -112,7 +112,20 @@ npm run lint
 
 ## 5. Datos iniciales
 
-Alembic crea las tablas, pero no crea usuarios ni clínicas de manera automática. El repositorio no incluye `seed.py`, por decisión del proyecto: los datos sintéticos se mantienen locales. El aprovisionamiento seguro de la primera clínica y el administrador está pendiente. Para pruebas de login se necesita una base de desarrollo con usuarios válidos previamente creados.
+Alembic crea las tablas, pero no crea usuarios ni clínicas. Para desarrollo existe un seed sintético versionado, `backend/scripts/seed_dev.py`:
+
+```powershell
+# En backend/, con odonto_venv activo
+$env:SEED_PASSWORD = "<contraseña de al menos 8 caracteres>"
+python -m scripts.seed_dev
+```
+
+- Crea **Clínica Demo Norte** y **Clínica Demo Sur**, cada una con administración, recepción, dos doctores y 15 pacientes ficticios. Sirve para probar roles y aislamiento entre clínicas.
+- Es **idempotente**: si se ejecuta de nuevo, no duplica nada. Tampoco borra ni modifica datos existentes.
+- Solo corre contra una base **local** (`localhost`/`127.0.0.1`) y con `APP_ENV` igual a `development` (valor por defecto).
+- No contiene contraseñas: todos los usuarios demo usan la de `SEED_PASSWORD`. Los correos se imprimen al terminar (por ejemplo, `admin.norte@odontonet-demo.com`).
+
+Un `seed.py` personal en `backend/scripts/` sigue ignorado por Git. El alta segura de la primera clínica real está pendiente (ODON-74).
 
 La futura importación de datos de clínicas existentes será una funcionalidad específica, con validación de estructura, duplicados, permisos y trazabilidad; **no** equivale al seed de desarrollo.
 
@@ -134,7 +147,23 @@ alembic upgrade head
 
 Nunca asumir que `--autogenerate` detecta correctamente renombrados o migraciones de datos. Evitar resets de volumen como alternativa a migraciones.
 
+Checklist antes de commitear una migración:
+
+1. Revisar el archivo generado: nombres de restricciones, ausencia de `drop_table`/`drop_column` no deseados y migración de datos existentes (por ejemplo, valores vacíos antes de una restricción única).
+2. Escribir un `downgrade()` que revierta exactamente el `upgrade()` o documentar por qué no es posible.
+3. `alembic upgrade head` y `alembic check` (sin operaciones pendientes).
+4. `python -m pytest`: las pruebas aplican todas las migraciones sobre la base `_test`.
+5. `scripts\dev\verify-infra.ps1`: prueba la cadena completa en una base vacía temporal.
+
 ## 7. Comprobaciones rápidas
+
+Verificación automática de PostgreSQL, Docker y migraciones (reinicia el contenedor una vez y usa una base temporal; no modifica datos):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\dev\verify-infra.ps1
+```
+
+Comprobaciones manuales:
 
 - `docker compose ps`: contenedor saludable.
 - `alembic current`: revisión actual coincide con `heads`.
