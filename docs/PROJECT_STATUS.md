@@ -47,8 +47,8 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre doctor
 - Proyecto `ODON`: 13 épicas, 60 historias, 180 subtareas importadas.
 - Épica `ODON-1`: arquitectura e infraestructura.
 - Historia `ODON-14`: estructura monorepositorio y convenciones — Done (`npm ci` y `npm run dev` verificados en Windows).
-- Historia `ODON-62`: aislamiento backend por `clinic_id` — Testing.
-- Historia `ODON-18`: frontend base — Testing. Corregido: registro de contraseña en consola en el login, formulario con Enter, logout, rutas comodín, NavLink activo, accesibilidad de Input/Modal, `strict` en TypeScript, `VITE_API_URL`. Verificado con lint, build y 19 pruebas E2E con API simulada.
+- Historia `ODON-62`: aislamiento backend por `clinic_id` — Done (23 pruebas verificadas en Windows).
+- Historia `ODON-18`: frontend base — Done. `ODON-106` (crear paciente) — Done. Corregido: registro de contraseña en consola en el login, formulario con Enter, logout, rutas comodín, NavLink activo, accesibilidad de Input/Modal, `strict` en TypeScript, `VITE_API_URL`. Verificado con lint, build y 19 pruebas E2E con API simulada.
 - `ODON-15`: auditoría de estructura — Done.
 - `ODON-16`: README y convenciones — Done.
 - `ODON-17`: `.gitignore` y configuración de secretos — Done.
@@ -56,8 +56,8 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre doctor
 
 ## Próximo paso
 
-1. Aplicar `alembic upgrade head` en la base local, ejecutar `pytest` y crear un paciente desde la interfaz.
-2. Continuar con ODON-22 (backend FastAPI y contratos API) y ODON-66 (roles).
+1. ODON-66: matriz de roles y guards backend.
+2. ODON-22: contratos API y manejo uniforme de errores.
 
 ## Convenciones de colaboración
 
