@@ -61,11 +61,18 @@ Doctor 1 ── * Patient (asignación opcional del paciente)
 5. **Separación de IA:** no acoplar PyTorch/OpenCV al backend clínico; definir posteriormente contratos versionados y controles de acceso.
 6. **Datos clínicos:** almacenamiento de imágenes, auditoría de accesos y políticas de retención siguen pendientes.
 
+## Contrato de la API
+
+- Documentación interactiva en `/docs` y especificación en `/openapi.json`. Todas las respuestas exitosas tienen un esquema Pydantic; una prueba lo verifica.
+- `/health` comprueba la API y la conexión con PostgreSQL (`503` si la base no responde).
+- **Formato único de errores** (`backend/app/core/errors.py`): toda respuesta de error es `{"detail": "<mensaje en español>"}`. Los errores de validación (`422`) agregan `errors: [{"field", "message"}]`. Los `500` nunca exponen trazas.
+- Códigos: `401` sin sesión válida (con `WWW-Authenticate: Bearer`), `403` sin permiso por rol, `404` recurso inexistente o de otra clínica, `409` conflicto (duplicado), `422` datos inválidos.
+
 ## Limitaciones de seguridad conocidas
 
 - Las rutas actuales de pacientes y doctores no requieren `get_current_user` ni aplican filtro por clínica.
-- `POST /auth/register` no incorpora todavía asignación segura de clínica ni restricciones de rol; con `clinic_id` obligatorio puede fallar.
-- `/patients/` y `/doctors/` exigen JWT y filtran por la clínica del usuario (ODON-62). Falta aplicar la matriz de roles (ODON-66).
+- `POST /auth/register` solo lo usa un `admin` y crea el usuario en su propia clínica. Faltan la edición y desactivación de usuarios (ODON-86, ODON-94).
+- `/patients/` y `/doctors/` exigen JWT y filtran por la clínica del usuario (ODON-62). Los permisos por rol están en [`PERMISSIONS.md`](PERMISSIONS.md) (ODON-66).
 - La existencia de JWT no equivale a un sistema de permisos completo.
 - No se ha implementado aún un mecanismo de incorporación de clínicas ni importación validada de bases de datos externas.
 

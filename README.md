@@ -8,7 +8,7 @@
 
 OdontoNet busca centralizar la administración de clínicas odontológicas: personal, pacientes, citas, expedientes, imágenes clínicas y periodontogramas. El proyecto se organiza como un monorepositorio con frontend React, API FastAPI y PostgreSQL. El servicio de inteligencia artificial se desarrollará por separado y se integrará mediante una API cuando esté validado.
 
-El modelo de datos ya contempla clínicas, usuarios, doctores y pacientes. Los endpoints de pacientes y doctores ya filtran por la clínica del usuario autenticado; la autorización por rol sigue pendiente.
+El modelo de datos ya contempla clínicas, usuarios, doctores y pacientes. Los endpoints filtran por la clínica del usuario autenticado y aplican permisos por rol según [`docs/PERMISSIONS.md`](docs/PERMISSIONS.md).
 
 ## Estado de las funcionalidades
 

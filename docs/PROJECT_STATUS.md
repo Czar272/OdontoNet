@@ -33,8 +33,8 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre doctor
 ## Limitaciones y riesgos prioritarios
 
 1. **Resuelto (ODON-62):** `/patients/` y `/doctors/` exigen JWT, filtran por la clínica del token y toman `clinic_id` de la sesión. Correo de paciente único por clínica (migración `4c1d2e8f9a10`). 23 pruebas cruzadas entre dos clínicas.
-2. **Bloqueante:** `/auth/register` no aprovisiona una clínica de forma segura y puede fallar por `clinic_id` obligatorio (ODON-86 / ODON-74).
-3. **Pendiente (ODON-66):** sin matriz de roles; cualquier usuario autenticado puede crear perfiles de doctor en su clínica.
+2. **Resuelto (ODON-66):** `/auth/register` exige rol `admin` y crea el usuario en la clínica del administrador. Pendiente: edición y desactivación de usuarios (ODON-86, ODON-94) y alta de la primera clínica (ODON-74).
+3. **Resuelto (ODON-66):** matriz RBAC en `docs/PERMISSIONS.md`, `require_roles` en backend, 403 en español. Usuarios inactivos no pueden iniciar sesión. 53 pruebas backend. Decisiones de módulos futuros confirmadas (admin con acceso clínico; recepción sin datos clínicos).
 4. **Seguridad:** el historial público de Git contiene un `.env` antiguo (commit `7081a3d`) con la `DATABASE_URL` de desarrollo. **Mitigado:** la contraseña se rotó el 2026-10-31 con `scripts/dev/rotate-db-password.ps1`, por lo que la credencial del historial ya no es válida. No se reescribe el historial sin autorización explícita.
 5. **Deuda técnica:** `requirements.txt` es un `pip freeze` completo (incluye dependencias transitivas y `pydantic-core`, que no usa Pydantic 1). Conviene separar dependencias directas en una historia posterior.
 6. **Deuda frontend:** sin manejo de token expirado (401) ni datos de usuario/clínica en sesión; interfaz unificada en español (decisión 2026-10-31); layout sin versión móvil; `PatientForm` no reutiliza `Input`/`Button`.
@@ -48,7 +48,9 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre doctor
 - Épica `ODON-1`: arquitectura e infraestructura.
 - Historia `ODON-14`: estructura monorepositorio y convenciones — Done (`npm ci` y `npm run dev` verificados en Windows).
 - Historia `ODON-62`: aislamiento backend por `clinic_id` — Done (23 pruebas verificadas en Windows).
-- Historia `ODON-18`: frontend base — Done. `ODON-106` (crear paciente) — Done. Corregido: registro de contraseña en consola en el login, formulario con Enter, logout, rutas comodín, NavLink activo, accesibilidad de Input/Modal, `strict` en TypeScript, `VITE_API_URL`. Verificado con lint, build y 19 pruebas E2E con API simulada.
+- Historia `ODON-18`: frontend base — Done. `ODON-106` (crear paciente) — Done.
+- Historia `ODON-66`: matriz RBAC y guards backend — Done.
+- Historia `ODON-22`: contratos API y errores unificados — Testing (63 pruebas backend). Corregido: registro de contraseña en consola en el login, formulario con Enter, logout, rutas comodín, NavLink activo, accesibilidad de Input/Modal, `strict` en TypeScript, `VITE_API_URL`. Verificado con lint, build y 19 pruebas E2E con API simulada.
 - `ODON-15`: auditoría de estructura — Done.
 - `ODON-16`: README y convenciones — Done.
 - `ODON-17`: `.gitignore` y configuración de secretos — Done.
@@ -56,8 +58,8 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre doctor
 
 ## Próximo paso
 
-1. ODON-66: matriz de roles y guards backend.
-2. ODON-22: contratos API y manejo uniforme de errores.
+1. ODON-26 / ODON-30: auditoría de PostgreSQL, Docker y migraciones.
+2. AUT04 (ODON-50): cerrar sesión en el frontend ante un 401.
 
 ## Convenciones de colaboración
 

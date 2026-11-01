@@ -72,8 +72,9 @@ Si `odonto_venv` ya existe, omite su creación. `alembic current` y `alembic hea
 
 - API: http://127.0.0.1:8000/
 - Swagger: http://127.0.0.1:8000/docs
+- Estado de API y base de datos: http://127.0.0.1:8000/health
 
-Los endpoints `/auth/me`, `/patients/` y `/doctors/` **requieren** JWT y devuelven solo datos de la clínica del usuario autenticado. Para probarlo, usa `POST /auth/login`, copia `access_token`, presiona `Authorize` en Swagger y ejecuta `GET /auth/me`. Un `403 Not authenticated` al abrirlo directamente en el navegador es esperado en la configuración actual.
+Los endpoints `/auth/me`, `/patients/` y `/doctors/` **requieren** JWT y devuelven solo datos de la clínica del usuario autenticado. Para probarlo, usa `POST /auth/login`, copia `access_token`, presiona `Authorize` en Swagger y ejecuta `GET /auth/me`. Sin token, la API responde `401 {"detail": "No autenticado."}`; es lo esperado al abrir un endpoint protegido en el navegador.
 
 ### Pruebas automatizadas del backend
 
@@ -151,10 +152,10 @@ Nunca asumir que `--autogenerate` detecta correctamente renombrados o migracione
 | `POSTGRES_USER requerido`             | Falta `.env` de la raíz o variable sin valor.                                |
 | `connection refused` puerto 5432      | Docker detenido, contenedor no saludable o puerto incorrecto.                |
 | `ModuleNotFoundError: app`            | Ejecutar Uvicorn/Alembic desde `backend/`.                                   |
-| `403 Not authenticated` en `/auth/me` | Falta encabezado `Authorization: Bearer <JWT>`.                              |
+| `401 No autenticado.`                 | Falta encabezado `Authorization: Bearer <JWT>`.                              |
 | `alembic current` distinto de `heads` | Migraciones pendientes; revisar antes de aplicar.                            |
 | `IntegrityError` con `clinic_id`      | Base sin migrar: ejecutar `alembic upgrade head`; no desactivar la FK.       |
-| CORS bloqueado                        | Verificar origen `http://localhost:5173` y configuración de `main.py`.       |
+| CORS bloqueado                        | Agregar el origen del frontend a `CORS_ORIGINS` en `backend/.env`.           |
 
 ## 9. Seguridad operativa
 
