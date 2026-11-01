@@ -8,105 +8,92 @@
 
 OdontoNet busca centralizar la administración de clínicas odontológicas: personal, pacientes, citas, expedientes, imágenes clínicas y periodontogramas. El proyecto se organiza como un monorepositorio con frontend React, API FastAPI y PostgreSQL. El servicio de inteligencia artificial se desarrollará por separado y se integrará mediante una API cuando esté validado.
 
-El modelo de datos ya contempla clínicas, usuarios, doctores y pacientes. Los endpoints filtran por la clínica del usuario autenticado y aplican permisos por rol según [`docs/PERMISSIONS.md`](docs/PERMISSIONS.md).
+Cada clínica es un espacio aislado: la API filtra todos los datos por la clínica del usuario autenticado y aplica permisos por rol (`admin`, `doctor`, `receptionist`) según [`docs/PERMISSIONS.md`](docs/PERMISSIONS.md).
 
 ## Estado de las funcionalidades
 
-| Área                                                  | Estado actual                                                  |
-| ----------------------------------------------------- | -------------------------------------------------------------- |
-| Interfaz React, rutas y componentes reutilizables     | Base implementada                                              |
-| Login JWT y `GET /auth/me`                            | Implementados; sesión frontend aún básica                      |
-| Clínicas, usuarios, doctores y pacientes              | Modelos relacionales y migración implementados                 |
-| Pacientes                                             | Listado y creación inicial; falta CRUD completo y autorización |
-| Doctores                                              | Listado y creación inicial; falta autorización y validaciones  |
-| Agenda, expedientes, imágenes, periodontograma manual | Pendientes                                                     |
-| IA periodontal                                        | Fuera del MVP inicial; servicio independiente futuro           |
+| Área | Estado actual |
+| --- | --- |
+| Interfaz React (español), rutas, layout y componentes reutilizables | Implementado |
+| Login JWT, `GET /auth/me`, logout | Implementado; restauración de sesión y expiración en frontend pendientes (AUT03/AUT04) |
+| Aislamiento por clínica y permisos por rol | Implementado y cubierto por pruebas |
+| Alta de usuarios por administrador (`POST /auth/register`) | Implementado; edición y desactivación pendientes |
+| Pacientes | Listado, detalle, creación con validación y filtros; edición y archivado pendientes |
+| Doctores | Listado, detalle y alta de perfil (admin) |
+| Agenda, expedientes, imágenes, periodontograma manual | Pendientes |
+| IA periodontal | Fuera del MVP inicial; servicio independiente futuro |
 
-**Aviso:** no usar con datos clínicos reales ni desplegar públicamente hasta completar autorización, aislamiento entre clínicas, validaciones, auditoría, privacidad y pruebas de seguridad.
+**Aviso:** no usar con datos clínicos reales ni desplegar públicamente hasta completar auditoría, privacidad, respaldos, endurecimiento de seguridad y pruebas de aceptación.
 
 ## Tecnologías
 
-- **Frontend:** React 19, TypeScript, Vite 8, Tailwind CSS 3, React Router 7, TanStack Query, Axios.
-- **Backend:** Python 3.11 recomendado, FastAPI, SQLAlchemy 2, Pydantic 1, Alembic, JWT.
+- **Frontend:** React 19, TypeScript (strict), Vite 8, Tailwind CSS 3, React Router 7, TanStack Query, Axios.
+- **Backend:** Python 3.11, FastAPI, SQLAlchemy 2, Pydantic 1, Alembic, JWT, pytest.
 - **Base de datos:** PostgreSQL 16 en Docker Compose.
 - **Futuro módulo IA:** servicio independiente; tecnología y contratos pendientes de validación.
 
-Las versiones exactas de dependencias están en `frontend/package-lock.json` y `backend/requirements.txt`.
+Las versiones exactas están en `frontend/package-lock.json` y `backend/requirements.txt`.
 
 ## Estructura
 
 ```text
 OdontoNet/
-├── frontend/                 # Aplicación React
-├── backend/                  # API FastAPI y migraciones Alembic
-│   ├── app/
-│   └── alembic/
-├── database/                 # Material auxiliar (no es la fuente de migraciones)
-├── docs/                     # Documentación técnica
-├── docker-compose.yml       # PostgreSQL para desarrollo
-├── .env.example              # Ejemplo de variables para Docker
-└── README.md
+├── frontend/            # Aplicación React
+├── backend/
+│   ├── app/             # API FastAPI (api, auth, core, models, schemas, database)
+│   ├── alembic/         # Migraciones del esquema
+│   ├── scripts/         # seed_dev.py (datos sintéticos de desarrollo)
+│   └── tests/           # Pruebas pytest contra PostgreSQL
+├── ai-service/          # Reservado para el futuro servicio de IA (sin código)
+├── scripts/dev/         # Utilidades locales (rotación de contraseña, verificación)
+├── docs/                # Documentación técnica
+├── docker-compose.yml   # PostgreSQL para desarrollo
+└── .env.example         # Variables de Docker
 ```
-
-`ai-service/` es una carpeta prevista para una etapa futura; puede no estar incluida en el repositorio actual.
 
 ## Inicio rápido (Windows / PowerShell)
 
-**Requisitos:** Git, Docker Desktop con Compose, Python 3.11, Node.js y npm compatibles con el `package.json` actual.
-
-Desde la raíz del repositorio:
+**Requisitos:** Git, Docker Desktop con Compose, Python 3.11, Node.js y npm compatibles con `frontend/package.json`.
 
 ```powershell
 Copy-Item .env.example .env
 Copy-Item backend/.env.example backend/.env
-```
+# Edita ambos .env con credenciales locales consistentes y una clave JWT aleatoria. No los subas a Git.
 
-Edita ambos archivos `.env` con credenciales locales consistentes y una clave JWT aleatoria. **No subas esos archivos a Git.**
-
-```powershell
-docker compose config --quiet
 docker compose up -d
-docker compose ps
-```
 
-En otra terminal:
-
-```powershell
 cd backend
 py -3.11 -m venv odonto_venv
 .\odonto_venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
 alembic upgrade head
+$env:SEED_PASSWORD = "<contraseña de al menos 8 caracteres>"
+python -m scripts.seed_dev        # clínicas y usuarios de demostración
 uvicorn app.main:app --reload
-```
 
-En una tercera terminal:
-
-```powershell
+# En otra terminal
 cd frontend
 npm ci
 npm run dev
 ```
 
-- Frontend: http://localhost:5173
-- API: http://127.0.0.1:8000
-- Documentación de API: http://127.0.0.1:8000/docs
+- Frontend: http://localhost:5173 (por ejemplo, `admin.norte@odontonet-demo.com` con la contraseña de `SEED_PASSWORD`)
+- API: http://127.0.0.1:8000 · Documentación: http://127.0.0.1:8000/docs · Estado: http://127.0.0.1:8000/health
+- Pruebas: `python -m pytest` en `backend/` · Verificación de infraestructura: `scripts\dev\verify-infra.ps1`
 
-El repositorio **no proporciona un aprovisionamiento de administrador listo para producción**. El inicio de sesión requiere un usuario existente en la base. No utilizar el endpoint público de registro actual para aprovisionamiento real hasta implementar los controles de clínica y permisos.
-
-Para instrucciones detalladas y resolución de problemas, consulta [Desarrollo](docs/DEVELOPMENT.md).
+Instrucciones detalladas y solución de problemas en [Desarrollo](docs/DEVELOPMENT.md).
 
 ## Documentación
 
 - [Arquitectura](docs/ARCHITECTURE.md)
+- [Permisos por rol](docs/PERMISSIONS.md)
 - [Entorno de desarrollo](docs/DEVELOPMENT.md)
 - [Convenciones](docs/CONVENTIONS.md)
 - [Estado técnico y Jira](docs/PROJECT_STATUS.md)
 
 ## Planificación
 
-El trabajo se organiza en Jira bajo el proyecto `ODON`, con épicas, historias y subtareas. El objetivo inicial es un MVP clínico **sin IA**, seguido de una integración posterior del servicio de análisis periodontal.
+El trabajo se organiza en Jira bajo el proyecto `ODON` (épica → historia → subtarea). El objetivo inicial es un MVP clínico **sin IA**, seguido de la integración posterior del servicio de análisis periodontal.
 
 ## Datos y licencia
 

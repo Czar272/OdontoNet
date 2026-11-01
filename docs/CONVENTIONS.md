@@ -26,6 +26,12 @@
 - No confiar en guardas de frontend como sustituto de permisos del backend.
 - Mantener consistencia de estilos con Tailwind y componentes compartidos.
 
+## Pruebas
+
+- Backend: `python -m pytest` en `backend/` contra una base PostgreSQL `*_test` (nunca la de desarrollo). Todo endpoint nuevo debe probar aislamiento entre clínicas y permisos por rol.
+- Frontend: `npm run lint` y `npm run build` sin errores antes de cada commit.
+- Migraciones: seguir el checklist de `DEVELOPMENT.md` y `scripts/dev/verify-infra.ps1`.
+
 ## Seguridad y privacidad
 
 - Nunca subir `.env`, JWT, contraseñas, dumps, fotografías ni datos identificables de pacientes.

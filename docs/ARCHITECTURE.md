@@ -23,22 +23,25 @@ PostgreSQL 16 (Docker Compose)
 
 ### Frontend
 
-- `src/pages/`: Login, Dashboard y Patients.
-- `src/routes/`: navegación y protección básica por presencia de token.
-- `src/context/AuthContext.tsx`: login, logout y token en almacenamiento local; **no** implementa todavía recuperación de sesión con `/auth/me`.
-- `src/services/`: cliente Axios, servicios de autenticación, pacientes y doctores.
-- `src/components/basic/`: componentes visuales reutilizables; `src/components/patients/`: formulario específico del dominio.
+- `src/pages/`: inicio de sesión, inicio (dashboard) y pacientes. Interfaz en español.
+- `src/routes/`: router, ruta protegida por presencia de token y ruta comodín.
+- `src/layouts/`: barra lateral con navegación activa y cierre de sesión (limpia token y caché).
+- `src/context/AuthContext.tsx`: login, logout y token en `localStorage`. **No** restaura todavía usuario/clínica con `/auth/me` ni reacciona a un `401` (AUT03/AUT04).
+- `src/services/`: cliente Axios (`VITE_API_URL`), servicios por recurso y `apiError.ts` para mostrar el `detail` de la API.
+- `src/components/basic/`: Button, Input, Select, Modal, Table, Card, PageHeader, LoadingSpinner (accesibles); `src/components/patients/`: formulario del dominio.
 - `src/types/`: contratos TypeScript mantenidos manualmente.
 
 ### Backend
 
-- `app/main.py`: instancia FastAPI, routers y CORS para `http://localhost:5173`.
+- `app/main.py`: instancia FastAPI, routers, manejadores de error, CORS (`CORS_ORIGINS`) y `/health`.
 - `app/api/`: rutas `/auth`, `/patients`, `/doctors`.
-- `app/auth/`: hash de contraseñas, emisión/validación JWT y dependencia de usuario actual.
+- `app/auth/`: hash de contraseñas, JWT, usuario actual (`get_current_user`), clínica actual (`get_current_clinic_id`) y roles (`permissions.py`, `require_roles`).
+- `app/core/errors.py`: formato único de errores.
 - `app/models/`: Clinic, User, Doctor y Patient.
 - `app/schemas/`: modelos de entrada/salida Pydantic.
 - `app/database/`: motor SQLAlchemy, sesiones y dependencia de sesión.
-- `alembic/`: control de cambios del esquema; no usar `Base.metadata.create_all` para evolucionar la base.
+- `alembic/`: cambios del esquema; no usar `Base.metadata.create_all` para evolucionar la base.
+- `scripts/seed_dev.py`: datos sintéticos de desarrollo; `tests/`: pruebas pytest contra PostgreSQL.
 
 ## Relaciones del modelo
 
@@ -50,16 +53,17 @@ User   1 ── 0..1 Doctor
 Doctor 1 ── * Patient (asignación opcional del paciente)
 ```
 
-`Patient.doctor_id` identifica al doctor asignado para organización y filtros. **No define propiedad exclusiva del paciente.** Los profesionales autorizados de la misma clínica deben poder acceder a sus pacientes conforme a permisos.
+`Patient.doctor_id` identifica al doctor asignado para organización y filtros. **No define propiedad exclusiva del paciente:** los usuarios autorizados de la misma clínica acceden a sus pacientes según su rol. El correo del paciente es único dentro de cada clínica.
 
 ## Decisiones arquitectónicas
 
-1. **Aislamiento por clínica:** cada recurso clínico deberá estar asociado a una clínica y todas las operaciones deberán limitarse por el `clinic_id` obtenido de la sesión validada en el servidor. No confiar en un `clinic_id` suministrado por el navegador.
-2. **Roles:** `admin`, `doctor`, `receptionist` existen como valores de datos; la autorización granular aún está pendiente.
-3. **Autenticación:** el backend ofrece `POST /auth/login` y `GET /auth/me`; el frontend conserva el JWT en `localStorage` de manera temporal. Revisar la estrategia de sesión y protección contra XSS antes de producción.
-4. **Migraciones:** Alembic es la fuente de verdad para el esquema; la revisión incluida en el repositorio es `e7aac1fc989e` (`initial_schema`).
-5. **Separación de IA:** no acoplar PyTorch/OpenCV al backend clínico; definir posteriormente contratos versionados y controles de acceso.
-6. **Datos clínicos:** almacenamiento de imágenes, auditoría de accesos y políticas de retención siguen pendientes.
+1. **Aislamiento por clínica:** todo recurso clínico pertenece a una clínica y toda operación se limita por el `clinic_id` del usuario autenticado (`get_current_clinic_id`). Un `clinic_id` enviado por el navegador se ignora. Un recurso de otra clínica responde `404`.
+2. **Roles:** `admin`, `doctor` y `receptionist`, un rol por usuario, aplicados en el backend con `require_roles` y leídos de la base en cada petición. Matriz y decisiones en [`PERMISSIONS.md`](PERMISSIONS.md).
+3. **Autenticación:** `POST /auth/login` emite un JWT con expiración configurable; `GET /auth/me` devuelve usuario y clínica. Usuarios inactivos no inician sesión y sus tokens dejan de valer. El frontend guarda el JWT en `localStorage` de forma temporal; revisar la estrategia frente a XSS antes de producción.
+4. **Migraciones:** Alembic es la fuente de verdad del esquema. Cadena lineal: `e7aac1fc989e` (esquema inicial) → `4c1d2e8f9a10` (correo único por clínica e índices `clinic_id`). Checklist de revisión en `DEVELOPMENT.md`.
+5. **Pruebas:** pytest contra una base PostgreSQL `*_test` que aplica todas las migraciones; incluyen aislamiento entre dos clínicas, matriz de roles, contrato de la API y seed.
+6. **Separación de IA:** no acoplar PyTorch/OpenCV al backend clínico; definir posteriormente contratos versionados y controles de acceso.
+7. **Datos clínicos:** almacenamiento de imágenes, auditoría de accesos y políticas de retención siguen pendientes.
 
 ## Contrato de la API
 
@@ -68,23 +72,23 @@ Doctor 1 ── * Patient (asignación opcional del paciente)
 - **Formato único de errores** (`backend/app/core/errors.py`): toda respuesta de error es `{"detail": "<mensaje en español>"}`. Los errores de validación (`422`) agregan `errors: [{"field", "message"}]`. Los `500` nunca exponen trazas.
 - Códigos: `401` sin sesión válida (con `WWW-Authenticate: Bearer`), `403` sin permiso por rol, `404` recurso inexistente o de otra clínica, `409` conflicto (duplicado), `422` datos inválidos.
 
-## Limitaciones de seguridad conocidas
+## Limitaciones conocidas
 
-- Las rutas actuales de pacientes y doctores no requieren `get_current_user` ni aplican filtro por clínica.
-- `POST /auth/register` solo lo usa un `admin` y crea el usuario en su propia clínica. Faltan la edición y desactivación de usuarios (ODON-86, ODON-94).
-- `/patients/` y `/doctors/` exigen JWT y filtran por la clínica del usuario (ODON-62). Los permisos por rol están en [`PERMISSIONS.md`](PERMISSIONS.md) (ODON-66).
-- La existencia de JWT no equivale a un sistema de permisos completo.
-- No se ha implementado aún un mecanismo de incorporación de clínicas ni importación validada de bases de datos externas.
+- No existe todavía el alta segura de la primera clínica y su administrador (ODON-74); en desarrollo se usa `seed_dev.py`.
+- Faltan edición y desactivación de usuarios (ODON-86, ODON-94) y la navegación por rol en el frontend (ODON-70).
+- El frontend no restaura la sesión con `/auth/me` ni cierra la sesión ante un `401` (ODON-46, ODON-50).
+- Sin auditoría de acciones clínicas, respaldos verificados ni endurecimiento para producción (épica CAL).
+- No hay mecanismo de importación validada de datos de clínicas existentes.
 
-Estas limitaciones son **bloqueantes para un despliegue con datos reales** y deberán resolverse en las historias de seguridad, autenticación y multiclínica de Jira.
+Estas limitaciones son **bloqueantes para un despliegue con datos reales**.
 
 ## Evolución prevista
 
-- Autenticación y autorización por clínica y rol.
+- Sesión completa en frontend y navegación por rol.
 - CRUD completo de pacientes y personal.
 - Agenda compartida por clínica, expedientes y periodontograma manual.
 - Gestión privada de imágenes clínicas.
-- Auditoría, pruebas, respaldos y despliegue.
+- Auditoría, respaldos y despliegue.
 - Integración futura con microservicio IA y revisión humana de resultados.
 
 Consulta [Estado del proyecto](PROJECT_STATUS.md) para las prioridades y tickets actuales.
