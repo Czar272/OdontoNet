@@ -9,6 +9,7 @@ import PageHeader from "../../components/basic/PageHeader";
 import Select from "../../components/basic/Select";
 import Table from "../../components/basic/Table";
 import PatientForm from "../../components/patients/PatientForm";
+import { usePermission } from "../../hooks/usePermission";
 import { getDoctors } from "../../services/doctorService";
 import { getPatients } from "../../services/patientService";
 
@@ -22,6 +23,8 @@ const PatientsPage: React.FC = () => {
     queryKey: ["doctors"],
     queryFn: getDoctors,
   });
+
+  const canCreate = usePermission("patients:create");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -51,7 +54,9 @@ const PatientsPage: React.FC = () => {
         title="Pacientes"
         description="Gestiona los pacientes de la clínica"
         action={
-          <Button onClick={() => setIsModalOpen(true)}>Nuevo paciente</Button>
+          canCreate && (
+            <Button onClick={() => setIsModalOpen(true)}>Nuevo paciente</Button>
+          )
         }
       />
 

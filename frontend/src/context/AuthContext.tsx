@@ -21,7 +21,7 @@ import type { CurrentUser } from "../types/auth";
  */
 export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
-interface AuthContextType {
+export interface AuthContextType {
   status: AuthStatus;
   user: CurrentUser | null;
   /** true si la sesión terminó por un cierre voluntario (no se recuerda la ruta anterior). */
@@ -30,7 +30,8 @@ interface AuthContextType {
   logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+// Exportado para pruebas: permite simular una sesión sin llamar a la API.
+export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();

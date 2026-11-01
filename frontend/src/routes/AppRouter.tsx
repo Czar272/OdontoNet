@@ -6,6 +6,7 @@ import PatientsPage from "../pages/Patients/PatientsPage";
 
 import MainLayout from "../layouts/MainLayout";
 import ProtectedRoute from "./ProtectedRoute";
+import RequirePermission from "./RequirePermission";
 
 export default function AppRouter() {
   return (
@@ -24,7 +25,14 @@ export default function AppRouter() {
         >
           <Route path="/dashboard" element={<DashboardPage />} />
 
-          <Route path="/patients" element={<PatientsPage />} />
+          <Route
+            path="/patients"
+            element={
+              <RequirePermission permission="patients:view">
+                <PatientsPage />
+              </RequirePermission>
+            }
+          />
         </Route>
 
         {/* Rutas desconocidas: login o dashboard según la sesión */}

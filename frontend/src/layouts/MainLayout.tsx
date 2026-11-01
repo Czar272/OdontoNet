@@ -2,16 +2,13 @@ import clsx from "clsx";
 import { LogOut } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 
+import { getNavigation } from "../config/navigation";
 import { useAuth } from "../context/AuthContext";
 import { ROLE_LABELS } from "../types/auth";
 
-const navItems = [
-  { to: "/dashboard", label: "Inicio" },
-  { to: "/patients", label: "Pacientes" },
-];
-
 export default function MainLayout() {
   const { user, logout } = useAuth();
+  const navItems = getNavigation(user?.role);
 
   return (
     <div className="min-h-screen flex bg-gray-100">
