@@ -5,13 +5,13 @@ import { getNavigation, NAV_ITEMS, type NavItem } from "./navigation";
 const labels = (items: NavItem[]) => items.map((item) => item.label);
 
 describe("getNavigation", () => {
-  it("administración ve Inicio, Pacientes y Usuarios", () => {
-    expect(labels(getNavigation("admin"))).toEqual(["Inicio", "Pacientes", "Usuarios"]);
+  it("administración ve Inicio, Pacientes, Doctores y Usuarios", () => {
+    expect(labels(getNavigation("admin"))).toEqual(["Inicio", "Pacientes", "Doctores", "Usuarios"]);
   });
 
   it("doctor y recepción no ven Usuarios", () => {
     for (const role of ["doctor", "receptionist"] as const) {
-      expect(labels(getNavigation(role))).toEqual(["Inicio", "Pacientes"]);
+      expect(labels(getNavigation(role))).toEqual(["Inicio", "Pacientes", "Doctores"]);
     }
   });
 

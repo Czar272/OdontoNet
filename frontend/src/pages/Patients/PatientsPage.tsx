@@ -19,9 +19,10 @@ const PatientsPage: React.FC = () => {
     queryFn: getPatients,
   });
 
+  // Todos los doctores, incluidos inactivos: sus pacientes siguen en el historial.
   const { data: doctors } = useQuery({
     queryKey: ["doctors"],
-    queryFn: getDoctors,
+    queryFn: () => getDoctors(),
   });
 
   const canCreate = usePermission("patients:create");
@@ -82,6 +83,7 @@ const PatientsPage: React.FC = () => {
           {doctors?.map((doctor) => (
             <option key={doctor.id} value={doctor.id}>
               {doctor.user.name}
+              {doctor.user.is_active ? "" : " (inactivo)"}
             </option>
           ))}
         </Select>

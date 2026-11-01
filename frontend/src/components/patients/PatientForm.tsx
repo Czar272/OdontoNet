@@ -29,9 +29,10 @@ const today = new Date().toISOString().slice(0, 10);
 const PatientForm: React.FC<PatientFormProps> = ({ onSuccess }) => {
   const queryClient = useQueryClient();
 
+  // Solo doctores activos: el backend rechaza asignar pacientes a inactivos.
   const { data: doctors } = useQuery({
-    queryKey: ["doctors"],
-    queryFn: getDoctors,
+    queryKey: ["doctors", { active: true }],
+    queryFn: () => getDoctors({ active: true }),
   });
 
   const [formData, setFormData] = useState<CreatePatientDTO>(emptyForm);

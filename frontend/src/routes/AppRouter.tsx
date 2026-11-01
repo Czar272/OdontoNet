@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 
 import LoginPage from "../pages/Auth/LoginPage";
 import DashboardPage from "../pages/Dashboard/DashboardPage";
+import DoctorsPage from "../pages/Doctors/DoctorsPage";
 import PatientsPage from "../pages/Patients/PatientsPage";
 import UsersPage from "../pages/Users/UsersPage";
 
@@ -31,6 +32,15 @@ export default function AppRouter() {
             element={
               <RequirePermission permission="patients:view">
                 <PatientsPage />
+              </RequirePermission>
+            }
+          />
+
+          <Route
+            path="/doctors"
+            element={
+              <RequirePermission permission="doctors:view">
+                <DoctorsPage />
               </RequirePermission>
             }
           />
