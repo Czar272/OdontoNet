@@ -52,10 +52,12 @@ Clinic 1 ── * User
 Clinic 1 ── * Doctor
 Clinic 1 ── * Patient
 User   1 ── 0..1 Doctor (misma clínica; garantizado por la base)
-Doctor 1 ── * Patient (asignación opcional del paciente)
+Doctor 1 ── * Patient (asignación opcional; misma clínica, garantizado por la base)
 ```
 
 `Patient.doctor_id` identifica al doctor asignado para organización y filtros. **No define propiedad exclusiva del paciente:** los usuarios autorizados de la misma clínica acceden a sus pacientes según su rol. El correo del paciente es único dentro de cada clínica.
+
+**Integridad Patient–Doctor (ODON-98):** `fk_patients_doctor_clinic` (`patients(doctor_id, clinic_id)` → `doctors(id, clinic_id)`) impide asignar un doctor de otra clínica; con `doctor_id` vacío no aplica, porque el doctor es opcional. El listado carga doctor y usuario con joins (sin consultas N+1, verificado por prueba).
 
 **Integridad User–Doctor (ODON-78):** `uq_doctors_user_id` impide un segundo perfil para el mismo usuario y `fk_doctors_user_clinic` (`doctors(user_id, clinic_id)` → `users(id, clinic_id)`) impide un perfil en otra clínica que su usuario. Usuarios y doctores no se borran: un usuario con perfil o un doctor con pacientes no se puede eliminar (las FK lo bloquean y el ORM usa `passive_deletes`); el acceso se retira desactivando (ODON-94).
 
@@ -64,7 +66,7 @@ Doctor 1 ── * Patient (asignación opcional del paciente)
 1. **Aislamiento por clínica:** todo recurso clínico pertenece a una clínica y toda operación se limita por el `clinic_id` del usuario autenticado (`get_current_clinic_id`). Un `clinic_id` enviado por el navegador se ignora. Un recurso de otra clínica responde `404`.
 2. **Roles:** `admin`, `doctor` y `receptionist`, un rol por usuario, aplicados en el backend con `require_roles` y leídos de la base en cada petición. Matriz y decisiones en [`PERMISSIONS.md`](PERMISSIONS.md).
 3. **Autenticación:** `POST /auth/login` emite un JWT con expiración configurable; `GET /auth/me` devuelve usuario y clínica. Usuarios inactivos no inician sesión y sus tokens dejan de valer. El frontend guarda el JWT en `sessionStorage` (o en `localStorage` con «Recuérdame») de forma temporal; revisar la estrategia frente a XSS antes de producción.
-4. **Migraciones:** Alembic es la fuente de verdad del esquema. Cadena lineal: `e7aac1fc989e` (esquema inicial) → `4c1d2e8f9a10` (correo único por clínica e índices `clinic_id`) → `7b3e9d2c5a61` (User–Doctor uno a uno y misma clínica; se detiene si hay datos que lo violan). Checklist de revisión en `DEVELOPMENT.md`.
+4. **Migraciones:** Alembic es la fuente de verdad del esquema. Cadena lineal: `e7aac1fc989e` (esquema inicial) → `4c1d2e8f9a10` (correo único por clínica e índices `clinic_id`) → `7b3e9d2c5a61` (User–Doctor uno a uno y misma clínica) → `9d4f1a7b2c83` (doctor del paciente de la misma clínica). Las dos últimas se detienen si hay datos que las violan. Checklist de revisión en `DEVELOPMENT.md`.
 5. **Pruebas:** pytest contra una base PostgreSQL `*_test` que aplica todas las migraciones; incluyen aislamiento entre dos clínicas, matriz de roles, contrato de la API y seed.
 6. **Separación de IA:** no acoplar PyTorch/OpenCV al backend clínico; definir posteriormente contratos versionados y controles de acceso.
 7. **Datos clínicos:** almacenamiento de imágenes, auditoría de accesos y políticas de retención siguen pendientes.
