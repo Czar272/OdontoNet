@@ -10,6 +10,9 @@ nombre de la base a "<nombre>_test". TEST_DATABASE_URL permite sobrescribirla.
 import os
 from pathlib import Path
 
+# Antes de importar la app: bcrypt barato solo en pruebas (ver app/auth/security.py).
+os.environ.setdefault("BCRYPT_ROUNDS", "4")
+
 import pytest
 from dotenv import dotenv_values
 from sqlalchemy import create_engine, text
