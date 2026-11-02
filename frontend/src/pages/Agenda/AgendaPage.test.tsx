@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderWithAuth } from "../../test/renderWithAuth";
@@ -20,14 +20,35 @@ vi.mock("@fullcalendar/react", async () => {
     React.useEffect(() => {
       datesSet.current({ start: new Date(2026, 10, 9), end: new Date(2026, 10, 16) });
     }, []);
-    const events = (props.events as { id: string; title: string; editable: boolean }[]) ?? [];
-      return React.createElement(
-        "ul",
-        { "aria-label": "Calendario" },
-        events.map((event) =>
-          React.createElement("li", { key: event.id, "data-editable": String(event.editable) }, event.title),
+    type FakeEvent = {
+      id: string;
+      title: string;
+      editable: boolean;
+      backgroundColor: string;
+      extendedProps: Record<string, unknown>;
+    };
+    const events = (props.events as FakeEvent[]) ?? [];
+    const renderContent = props.eventContent as ((arg: unknown) => unknown) | undefined;
+    return React.createElement(
+      "ul",
+      { "aria-label": "Calendario" },
+      events.map((event) =>
+        React.createElement(
+          "li",
+          {
+            key: event.id,
+            "data-editable": String(event.editable),
+            "data-background": event.backgroundColor,
+          },
+          React.createElement("span", { "data-title": true }, event.title),
+          renderContent?.({
+            event: { extendedProps: event.extendedProps },
+            timeText: "09:00 - 09:30",
+            view: { type: "timeGridDay" },
+          }) as React.ReactNode,
         ),
-      );
+      ),
+    );
   }
   return { default: FakeCalendar };
 });
@@ -82,7 +103,8 @@ vi.mock("react-hot-toast", () => {
 
 const { getAppointments, updateAppointment } = await import("../../services/appointmentService");
 
-const titles = () => screen.queryAllByRole("listitem").map((item) => item.textContent);
+const titles = () =>
+  screen.queryAllByRole("listitem").map((item) => item.querySelector("[data-title]")?.textContent);
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -210,5 +232,30 @@ describe("AgendaPage", () => {
 
     expect(await screen.findByRole("button", { name: "Confirmar" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Historial de estados" })).toBeInTheDocument();
+  });
+
+  it("cada cita lleva el color y el nombre de su doctor (ODON-257)", async () => {
+    renderWithAuth(<AgendaPage />, "receptionist");
+    await screen.findByText("Ana Paz · Dra. Ana");
+
+    const first = screen.getAllByRole("listitem")[0];
+    // Dra. Ana es el único doctor: primer color de la paleta, aclarado de fondo.
+    expect(first).toHaveAttribute("data-background", "#ebe1fa");
+    expect(within(first).getByText("Dra. Ana", { selector: ".odn-doc-name" })).toBeInTheDocument();
+  });
+
+  it("la leyenda de doctores filtra al hacer clic y vuelve a todos con otro clic", async () => {
+    renderWithAuth(<AgendaPage />, "receptionist");
+    const chip = await screen.findByRole("button", { name: /Dra\. Ana/ });
+
+    fireEvent.click(chip);
+    expect(chip).toHaveAttribute("aria-pressed", "true");
+    await waitFor(() => expect(getAppointments).toHaveBeenLastCalledWith(expect.objectContaining({ doctorId: 1 })));
+
+    fireEvent.click(chip);
+    expect(chip).toHaveAttribute("aria-pressed", "false");
+    await waitFor(() =>
+      expect(getAppointments).toHaveBeenLastCalledWith(expect.objectContaining({ doctorId: undefined })),
+    );
   });
 });

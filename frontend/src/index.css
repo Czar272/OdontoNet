@@ -1,3 +1,33 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Agenda (ODON-257): franja izquierda con el color del doctor. */
+.odn-event.fc-timegrid-event,
+.odn-event.fc-daygrid-event {
+  border-width: 1px 1px 1px 4px;
+  border-radius: 6px;
+}
+
+.fc .fc-timegrid-slot {
+  height: 1.75rem;
+}
+
+.odn-event-body {
+  container-type: inline-size;
+}
+
+.odn-doc-initials {
+  display: none;
+}
+
+/* Citas simultáneas en la vista de semana: solo caben las iniciales. */
+@container (max-width: 96px) {
+  .odn-doc-name {
+    display: none;
+  }
+
+  .odn-doc-initials {
+    display: inline-block;
+  }
+}

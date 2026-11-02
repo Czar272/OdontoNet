@@ -27,6 +27,7 @@ import Button from "../../components/basic/Button";
 import Modal from "../../components/basic/Modal";
 import PageHeader from "../../components/basic/PageHeader";
 import Select from "../../components/basic/Select";
+import AppointmentEventContent from "../../components/appointments/AppointmentEventContent";
 import AppointmentForm from "../../components/appointments/AppointmentForm";
 import AppointmentStatusPanel from "../../components/appointments/AppointmentStatusPanel";
 import { usePermission } from "../../hooks/usePermission";
@@ -53,6 +54,12 @@ import {
   toLocalIso,
   type AppointmentFormData,
 } from "./appointmentFormData";
+import {
+  doctorColor,
+  doctorColorMap,
+  doctorInitials,
+  lighten,
+} from "./agendaColors";
 import ConfirmationsList from "./ConfirmationsList";
 import { toConfirmQuery } from "./confirmations";
 
@@ -186,23 +193,32 @@ export default function AgendaPage() {
     placeholderData: keepPreviousData,
   });
 
+  // Un color estable por doctor (ODON-257); el estado va como punto y texto.
+  const doctorColors = useMemo(() => doctorColorMap(doctors ?? []), [doctors]);
+
   const events: EventInput[] = useMemo(
     () =>
       (appointments ?? [])
         .filter((a) => visible.includes(a.status))
-        .map((a) => ({
-          id: String(a.id),
-          title: `${a.patient.first_name} ${a.patient.last_name} · ${a.doctor.user.name}`,
-          start: a.starts_at,
-          end: a.ends_at,
-          backgroundColor: STATUS_COLORS[a.status],
-          borderColor: STATUS_COLORS[a.status],
-          editable: canManage && isReschedulable(a),
-          classNames:
-            a.status === "cancelled" ? ["line-through", "opacity-70"] : [],
-          extendedProps: { appointment: a },
-        })),
-    [appointments, visible, canManage],
+        .map((a) => {
+          const color = doctorColor(doctorColors, a.doctor_id);
+          return {
+            id: String(a.id),
+            title: `${a.patient.first_name} ${a.patient.last_name} · ${a.doctor.user.name}`,
+            start: a.starts_at,
+            end: a.ends_at,
+            backgroundColor: lighten(color, 0.14),
+            borderColor: color,
+            textColor: "#111827",
+            editable: canManage && isReschedulable(a),
+            classNames: [
+              "odn-event",
+              ...(a.status === "cancelled" ? ["opacity-60"] : []),
+            ],
+            extendedProps: { appointment: a, doctorColor: color },
+          };
+        }),
+    [appointments, visible, canManage, doctorColors],
   );
 
   const moveMutation = useMutation({
@@ -366,6 +382,48 @@ export default function AgendaPage() {
 
           <div
             role="group"
+            aria-label="Doctores"
+            className="flex flex-wrap gap-2"
+          >
+            {doctors?.map((doctor) => {
+              const selected = doctorFilter === doctor.id;
+              const color = doctorColor(doctorColors, doctor.id);
+              return (
+                <button
+                  key={doctor.id}
+                  type="button"
+                  aria-pressed={selected}
+                  title={
+                    selected
+                      ? "Ver todos los doctores"
+                      : `Ver solo a ${doctor.user.name}`
+                  }
+                  onClick={() =>
+                    setDoctorFilter(selected ? undefined : doctor.id)
+                  }
+                  className={clsx(
+                    "flex items-center gap-2 px-3 py-2 rounded-full border text-sm transition",
+                    selected
+                      ? "bg-white shadow-sm"
+                      : "bg-white border-gray-200",
+                  )}
+                  style={selected ? { borderColor: color } : undefined}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="rounded px-1 text-[10px] font-bold text-white"
+                    style={{ backgroundColor: color }}
+                  >
+                    {doctorInitials(doctor.user.name)}
+                  </span>
+                  {doctor.user.name}
+                </button>
+              );
+            })}
+          </div>
+
+          <div
+            role="group"
             aria-label="Estados visibles"
             className="flex flex-wrap gap-2"
           >
@@ -442,6 +500,18 @@ export default function AgendaPage() {
             eventAllow={(info) => info.start >= currentMinute()}
             eventDrop={handleMove}
             eventResize={handleMove}
+            // Citas simultáneas una al lado de la otra, sin encimarse.
+            slotEventOverlap={false}
+            eventMinHeight={36}
+            eventContent={(arg) => (
+              <AppointmentEventContent
+                appointment={arg.event.extendedProps.appointment as Appointment}
+                doctorColor={arg.event.extendedProps.doctorColor as string}
+                timeText={arg.timeText}
+                compact={arg.view.type.startsWith("dayGrid")}
+                shortDoctorName={arg.view.type === "timeGridWeek"}
+              />
+            )}
             eventTimeFormat={{
               hour: "2-digit",
               minute: "2-digit",
