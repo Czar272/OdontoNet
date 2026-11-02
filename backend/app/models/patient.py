@@ -12,6 +12,8 @@ class Patient(Base):
     __table_args__ = (
         # El correo es único dentro de cada clínica, no en todo el sistema.
         UniqueConstraint("clinic_id", "email", name="uq_patients_clinic_email"),
+        # Permite que appointments referencie (patient_id, clinic_id) a la vez.
+        UniqueConstraint("id", "clinic_id", name="uq_patients_id_clinic"),
         # El doctor asignado pertenece a la clínica del paciente (ODON-98).
         # Con doctor_id NULL la restricción no aplica: el doctor es opcional.
         ForeignKeyConstraint(
@@ -35,3 +37,10 @@ class Patient(Base):
 
     doctor = relationship("Doctor", back_populates="patients", foreign_keys=[doctor_id])
     clinic = relationship("Clinic", back_populates="patients", foreign_keys=[clinic_id])
+    # Las citas son historial: un paciente con citas no se borra (se archiva).
+    appointments = relationship(
+        "Appointment",
+        back_populates="patient",
+        foreign_keys="Appointment.patient_id",
+        passive_deletes="all",
+    )

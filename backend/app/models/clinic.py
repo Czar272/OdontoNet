@@ -26,3 +26,9 @@ class Clinic(Base):
     patients = relationship(
         "Patient", back_populates="clinic", foreign_keys="Patient.clinic_id", passive_deletes="all"
     )
+    appointments = relationship(
+        "Appointment",
+        back_populates="clinic",
+        foreign_keys="Appointment.clinic_id",
+        passive_deletes="all",
+    )

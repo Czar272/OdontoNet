@@ -69,7 +69,7 @@ from app.models import Clinic, Doctor, User  # noqa: E402
 
 PASSWORD = "Test-Password-123"
 
-TEST_CATEGORIES = {"auth", "patients", "doctors", "users", "api", "seed", "isolation", "rbac"}
+TEST_CATEGORIES = {"auth", "patients", "doctors", "users", "api", "seed", "isolation", "rbac", "appointments"}
 
 
 def pytest_collection_modifyitems(config, items):
@@ -97,7 +97,7 @@ def migrated_database():
 @pytest.fixture(autouse=True)
 def clean_tables():
     with engine.begin() as conn:
-        conn.execute(text("TRUNCATE patients, doctors, users, clinics RESTART IDENTITY CASCADE"))
+        conn.execute(text("TRUNCATE appointments, patients, doctors, users, clinics RESTART IDENTITY CASCADE"))
     yield
 
 

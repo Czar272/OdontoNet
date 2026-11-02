@@ -37,3 +37,10 @@ class Doctor(Base):
         passive_deletes="all",
     )
     clinic = relationship("Clinic", back_populates="doctors", foreign_keys=[clinic_id])
+    # Las citas se conservan: un doctor con citas no se borra.
+    appointments = relationship(
+        "Appointment",
+        back_populates="doctor",
+        foreign_keys="Appointment.doctor_id",
+        passive_deletes="all",
+    )
