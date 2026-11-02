@@ -206,8 +206,21 @@ def test_search_by_email_or_phone(client, clinic, contacts, term, expected):
     assert names(get_page(client, clinic, q=term)) == expected
 
 
-def test_short_or_mixed_numbers_do_not_search_phone(client, clinic, contacts):
-    assert get_page(client, clinic, q="55")["items"] == []
+@pytest.mark.parametrize(
+    ("term", "expected"),
+    [
+        ("5", ["Rita Correo", "Tomás Fono"]),
+        ("55", ["Rita Correo"]),
+        ("9", ["Tomás Fono"]),
+        ("77", []),
+        ("-", []),
+    ],
+)
+def test_any_digit_searches_phone(client, clinic, contacts, term, expected):
+    assert names(get_page(client, clinic, q=term)) == expected
+
+
+def test_digits_mixed_with_letters_do_not_search_phone(client, clinic, contacts):
     assert get_page(client, clinic, q="rita 5555")["items"] == []
 
 

@@ -41,8 +41,8 @@ MAX_PAGE_SIZE = 100
 _ACCENTED_NO_ENE = _ACCENTED.replace("Ñ", "").replace("ñ", "")
 _PLAIN_NO_ENE = _PLAIN[:_ACCENTED.index("Ñ")] + _PLAIN[_ACCENTED.index("Ñ") + 1 : _ACCENTED.index("ñ")] + _PLAIN[_ACCENTED.index("ñ") + 1 :]
 
-# Un término de solo dígitos y separadores también busca en el teléfono.
-_MIN_PHONE_DIGITS = 3
+# Un término de solo dígitos y separadores también busca en el teléfono,
+# desde el primer dígito: cualquier coincidencia parcial cuenta.
 
 
 def _normalized_sql(column):
@@ -57,11 +57,11 @@ def _sort_key_sql(column):
 
 
 def _phone_digits(term: str) -> str | None:
-    """Dígitos del término si parece un teléfono ("5555-01" → "555501")."""
+    """Dígitos del término si parece un teléfono ("5555-01" → "555501", "5" → "5")."""
     if not all(ch.isdigit() or ch in " -+()" for ch in term):
         return None
     digits = "".join(ch for ch in term if ch.isdigit())
-    return digits if len(digits) >= _MIN_PHONE_DIGITS else None
+    return digits or None
 
 
 def _normalized_text(text_value: str) -> str:
@@ -173,7 +173,7 @@ def get_patients(
     q: str | None = QueryParam(
         None, max_length=100,
         description="Nombre y/o apellidos (en cualquier orden, sin tildes ni mayúsculas), "
-        "correo o teléfono (solo dígitos, mínimo 3).",
+        "correo o teléfono (dígitos y separadores; basta un dígito).",
     ),
     doctor_id: int | None = QueryParam(None, description="Solo pacientes de este doctor."),
     page: int = QueryParam(1, ge=1),
