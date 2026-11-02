@@ -1,19 +1,25 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { ArrowLeft, ClipboardList, Lock, Pencil, SearchX } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowLeft, ClipboardList, Lock, Pencil, SearchX } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import Button from "../../components/basic/Button";
 import Card from "../../components/basic/Card";
+import ConfirmDialog from "../../components/basic/ConfirmDialog";
 import Input from "../../components/basic/Input";
 import LoadingSpinner from "../../components/basic/LoadingSpinner";
 import Select from "../../components/basic/Select";
 import { usePermission } from "../../hooks/usePermission";
 import { getApiErrorMessage } from "../../services/apiError";
 import { getDoctors } from "../../services/doctorService";
-import { getPatient, updatePatient } from "../../services/patientService";
+import {
+  archivePatient,
+  getPatient,
+  reactivatePatient,
+  updatePatient,
+} from "../../services/patientService";
 import type { Patient } from "../../types/patient";
 import {
   ageFrom,
@@ -45,10 +51,13 @@ function NotFound() {
 interface PatientFormProps {
   patient: Patient;
   canEdit: boolean;
+  isArchived: boolean;
 }
 
 /** Datos generales con edición en dos pasos, igual que en Clínica. */
-function PatientDataForm({ patient, canEdit }: PatientFormProps) {
+function PatientDataForm({ patient, canEdit: hasEditPermission, isArchived }: PatientFormProps) {
+  // Un paciente archivado se reactiva antes de editarse (el backend responde 409).
+  const canEdit = hasEditPermission && !isArchived;
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<PatientFormData>(() => initialPatientData(patient));
@@ -71,7 +80,7 @@ function PatientDataForm({ patient, canEdit }: PatientFormProps) {
       toast.success("Paciente actualizado");
       setIsEditing(false);
       queryClient.setQueryData(["patients", patient.id], updated);
-      queryClient.invalidateQueries({ queryKey: ["patients"], exact: true });
+      queryClient.invalidateQueries({ queryKey: ["patients", "list"] });
     },
 
     onError: (error) => {
@@ -116,7 +125,7 @@ function PatientDataForm({ patient, canEdit }: PatientFormProps) {
 
         {!isEditing && !canEdit && (
           <span className="flex items-center gap-2 text-sm text-gray-500">
-            <Lock size={16} /> Solo lectura
+            <Lock size={16} /> {isArchived ? "Archivado: solo lectura" : "Solo lectura"}
           </span>
         )}
       </div>
@@ -164,12 +173,77 @@ function PatientDataForm({ patient, canEdit }: PatientFormProps) {
   );
 }
 
+const dateFormat = new Intl.DateTimeFormat("es-GT", { dateStyle: "long" });
+
+/** Archivar o reactivar con confirmación (ODON-122). No borra datos. */
+function ArchiveControls({ patient }: { patient: Patient }) {
+  const queryClient = useQueryClient();
+  const [isConfirming, setIsConfirming] = useState(false);
+  const isArchived = Boolean(patient.archived_at);
+
+  const mutation = useMutation({
+    mutationFn: () => (isArchived ? reactivatePatient(patient.id) : archivePatient(patient.id)),
+
+    onSuccess: (updated) => {
+      toast.success(updated.archived_at ? "Paciente archivado" : "Paciente reactivado");
+      setIsConfirming(false);
+      queryClient.setQueryData(["patients", patient.id], updated);
+      queryClient.invalidateQueries({ queryKey: ["patients", "list"] });
+    },
+
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, "No se pudo cambiar el estado del paciente"));
+    },
+  });
+
+  const name = `${patient.first_name} ${patient.last_name}`;
+
+  return (
+    <>
+      <Button
+        variant={isArchived ? "primary" : "secondary"}
+        onClick={() => setIsConfirming(true)}
+      >
+        <span className="flex items-center gap-2">
+          {isArchived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+          {isArchived ? "Reactivar paciente" : "Archivar paciente"}
+        </span>
+      </Button>
+
+      <ConfirmDialog
+        isOpen={isConfirming}
+        title={isArchived ? "Reactivar paciente" : "Archivar paciente"}
+        message={
+          isArchived ? (
+            <p>
+              <strong>{name}</strong> volverá al listado de pacientes activos y
+              podrá editarse de nuevo.
+            </p>
+          ) : (
+            <p>
+              <strong>{name}</strong> dejará de aparecer en el listado de pacientes
+              activos. No se borra ningún dato: su ficha e historial se conservan y
+              puedes reactivarlo cuando lo necesites.
+            </p>
+          )
+        }
+        confirmLabel={isArchived ? "Reactivar" : "Archivar"}
+        variant={isArchived ? "primary" : "danger"}
+        isPending={mutation.isPending}
+        onConfirm={() => mutation.mutate()}
+        onCancel={() => setIsConfirming(false)}
+      />
+    </>
+  );
+}
+
 /** Ficha del paciente (ODON-114): datos generales y acceso al historial clínico. */
 export default function PatientDetailPage() {
   const { patientId } = useParams();
   const id = Number(patientId);
   const validId = Number.isInteger(id) && id > 0;
   const canEdit = usePermission("patients:edit");
+  const canArchive = usePermission("patients:archive");
 
   const { data: patient, isLoading, error } = useQuery({
     queryKey: ["patients", id],
@@ -198,18 +272,40 @@ export default function PatientDetailPage() {
         <ArrowLeft size={16} /> Pacientes
       </Link>
 
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold">
-          {patient.first_name} {patient.last_name}
-        </h1>
-        <p className="text-gray-500 mt-2">
-          {patient.doctor ? `Doctor asignado: ${patient.doctor.user.name}` : "Sin doctor asignado"}
-        </p>
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-bold">
+            {patient.first_name} {patient.last_name}
+          </h1>
+          <p className="text-gray-500 mt-2">
+            {patient.doctor ? `Doctor asignado: ${patient.doctor.user.name}` : "Sin doctor asignado"}
+          </p>
+        </div>
+
+        {canArchive && <ArchiveControls patient={patient} />}
       </div>
+
+      {patient.archived_at && (
+        <div
+          role="status"
+          className="mb-6 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900"
+        >
+          <Archive size={20} aria-hidden="true" />
+          <p>
+            Paciente archivado el {dateFormat.format(new Date(patient.archived_at))}.
+            Sus datos e historial se conservan; reactívalo para editarlo.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <Card className="xl:col-span-2">
-          <PatientDataForm key={JSON.stringify(patient)} patient={patient} canEdit={canEdit} />
+          <PatientDataForm
+            key={JSON.stringify(patient)}
+            patient={patient}
+            canEdit={canEdit}
+            isArchived={Boolean(patient.archived_at)}
+          />
         </Card>
 
         <Card>

@@ -19,10 +19,16 @@ function normalize(text: string): string {
   return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
+type StatusFilter = "active" | "archived";
+
 const PatientsPage: React.FC = () => {
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
+  const archived = statusFilter === "archived";
+
+  // Activos y archivados se piden por separado: el backend filtra (ODON-122).
   const { data: patients, isLoading, isError } = useQuery({
-    queryKey: ["patients"],
-    queryFn: getPatients,
+    queryKey: ["patients", "list", { archived }],
+    queryFn: () => getPatients({ archived }),
   });
 
   // Todos los doctores, incluidos inactivos: sus pacientes siguen en el historial.
@@ -94,6 +100,15 @@ const PatientsPage: React.FC = () => {
             </option>
           ))}
         </Select>
+
+        <Select
+          aria-label="Filtrar por estado"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+        >
+          <option value="active">Activos</option>
+          <option value="archived">Archivados</option>
+        </Select>
       </div>
 
       <Modal
@@ -127,6 +142,12 @@ const PatientsPage: React.FC = () => {
                 >
                   {patient.first_name} {patient.last_name}
                 </Link>
+
+                {patient.archived_at && (
+                  <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-800">
+                    Archivado
+                  </span>
+                )}
               </td>
 
               <td className="p-4">{patient.email ?? "—"}</td>
@@ -156,6 +177,8 @@ const PatientsPage: React.FC = () => {
                       Limpiar filtros
                     </button>
                   </>
+                ) : archived ? (
+                  "No hay pacientes archivados."
                 ) : (
                   "Todavía no hay pacientes registrados en la clínica."
                 )}

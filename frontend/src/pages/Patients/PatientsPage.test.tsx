@@ -32,10 +32,12 @@ const patient = (id: number, first: string, last: string, doc: Doctor | null): P
   doctor: doc,
 });
 
-const state = vi.hoisted(() => ({ patients: [] as unknown[] }));
+const state = vi.hoisted(() => ({ patients: [] as unknown[], archived: [] as unknown[] }));
 
 vi.mock("../../services/patientService", () => ({
-  getPatients: vi.fn(async () => state.patients),
+  getPatients: vi.fn(async (filters?: { archived?: boolean }) =>
+    filters?.archived ? state.archived : state.patients,
+  ),
   createPatient: vi.fn(),
 }));
 
@@ -48,6 +50,8 @@ const ALL = [
   patient(2, "María", "López", luis),
   patient(3, "Carlos", "Ruiz", null),
 ];
+
+const { getPatients } = await import("../../services/patientService");
 
 describe("PatientsPage", () => {
   it("busca por nombre o apellido sin importar tildes ni orden", async () => {
@@ -91,5 +95,31 @@ describe("PatientsPage", () => {
     renderWithAuth(<PatientsPage />, "admin");
 
     expect(await screen.findByText("Todavía no hay pacientes registrados en la clínica.")).toBeInTheDocument();
+  });
+
+  it("muestra los archivados al cambiar el estado, pidiéndolos al backend", async () => {
+    state.patients = ALL;
+    state.archived = [{ ...patient(9, "Rosa", "Archivada", ana), archived_at: "2026-11-02T10:00:00Z" }];
+    renderWithAuth(<PatientsPage />, "receptionist");
+    await screen.findByText("José Pérez");
+    expect(screen.queryByText("Archivado")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Filtrar por estado"), { target: { value: "archived" } });
+
+    expect(await screen.findByText("Rosa Archivada")).toBeInTheDocument();
+    expect(screen.getByText("Archivado")).toBeInTheDocument();
+    expect(screen.queryByText("José Pérez")).not.toBeInTheDocument();
+    expect(getPatients).toHaveBeenLastCalledWith({ archived: true });
+  });
+
+  it("estado vacío propio cuando no hay archivados", async () => {
+    state.patients = ALL;
+    state.archived = [];
+    renderWithAuth(<PatientsPage />, "admin");
+    await screen.findByText("José Pérez");
+
+    fireEvent.change(screen.getByLabelText("Filtrar por estado"), { target: { value: "archived" } });
+
+    expect(await screen.findByText("No hay pacientes archivados.")).toBeInTheDocument();
   });
 });

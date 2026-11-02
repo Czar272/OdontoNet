@@ -11,6 +11,8 @@ export interface Patient {
   doctor_id?: number | null;
   doctor?: Doctor | null;
   clinic_id: number;
+  /** null = activo; con fecha ISO = archivado (ODON-122). */
+  archived_at?: string | null;
 }
 
 /** Edición parcial: "" borra los opcionales y doctor_id null quita el doctor. */

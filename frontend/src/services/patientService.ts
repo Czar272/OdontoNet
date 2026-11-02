@@ -1,8 +1,14 @@
 import type { CreatePatientDTO, Patient, UpdatePatientDTO } from "../types/patient";
 import api from "./api";
 
-export async function getPatients(): Promise<Patient[]> {
-  const response = await api.get("/patients/");
+export interface PatientFilters {
+  /** false (por defecto): solo activos · true: solo archivados. */
+  archived?: boolean;
+}
+
+export async function getPatients(filters: PatientFilters = {}): Promise<Patient[]> {
+  const params = filters.archived ? { archived: true } : {};
+  const response = await api.get("/patients/", { params });
 
   return response.data;
 }
@@ -23,6 +29,18 @@ export async function getPatient(id: number): Promise<Patient> {
 
 export async function updatePatient(id: number, changes: UpdatePatientDTO): Promise<Patient> {
   const response = await api.patch(`/patients/${id}`, changes);
+
+  return response.data;
+}
+
+export async function archivePatient(id: number): Promise<Patient> {
+  const response = await api.post(`/patients/${id}/archive`);
+
+  return response.data;
+}
+
+export async function reactivatePatient(id: number): Promise<Patient> {
+  const response = await api.post(`/patients/${id}/reactivate`);
 
   return response.data;
 }
