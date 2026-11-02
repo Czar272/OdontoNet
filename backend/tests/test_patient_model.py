@@ -83,7 +83,7 @@ def test_list_shows_name_contact_and_doctor(client, clinics, db):
     db.add(Patient(first_name="Otro", last_name="Ajeno", clinic_id=clinics["b"], doctor_id=clinics["doctor_b"]))
     db.commit()
 
-    body = client.get("/patients/", headers=clinics["headers"]).json()
+    body = client.get("/patients/", headers=clinics["headers"]).json()["items"]
 
     assert len(body) == 1
     patient = body[0]

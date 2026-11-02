@@ -178,7 +178,7 @@ def test_deactivated_user_stays_listed(client, staff):
 def test_history_of_deactivated_doctor_is_preserved(client, staff, db):
     deactivate(client, staff, staff["ids"]["doctor"])
 
-    patients = client.get("/patients/", headers=staff["headers"]["admin"]).json()
+    patients = client.get("/patients/", headers=staff["headers"]["admin"]).json()["items"]
 
     patient = next(p for p in patients if p["id"] == staff["ids"]["patient"])
     assert patient["doctor"]["user"]["name"] == "Usuario doctor"

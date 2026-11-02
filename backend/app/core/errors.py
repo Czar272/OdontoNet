@@ -34,6 +34,7 @@ _VALIDATION_MESSAGES = {
     "type_error.date": "Fecha inválida.",
     "type_error.integer": "Debe ser un número entero.",
     "type_error.enum": "Valor no permitido.",
+    "type_error.bool": "Debe ser verdadero o falso.",
     "type_error.none.not_allowed": "Campo obligatorio.",
     "value_error.jsondecode": "El cuerpo de la petición no es JSON válido.",
 }
@@ -48,6 +49,10 @@ def _validation_message(error: dict) -> str:
         return "Campo obligatorio." if limit == 1 else f"Debe tener al menos {limit} caracteres."
     if error_type == "value_error.any_str.max_length":
         return f"Debe tener como máximo {ctx.get('limit_value')} caracteres."
+    if error_type == "value_error.number.not_ge":
+        return f"Debe ser mayor o igual a {ctx.get('limit_value')}."
+    if error_type == "value_error.number.not_le":
+        return f"Debe ser menor o igual a {ctx.get('limit_value')}."
     if error_type in _VALIDATION_MESSAGES:
         return _VALIDATION_MESSAGES[error_type]
     if error_type == "value_error":

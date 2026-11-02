@@ -70,7 +70,7 @@ def test_seeded_users_log_in_and_see_only_their_clinic(client, db):
         assert login.status_code == 200, login.text
         headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
 
-        patients = client.get("/patients/", headers=headers).json()
+        patients = client.get("/patients/", headers=headers).json()["items"]
         assert len(patients) == PATIENTS_PER_CLINIC
         assert all(spec["slug"] in p["email"] for p in patients)
 

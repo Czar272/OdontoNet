@@ -75,3 +75,12 @@ class PatientResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class PatientPage(BaseModel):
+    """Una página del listado de pacientes (ODON-126)."""
+
+    items: list[PatientResponse]
+    total: int
+    page: int
+    page_size: int

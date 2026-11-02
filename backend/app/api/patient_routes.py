@@ -1,7 +1,9 @@
 import logging
+import unicodedata
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query as QueryParam, status
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, joinedload
 
@@ -11,7 +13,7 @@ from app.database.dependencies import get_db
 from app.models.doctor import Doctor
 from app.models.patient import Patient
 from app.models.user import User
-from app.schemas.patient_schema import PatientCreate, PatientResponse, PatientUpdate
+from app.schemas.patient_schema import PatientCreate, PatientPage, PatientResponse, PatientUpdate
 
 # Eventos de auditoría (sin datos personales: solo ids y nombres de campos).
 # La auditoría persistente se diseña en ODON-222.
@@ -23,6 +25,26 @@ router = APIRouter(
     tags=["Patients"],
     dependencies=[Depends(require_roles(*ALL_ROLES))],
 )
+
+
+# Búsqueda sin tildes ni mayúsculas que no depende de la collation de la base
+# ni de extensiones (unaccent): translate quita las tildes y lower el resto.
+_ACCENTED = "ÁÀÄÂÉÈËÊÍÌÏÎÓÒÖÔÚÙÜÛÑÇáàäâéèëêíìïîóòöôúùüûñç"
+_PLAIN = "AAAAEEEEIIIIOOOOUUUUNCaaaaeeeeiiiioooouuuunc"
+
+DEFAULT_PAGE_SIZE = 20
+MAX_PAGE_SIZE = 100
+
+
+def _normalized_sql(column):
+    return func.lower(func.translate(column, _ACCENTED, _PLAIN))
+
+
+def _normalized_text(text_value: str) -> str:
+    """Mismo criterio que _normalized_sql, en Python: "José  PÉREZ" → "jose perez"."""
+    decomposed = unicodedata.normalize("NFD", text_value)
+    plain = "".join(ch for ch in decomposed if unicodedata.category(ch) != "Mn")
+    return " ".join(plain.lower().split())
 
 
 def _clinic_patients(db: Session, clinic_id: int) -> Query:
@@ -69,13 +91,25 @@ def _get_clinic_patient(db: Session, patient_id: int, clinic_id: int) -> Patient
     return patient
 
 
-def _commit(db: Session) -> None:
+def _commit(db: Session, clinic_id: int, email: str | None) -> None:
     """Guarda y traduce las restricciones de la base a errores de la API."""
     try:
         db.commit()
     except IntegrityError as exc:
         db.rollback()
         if "uq_patients_clinic_email" in str(exc.orig):
+            owner = (
+                db.query(Patient.archived_at)
+                .filter(Patient.clinic_id == clinic_id, Patient.email == email)
+                .first()
+            )
+            if owner is not None and owner.archived_at is not None:
+                # El correo lo conserva un archivado: reactivarlo evita duplicados.
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Ya existe un paciente archivado con ese correo en la clínica. "
+                    "Reactívalo desde la lista de archivados.",
+                )
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Ya existe un paciente con ese correo en la clínica.",
@@ -102,27 +136,60 @@ def create_patient(
 
     db.add(new_patient)
 
-    _commit(db)
+    _commit(db, clinic_id, patient.email)
 
     return _clinic_patients(db, clinic_id).filter(Patient.id == new_patient.id).one()
 
 
-@router.get("/", response_model=list[PatientResponse])
+@router.get("/", response_model=PatientPage)
 def get_patients(
     archived: bool = QueryParam(
         False, description="false: solo activos (por defecto) · true: solo archivados."
     ),
+    q: str | None = QueryParam(
+        None, max_length=100,
+        description="Nombre y/o apellidos, en cualquier orden, sin importar tildes ni mayúsculas.",
+    ),
+    doctor_id: int | None = QueryParam(None, description="Solo pacientes de este doctor."),
+    page: int = QueryParam(1, ge=1),
+    page_size: int = QueryParam(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
     db: Session = Depends(get_db),
     clinic_id: int = Depends(get_current_clinic_id),
 ):
+    """Listado paginado de la clínica (ODON-126), ordenado por apellidos y nombres."""
+    filters = [Patient.clinic_id == clinic_id]
+    filters.append(Patient.archived_at.is_not(None) if archived else Patient.archived_at.is_(None))
 
-    query = _clinic_patients(db, clinic_id)
-    if archived:
-        query = query.filter(Patient.archived_at.is_not(None))
-    else:
-        query = query.filter(Patient.archived_at.is_(None))
+    if doctor_id is not None:
+        # Un doctor de otra clínica no coincide con ningún paciente: lista vacía.
+        filters.append(Patient.doctor_id == doctor_id)
 
-    return query.order_by(Patient.id).all()
+    term = _normalized_text(q or "")
+    if term:
+        first = _normalized_sql(Patient.first_name)
+        last = _normalized_sql(Patient.last_name)
+        filters.append(
+            (first.concat(" ").concat(last)).contains(term, autoescape=True)
+            | (last.concat(" ").concat(first)).contains(term, autoescape=True)
+        )
+
+    total = db.query(func.count(Patient.id)).filter(*filters).scalar()
+
+    items = (
+        _clinic_patients(db, clinic_id)
+        .filter(*filters)
+        # COLLATE "C": mismo orden en Windows (en_US) y en CI (C.UTF-8).
+        .order_by(
+            _normalized_sql(Patient.last_name).collate("C"),
+            _normalized_sql(Patient.first_name).collate("C"),
+            Patient.id,
+        )
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+
+    return {"items": items, "total": total, "page": page, "page_size": page_size}
 
 
 @router.get("/{patient_id}", response_model=PatientResponse)
@@ -174,7 +241,7 @@ def update_patient(
         setattr(patient, field, data[field])
 
     if changed:
-        _commit(db)
+        _commit(db, clinic_id, patient.email)
         audit_logger.info(
             "patient.updated patient_id=%s user_id=%s clinic_id=%s fields=%s",
             patient.id, current_user.id, clinic_id, ",".join(sorted(changed)),

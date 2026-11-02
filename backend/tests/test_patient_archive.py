@@ -55,7 +55,7 @@ def reactivate(client, setup, role="receptionist", patient="patient"):
 def listed_ids(client, setup, role="receptionist", **params):
     response = client.get("/patients/", params=params, headers=setup["headers"][role])
     assert response.status_code == 200, response.text
-    return {p["id"] for p in response.json()}
+    return {p["id"] for p in response.json()["items"]}
 
 
 # --- Archivar y reactivar (ODON-124) -------------------------------------------------
@@ -217,6 +217,26 @@ def test_archived_patient_keeps_email_reserved(client, setup):
     response = client.post("/patients/", json={"first_name": "Otra", "last_name": "Eva", "email": "eva@luna.com"}, headers=setup["headers"]["admin"])
 
     assert response.status_code == 409
+    assert response.json()["detail"] == (
+        "Ya existe un paciente archivado con ese correo en la clínica. "
+        "Reactívalo desde la lista de archivados."
+    )
+
+
+def test_editing_to_archived_patient_email_explains_conflict(client, setup):
+    archive(client, setup)
+
+    response = client.patch(f"/patients/{setup['with_retired']}", json={"email": "eva@luna.com"}, headers=setup["headers"]["admin"])
+
+    assert response.status_code == 409
+    assert "archivado" in response.json()["detail"]
+
+
+def test_duplicate_email_of_active_patient_keeps_generic_message(client, setup):
+    response = client.post("/patients/", json={"first_name": "Otra", "last_name": "Eva", "email": "eva@luna.com"}, headers=setup["headers"]["admin"])
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Ya existe un paciente con ese correo en la clínica."
 
 
 def test_archive_is_audited_without_personal_data(client, setup, caplog):

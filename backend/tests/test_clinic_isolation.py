@@ -65,8 +65,8 @@ def test_list_patients_only_returns_own_clinic(client, two_clinics):
     client.post("/patients/", json=new_patient(first_name="De A", email="a1@test.com"), headers=a["headers"])
     client.post("/patients/", json=new_patient(first_name="De B", email="b1@test.com"), headers=b["headers"])
 
-    names_a = [p["first_name"] for p in client.get("/patients/", headers=a["headers"]).json()]
-    names_b = [p["first_name"] for p in client.get("/patients/", headers=b["headers"]).json()]
+    names_a = [p["first_name"] for p in client.get("/patients/", headers=a["headers"]).json()["items"]]
+    names_b = [p["first_name"] for p in client.get("/patients/", headers=b["headers"]).json()["items"]]
 
     assert names_a == ["De A"]
     assert names_b == ["De B"]
@@ -90,7 +90,7 @@ def test_cannot_assign_doctor_of_other_clinic(client, two_clinics):
     response = client.post("/patients/", json=new_patient(doctor_id=b["doctor"]), headers=a["headers"])
 
     assert response.status_code == 422
-    assert client.get("/patients/", headers=a["headers"]).json() == []
+    assert client.get("/patients/", headers=a["headers"]).json()["items"] == []
 
 
 @pytest.mark.patients
