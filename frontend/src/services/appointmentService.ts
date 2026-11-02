@@ -1,6 +1,7 @@
 import type {
   Appointment,
   AppointmentStatus,
+  AppointmentStatusChange,
   CreateAppointmentDTO,
   UpdateAppointmentDTO,
 } from "../types/appointment";
@@ -44,6 +45,26 @@ export async function updateAppointment(
   changes: UpdateAppointmentDTO,
 ): Promise<Appointment> {
   const response = await api.patch(`/appointments/${id}`, changes);
+
+  return response.data;
+}
+
+/** Confirma, cancela, marca atendida o no asistió, o reactiva (ODON-147). */
+export async function changeAppointmentStatus(
+  id: number,
+  status: AppointmentStatus,
+  note?: string,
+): Promise<Appointment> {
+  const body = note?.trim() ? { status, note: note.trim() } : { status };
+  const response = await api.post(`/appointments/${id}/status`, body);
+
+  return response.data;
+}
+
+export async function getAppointmentHistory(
+  id: number,
+): Promise<AppointmentStatusChange[]> {
+  const response = await api.get(`/appointments/${id}/history`);
 
   return response.data;
 }

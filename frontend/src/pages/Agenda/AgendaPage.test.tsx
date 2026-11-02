@@ -53,7 +53,7 @@ function appointment(id: number, first: string, status: AppointmentStatus, start
   return {
     id, clinic_id: 1, patient_id: id, doctor_id: 1, starts_at: toLocalIso(start), ends_at: toLocalIso(end),
     duration_minutes: 30, status, reason: "Control", created_by_user_id: 1, created_at: "", updated_at: "",
-    patient: { id, first_name: first, last_name: "Paz", archived_at: null }, doctor: ana,
+    patient: { id, first_name: first, last_name: "Paz", phone: "5555-0000", archived_at: null }, doctor: ana,
   };
 }
 
@@ -70,6 +70,8 @@ vi.mock("../../services/appointmentService", () => ({
   getAppointments: vi.fn(async () => APPOINTMENTS),
   updateAppointment: vi.fn(async () => APPOINTMENTS[0]),
   createAppointment: vi.fn(),
+  getAppointmentHistory: vi.fn(async () => []),
+  changeAppointmentStatus: vi.fn(),
 }));
 vi.mock("../../services/doctorService", () => ({ getDoctors: vi.fn(async () => [ana]) }));
 vi.mock("../../services/patientService", () => ({ getPatients: vi.fn() }));
@@ -185,5 +187,28 @@ describe("AgendaPage", () => {
 
     expect(changeView).toHaveBeenCalledWith("timeGridDay", future);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("la pestaña «Por confirmar» muestra cuántas hay y su lista", async () => {
+    renderWithAuth(<AgendaPage />, "receptionist");
+    await screen.findByText("Ana Paz · Dra. Ana");
+
+    const tab = screen.getByRole("tab", { name: /Por confirmar/ });
+    expect(tab).toHaveTextContent("5");
+    fireEvent.click(tab);
+
+    expect(tab).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByLabelText("Periodo")).toBeInTheDocument();
+    expect(getAppointments).toHaveBeenCalledWith(expect.objectContaining({ statuses: ["scheduled"] }));
+  });
+
+  it("el detalle incluye las acciones de estado", async () => {
+    renderWithAuth(<AgendaPage />, "receptionist");
+    await screen.findByText("Ana Paz · Dra. Ana");
+
+    calendar.props.eventClick({ event: { extendedProps: { appointment: APPOINTMENTS[0] } } });
+
+    expect(await screen.findByRole("button", { name: "Confirmar" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Historial de estados" })).toBeInTheDocument();
   });
 });

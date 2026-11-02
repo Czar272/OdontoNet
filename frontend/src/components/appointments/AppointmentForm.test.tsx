@@ -24,7 +24,7 @@ const existing: Appointment = {
   starts_at: toLocalIso(nine), ends_at: toLocalIso(new Date(2026, 10, 10, 9, 30)),
   duration_minutes: 30, status: "scheduled", reason: null,
   created_by_user_id: 1, created_at: "", updated_at: "",
-  patient: { id: 5, first_name: "Eva", last_name: "Luna", archived_at: null },
+  patient: { id: 5, first_name: "Eva", last_name: "Luna", phone: null, archived_at: null },
   doctor: retired,
 };
 

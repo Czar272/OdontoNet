@@ -40,6 +40,8 @@ export interface AppointmentPatient {
   id: number;
   first_name: string;
   last_name: string;
+  /** Para llamar a confirmar (ODON-146). */
+  phone: string | null;
   archived_at: string | null;
 }
 
@@ -86,4 +88,15 @@ export interface AppointmentConflict {
   doctor_name: string;
   patient_id: number;
   patient_name: string;
+}
+
+/** Un cambio de estado del historial (ODON-146). */
+export interface AppointmentStatusChange {
+  id: number;
+  /** null en el registro de creación. */
+  from_status: AppointmentStatus | null;
+  to_status: AppointmentStatus;
+  note: string | null;
+  changed_at: string;
+  changed_by: { id: number; name: string };
 }

@@ -6,6 +6,8 @@ interface ConfirmDialogProps {
   title: string;
   message: React.ReactNode;
   confirmLabel: string;
+  /** Texto del botón que cierra sin hacer nada. */
+  cancelLabel?: string;
   variant?: "primary" | "danger";
   isPending?: boolean;
   onConfirm: () => void;
@@ -18,6 +20,7 @@ export default function ConfirmDialog({
   title,
   message,
   confirmLabel,
+  cancelLabel = "Cancelar",
   variant = "primary",
   isPending = false,
   onConfirm,
@@ -29,7 +32,7 @@ export default function ConfirmDialog({
 
       <div className="mt-6 flex justify-end gap-3">
         <Button variant="secondary" onClick={onCancel} disabled={isPending}>
-          Cancelar
+          {cancelLabel}
         </Button>
 
         <Button variant={variant} onClick={onConfirm} disabled={isPending}>

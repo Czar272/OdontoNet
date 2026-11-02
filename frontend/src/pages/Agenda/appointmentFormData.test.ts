@@ -21,7 +21,7 @@ function appointment(overrides: Partial<Appointment> = {}): Appointment {
     starts_at: toLocalIso(nine), ends_at: toLocalIso(new Date(2026, 10, 10, 9, 30)),
     duration_minutes: 30, status: "scheduled", reason: "Limpieza",
     created_by_user_id: 1, created_at: "", updated_at: "",
-    patient: { id: 3, first_name: "Eva", last_name: "Luna", archived_at: null },
+    patient: { id: 3, first_name: "Eva", last_name: "Luna", phone: null, archived_at: null },
     doctor: {
       id: 2, user_id: 9, specialization: null, license_number: null, phone: null, clinic_id: 1,
       user: { id: 9, name: "Dra. Ana", email: "a@x.com", role: "doctor", clinic_id: 1, is_active: true },
