@@ -119,6 +119,7 @@ Cada prueba pertenece al menos a una categoría (marcador de pytest), según el 
 | `seed` | Seed sintético de desarrollo |
 | `isolation` | Aislamiento entre clínicas (transversal) |
 | `rbac` | Permisos por rol (transversal) |
+| `appointments` | Modelo, integridad y endpoints de citas |
 
 ```powershell
 python -m pytest -m auth                      # solo autenticación

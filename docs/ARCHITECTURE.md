@@ -54,11 +54,20 @@ Clinic 1 ── * Doctor
 Clinic 1 ── * Patient
 User   1 ── 0..1 Doctor (misma clínica; garantizado por la base)
 Doctor 1 ── * Patient (asignación opcional; misma clínica, garantizado por la base)
+Clinic 1 ── * Appointment
+Patient 1 ── * Appointment (misma clínica, garantizado por la base)
+Doctor  1 ── * Appointment (misma clínica; sin cruces de horario, garantizado por la base)
 ```
 
 `Patient.doctor_id` identifica al doctor asignado para organización y filtros. **No define propiedad exclusiva del paciente:** los usuarios autorizados de la misma clínica acceden a sus pacientes según su rol. El correo del paciente es único dentro de cada clínica.
 
 **Integridad Patient–Doctor (ODON-98):** `fk_patients_doctor_clinic` (`patients(doctor_id, clinic_id)` → `doctors(id, clinic_id)`) impide asignar un doctor de otra clínica; con `doctor_id` vacío no aplica, porque el doctor es opcional. El listado carga doctor y usuario con joins (sin consultas N+1, verificado por prueba).
+
+**Citas (ODON-130):** una cita guarda `starts_at` (con zona horaria; la base lo guarda en UTC) y `duration_minutes` (5 a 480). El fin se calcula: en Python con `Appointment.ends_at` y en SQL con la función `appointment_end(starts_at, duration_minutes)`, declarada `IMMUTABLE` porque sumar minutos no depende de la zona horaria. Estados: `scheduled` (Programada), `confirmed` (Confirmada), `completed` (Atendida), `cancelled` (Cancelada) y `no_show` (No asistió). Restricciones:
+- `fk_appointments_patient_clinic` y `fk_appointments_doctor_clinic`: paciente y doctor son de la clínica de la cita.
+- `ex_appointments_doctor_overlap` (`EXCLUDE USING gist`, extensión `btree_gist`): un doctor no tiene dos citas que se crucen mientras ocupen el horario (programada, confirmada o atendida). Cancelada y No asistió liberan el horario. Los intervalos son `[inicio, fin)`, así que una cita puede empezar justo cuando termina otra. La base lo impide aunque lleguen dos peticiones a la vez; el backend validará antes para dar un mensaje claro (ODON-134).
+- Un paciente o doctor con citas no se borra: las citas son historial.
+- Decidido el 2026-11-02: un paciente con citas próximas activas no se puede archivar, y no se crean citas para pacientes archivados (se implementa en ODON-134).
 
 **Integridad User–Doctor (ODON-78):** `uq_doctors_user_id` impide un segundo perfil para el mismo usuario y `fk_doctors_user_clinic` (`doctors(user_id, clinic_id)` → `users(id, clinic_id)`) impide un perfil en otra clínica que su usuario. Usuarios y doctores no se borran: un usuario con perfil o un doctor con pacientes no se puede eliminar (las FK lo bloquean y el ORM usa `passive_deletes`); el acceso se retira desactivando (ODON-94).
 
@@ -67,7 +76,7 @@ Doctor 1 ── * Patient (asignación opcional; misma clínica, garantizado por
 1. **Aislamiento por clínica:** todo recurso clínico pertenece a una clínica y toda operación se limita por el `clinic_id` del usuario autenticado (`get_current_clinic_id`). Un `clinic_id` enviado por el navegador se ignora. Un recurso de otra clínica responde `404`.
 2. **Roles:** `admin`, `doctor` y `receptionist`, un rol por usuario, aplicados en el backend con `require_roles` y leídos de la base en cada petición. Matriz y decisiones en [`PERMISSIONS.md`](PERMISSIONS.md).
 3. **Autenticación:** `POST /auth/login` emite un JWT con expiración configurable; `GET /auth/me` devuelve usuario y clínica. Usuarios inactivos no inician sesión y sus tokens dejan de valer. El frontend guarda el JWT en `sessionStorage` (o en `localStorage` con «Recuérdame») de forma temporal; revisar la estrategia frente a XSS antes de producción.
-4. **Migraciones:** Alembic es la fuente de verdad del esquema. Cadena lineal: `e7aac1fc989e` (esquema inicial) → `4c1d2e8f9a10` (correo único por clínica e índices `clinic_id`) → `7b3e9d2c5a61` (User–Doctor uno a uno y misma clínica) → `9d4f1a7b2c83` (doctor del paciente de la misma clínica) → `b2e6c4a8d915` (`patients.archived_at`, archivo de pacientes). `7b3e9d2c5a61` y `9d4f1a7b2c83` se detienen si hay datos que las violan; el downgrade de `b2e6c4a8d915` se detiene si hay pacientes archivados. Checklist de revisión en `DEVELOPMENT.md`.
+4. **Migraciones:** Alembic es la fuente de verdad del esquema. Cadena lineal: `e7aac1fc989e` (esquema inicial) → `4c1d2e8f9a10` (correo único por clínica e índices `clinic_id`) → `7b3e9d2c5a61` (User–Doctor uno a uno y misma clínica) → `9d4f1a7b2c83` (doctor del paciente de la misma clínica) → `b2e6c4a8d915` (`patients.archived_at`, archivo de pacientes) → `c4f8a1d2e6b3` (tabla `appointments`, `btree_gist` y `appointment_end`). `7b3e9d2c5a61` y `9d4f1a7b2c83` se detienen si hay datos que las violan; los downgrades de `b2e6c4a8d915` y `c4f8a1d2e6b3` se detienen si hay pacientes archivados o citas registradas. Checklist de revisión en `DEVELOPMENT.md`.
 5. **Pruebas:** pytest contra una base PostgreSQL `*_test` que aplica todas las migraciones; incluyen aislamiento entre dos clínicas, matriz de roles, contrato de la API y seed.
 6. **Separación de IA:** no acoplar PyTorch/OpenCV al backend clínico; definir posteriormente contratos versionados y controles de acceso.
 7. **Datos clínicos:** almacenamiento de imágenes, auditoría de accesos y políticas de retención siguen pendientes.
@@ -93,7 +102,7 @@ Doctor 1 ── * Patient (asignación opcional; misma clínica, garantizado por
 - Documentación interactiva en `/docs` y especificación en `/openapi.json`. Todas las respuestas exitosas tienen un esquema Pydantic; una prueba lo verifica.
 - `/health` comprueba la API y la conexión con PostgreSQL (`503` si la base no responde).
 - **Formato único de errores** (`backend/app/core/errors.py`): toda respuesta de error es `{"detail": "<mensaje en español>"}`. Los errores de validación (`422`) agregan `errors: [{"field", "message"}]`. Los `500` nunca exponen trazas.
-- **Listados paginados** (por ahora `GET /patients/`, ODON-126): responden `{"items", "total", "page", "page_size"}` con `page` desde 1 y `page_size` de 1 a 100 (20 por defecto). Búsqueda y filtros se resuelven en el backend, siempre dentro de la clínica del token. La búsqueda (`q`) cubre nombre y apellidos en cualquier orden, correo y, si el término solo tiene dígitos y separadores (mínimo 3 dígitos), el teléfono comparado por dígitos. Ignora tildes y mayúsculas con `translate`/`lower` (sin la extensión `unaccent`). El orden usa `COLLATE "C"` sobre el texto normalizado, con la «ñ» después de la «n», así que no depende de la collation de la base.
+- **Listados paginados** (por ahora `GET /patients/`, ODON-126): responden `{"items", "total", "page", "page_size"}` con `page` desde 1 y `page_size` de 1 a 100 (20 por defecto). Búsqueda y filtros se resuelven en el backend, siempre dentro de la clínica del token. La búsqueda (`q`) cubre nombre y apellidos en cualquier orden, correo y, si el término solo tiene dígitos y separadores (basta un dígito), el teléfono comparado por dígitos. Ignora tildes y mayúsculas con `translate`/`lower` (sin la extensión `unaccent`). El orden usa `COLLATE "C"` sobre el texto normalizado, con la «ñ» después de la «n», así que no depende de la collation de la base.
 - Códigos: `401` sin sesión válida (con `WWW-Authenticate: Bearer`), `403` sin permiso por rol, `404` recurso inexistente o de otra clínica, `409` conflicto (duplicado), `422` datos inválidos.
 
 ## Limitaciones conocidas
