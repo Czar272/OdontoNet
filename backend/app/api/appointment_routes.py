@@ -8,16 +8,24 @@ from sqlalchemy.orm import Query, Session, joinedload
 from app.auth.dependencies import get_current_clinic_id, get_current_user
 from app.auth.permissions import ALL_ROLES, require_roles
 from app.database.dependencies import get_db
-from app.models.appointment import Appointment, AppointmentStatus
+from app.models.appointment import Appointment, AppointmentStatus, AppointmentStatusChange
 from app.models.doctor import Doctor
 from app.models.patient import Patient
 from app.models.user import User
-from app.schemas.appointment_schema import AppointmentCreate, AppointmentResponse, AppointmentUpdate
+from app.schemas.appointment_schema import (
+    AppointmentCreate,
+    AppointmentResponse,
+    AppointmentStatusChangeResponse,
+    AppointmentStatusUpdate,
+    AppointmentUpdate,
+)
 from app.services.appointment_service import (
     PENDING_STATUSES,
     commit_appointment,
     ensure_no_overlap,
     ensure_not_in_past,
+    ensure_transition_allowed,
+    status_change,
 )
 from app.services.doctor_service import ensure_assignable_doctor
 
@@ -174,6 +182,9 @@ def create_appointment(
         status=AppointmentStatus.SCHEDULED.value,
         created_by_user_id=current_user.id,
     )
+    appointment.status_changes.append(
+        status_change(appointment, None, appointment.status, current_user.id)
+    )
     db.add(appointment)
     commit_appointment(db)
 
@@ -242,3 +253,75 @@ def update_appointment(
     )
     db.expire_all()
     return _get_clinic_appointment(db, appointment_id, clinic_id)
+
+
+@router.post("/{appointment_id}/status", response_model=AppointmentResponse)
+def change_appointment_status(
+    appointment_id: int,
+    data: AppointmentStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    clinic_id: int = Depends(get_current_clinic_id),
+):
+    """Confirma, cancela, marca atendida o no asistió, o reactiva (ODON-147).
+
+    Repetir el estado actual no cambia nada ni agrega historial."""
+    appointment = _get_clinic_appointment(db, appointment_id, clinic_id)
+    new_status = data.status.value
+    previous = appointment.status
+
+    if new_status == previous:
+        return appointment
+
+    ensure_transition_allowed(appointment, new_status)
+
+    if previous == AppointmentStatus.CANCELLED.value:
+        # Reactivar: vuelve a ocupar el horario, así que se valida como una cita nueva.
+        if appointment.patient.archived_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="El paciente está archivado. Reactívalo para agendarle citas.",
+            )
+        ensure_assignable_doctor(db, appointment.doctor_id, clinic_id)
+        ensure_not_in_past(appointment.starts_at)
+        ensure_no_overlap(
+            db,
+            doctor_id=appointment.doctor_id,
+            patient_id=appointment.patient_id,
+            starts_at=appointment.starts_at,
+            duration_minutes=appointment.duration_minutes,
+            exclude_id=appointment.id,
+        )
+
+    appointment.status = new_status
+    appointment.status_changes.append(
+        status_change(appointment, previous, new_status, current_user.id, data.note)
+    )
+    commit_appointment(db)
+
+    audit_logger.info(
+        "appointment.status_changed appointment_id=%s user_id=%s clinic_id=%s from=%s to=%s",
+        appointment.id, current_user.id, clinic_id, previous, new_status,
+    )
+    db.expire_all()
+    return _get_clinic_appointment(db, appointment_id, clinic_id)
+
+
+@router.get("/{appointment_id}/history", response_model=list[AppointmentStatusChangeResponse])
+def get_appointment_history(
+    appointment_id: int,
+    db: Session = Depends(get_db),
+    clinic_id: int = Depends(get_current_clinic_id),
+):
+    """Cambios de estado de la cita, del más antiguo al más reciente."""
+    _get_clinic_appointment(db, appointment_id, clinic_id)
+    return (
+        db.query(AppointmentStatusChange)
+        .options(joinedload(AppointmentStatusChange.changed_by))
+        .filter(
+            AppointmentStatusChange.appointment_id == appointment_id,
+            AppointmentStatusChange.clinic_id == clinic_id,
+        )
+        .order_by(AppointmentStatusChange.id)
+        .all()
+    )

@@ -1,7 +1,7 @@
 """Seed sintético de desarrollo (ODON-34 / ODON-35 / ODON-36)."""
 import pytest
 
-from app.models import Appointment, Clinic, Doctor, Patient, User
+from app.models import Appointment, AppointmentStatusChange, Clinic, Doctor, Patient, User
 from scripts.seed_dev import (
     CLINICS,
     PATIENTS_PER_CLINIC,
@@ -127,14 +127,21 @@ def test_seeded_agenda_is_coherent(db):
         assert all(a.patient.clinic_id == clinic.id and a.doctor.clinic_id == clinic.id for a in appointments)
         statuses = {a.status for a in appointments}
         assert {"completed", "scheduled"} <= statuses
+        assert all([c.to_status for c in a.status_changes] == [a.status] for a in appointments)
 
 
 @pytest.mark.appointments
 def test_seed_does_not_add_appointments_to_an_existing_agenda(db):
+    # Simula una clínica con una sola cita propia (no del seed).
     seed(db, PASSWORD)
-    db.query(Appointment).filter(Appointment.status == "cancelled").delete()
+    keep = db.query(Appointment.id).order_by(Appointment.id).first().id
+    db.query(AppointmentStatusChange).delete()
+    db.query(Appointment).filter(Appointment.id != keep).delete()
     db.commit()
     before = db.query(Appointment).count()
 
-    assert seed(db, PASSWORD)["appointments"] == 0
-    assert db.query(Appointment).count() == before
+    created = seed(db, PASSWORD)["appointments"]
+
+    # La clínica con su cita no recibe la agenda demo; la otra, sin citas, sí.
+    assert db.query(Appointment).count() == before + created
+    assert created == 60

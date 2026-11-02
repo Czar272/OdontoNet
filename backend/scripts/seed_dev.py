@@ -35,7 +35,7 @@ from sqlalchemy.engine import make_url  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
 from app.auth.security import hash_password  # noqa: E402
-from app.models import Appointment, Clinic, Doctor, Patient, User  # noqa: E402
+from app.models import Appointment, AppointmentStatusChange, Clinic, Doctor, Patient, User  # noqa: E402
 
 LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 EMAIL_DOMAIN = "odontonet-demo.com"
@@ -268,18 +268,26 @@ def _seed_appointments(db: Session, clinic: Clinic, doctors: list, author: User)
                     status = "cancelled" if roll < 0.1 else "confirmed" if roll < 0.4 else "scheduled"
                 else:
                     status = "no_show" if rng.random() < 0.15 else "completed"
-                db.add(
-                    Appointment(
+                appointment = Appointment(
+                    clinic_id=clinic.id,
+                    patient_id=patients[count % len(patients)].id,
+                    doctor_id=doctor.id,
+                    starts_at=starts_at,
+                    duration_minutes=rng.choice((30, 45, 60)),
+                    status=status,
+                    reason=rng.choice(APPOINTMENT_REASONS),
+                    created_by_user_id=author.id,
+                )
+                # Historial mínimo (ODON-146): un registro con el estado demo.
+                appointment.status_changes.append(
+                    AppointmentStatusChange(
                         clinic_id=clinic.id,
-                        patient_id=patients[count % len(patients)].id,
-                        doctor_id=doctor.id,
-                        starts_at=starts_at,
-                        duration_minutes=rng.choice((30, 45, 60)),
-                        status=status,
-                        reason=rng.choice(APPOINTMENT_REASONS),
-                        created_by_user_id=author.id,
+                        to_status=status,
+                        note="Agenda demo del seed",
+                        changed_by_user_id=author.id,
                     )
                 )
+                db.add(appointment)
                 count += 1
     return count
 

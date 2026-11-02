@@ -59,11 +59,13 @@ class AppointmentUpdate(BaseModel):
 
 
 class AppointmentPatient(BaseModel):
-    """Datos mínimos del paciente para la agenda (sin contacto ni datos clínicos)."""
+    """Datos mínimos del paciente para la agenda. Incluye el teléfono para
+    llamar a confirmar (ODON-146); nada clínico."""
 
     id: int
     first_name: str
     last_name: str
+    phone: str | None = None
     archived_at: datetime | None = None
 
     class Config:
@@ -85,6 +87,38 @@ class AppointmentResponse(BaseModel):
     updated_at: datetime
     patient: AppointmentPatient
     doctor: DoctorResponse
+
+    class Config:
+        orm_mode = True
+
+
+Note = constr(strip_whitespace=True, max_length=255)
+
+
+class AppointmentStatusUpdate(BaseModel):
+    """Cambio de estado (ODON-147) con nota opcional del seguimiento."""
+
+    status: AppointmentStatus
+    note: Optional[Note] = None
+
+    _note = validator("note", pre=True, allow_reuse=True)(_empty_to_none)
+
+
+class StatusChangeUser(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        orm_mode = True
+
+
+class AppointmentStatusChangeResponse(BaseModel):
+    id: int
+    from_status: AppointmentStatus | None
+    to_status: AppointmentStatus
+    note: str | None
+    changed_at: datetime
+    changed_by: StatusChangeUser
 
     class Config:
         orm_mode = True

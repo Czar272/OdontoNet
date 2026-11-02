@@ -6,7 +6,12 @@ from sqlalchemy import func, literal
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
-from app.models.appointment import Appointment, AppointmentStatus, BLOCKING_STATUSES
+from app.models.appointment import (
+    BLOCKING_STATUSES,
+    Appointment,
+    AppointmentStatus,
+    AppointmentStatusChange,
+)
 from app.models.doctor import Doctor
 
 # Citas que todavía se pueden reprogramar y que cuentan como pendientes.
@@ -133,3 +138,71 @@ def commit_appointment(db: Session) -> None:
                 # La otra cita llegó en paralelo: no hay detalle fiable que mostrar.
                 raise AppointmentConflict(detail) from exc
         raise
+
+
+# --- Estados (ODON-146) --------------------------------------------------------------
+
+S = AppointmentStatus
+# Transiciones permitidas. Las terminales solo se corrigen entre sí
+# (Atendida ↔ No asistió) y una cancelada solo vuelve a Programada.
+ALLOWED_TRANSITIONS: dict[str, frozenset[str]] = {
+    S.SCHEDULED.value: frozenset({S.CONFIRMED.value, S.CANCELLED.value, S.COMPLETED.value, S.NO_SHOW.value}),
+    S.CONFIRMED.value: frozenset({S.SCHEDULED.value, S.CANCELLED.value, S.COMPLETED.value, S.NO_SHOW.value}),
+    S.CANCELLED.value: frozenset({S.SCHEDULED.value}),
+    S.COMPLETED.value: frozenset({S.NO_SHOW.value}),
+    S.NO_SHOW.value: frozenset({S.COMPLETED.value}),
+}
+
+# Solo tienen sentido cuando la cita ya empezó.
+_AFTER_START = frozenset({S.COMPLETED.value, S.NO_SHOW.value})
+
+STATUS_LABELS = {
+    S.SCHEDULED.value: "Programada",
+    S.CONFIRMED.value: "Confirmada",
+    S.COMPLETED.value: "Atendida",
+    S.CANCELLED.value: "Cancelada",
+    S.NO_SHOW.value: "No asistió",
+}
+
+
+def ensure_transition_allowed(appointment: Appointment, new_status: str) -> None:
+    """422/409 si el cambio de estado no tiene sentido para esta cita."""
+    current = appointment.status
+    if new_status not in ALLOWED_TRANSITIONS[current]:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Una cita {STATUS_LABELS[current].lower()} no puede pasar a "
+            f"{STATUS_LABELS[new_status].lower()}.",
+        )
+
+    now = now_utc()
+    if new_status in _AFTER_START and appointment.starts_at > now:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="La cita todavía no empieza: no se puede marcar como atendida o no asistió.",
+        )
+    # Confirmar, quitar la confirmación o cancelar: solo antes de que termine.
+    # Reactivar una cancelada exige además un inicio futuro (se valida aparte).
+    if new_status not in _AFTER_START and current != S.CANCELLED.value and appointment.ends_at <= now:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="La cita ya terminó: márcala como atendida o como no asistió.",
+        )
+
+
+def status_change(
+    appointment: Appointment,
+    from_status: str | None,
+    to_status: str,
+    user_id: int,
+    note: str | None = None,
+) -> AppointmentStatusChange:
+    """Registro de historial; se agrega con appointment.status_changes.append
+    para guardarse en el mismo commit que la cita."""
+    return AppointmentStatusChange(
+        clinic_id=appointment.clinic_id,
+        from_status=from_status,
+        to_status=to_status,
+        note=note,
+        changed_by_user_id=user_id,
+    )

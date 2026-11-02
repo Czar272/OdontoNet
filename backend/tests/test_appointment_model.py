@@ -241,5 +241,5 @@ def test_response_schema_exposes_end_and_minimal_patient(db, agenda):
 
     assert body["ends_at"] == NINE + timedelta(minutes=45)
     assert body["status"] == "scheduled"
-    assert set(body["patient"]) == {"id", "first_name", "last_name", "archived_at"}
+    assert set(body["patient"]) == {"id", "first_name", "last_name", "phone", "archived_at"}
     assert "hashed_password" not in body["doctor"]["user"]

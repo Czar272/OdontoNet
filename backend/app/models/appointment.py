@@ -9,6 +9,7 @@ from sqlalchemy import (
     ForeignKeyConstraint,
     Integer,
     String,
+    UniqueConstraint,
     func,
     text,
 )
@@ -51,6 +52,8 @@ class Appointment(Base):
 
     __tablename__ = "appointments"
     __table_args__ = (
+        # Permite que el historial referencie (appointment_id, clinic_id) a la vez.
+        UniqueConstraint("id", "clinic_id", name="uq_appointments_id_clinic"),
         # Paciente y doctor son de la clínica de la cita.
         ForeignKeyConstraint(
             ["patient_id", "clinic_id"],
@@ -112,6 +115,14 @@ class Appointment(Base):
     patient = relationship("Patient", back_populates="appointments", foreign_keys=[patient_id])
     doctor = relationship("Doctor", back_populates="appointments", foreign_keys=[doctor_id])
     created_by = relationship("User", foreign_keys=[created_by_user_id])
+    # Historial de estados (ODON-146): se conserva, la cita nunca se borra.
+    status_changes = relationship(
+        "AppointmentStatusChange",
+        back_populates="appointment",
+        foreign_keys="AppointmentStatusChange.appointment_id",
+        order_by="AppointmentStatusChange.id",
+        passive_deletes="all",
+    )
 
     @property
     def ends_at(self):
@@ -119,3 +130,36 @@ class Appointment(Base):
         if self.starts_at is None or self.duration_minutes is None:
             return None
         return self.starts_at + timedelta(minutes=self.duration_minutes)
+
+
+class AppointmentStatusChange(Base):
+    """Un cambio de estado de una cita (ODON-146). from_status es NULL al crearla."""
+
+    __tablename__ = "appointment_status_changes"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["appointment_id", "clinic_id"],
+            ["appointments.id", "appointments.clinic_id"],
+            name="fk_appointment_status_changes_appointment_clinic",
+        ),
+        CheckConstraint(
+            f"from_status IS NULL OR from_status IN ({_STATUS_VALUES})",
+            name="ck_appointment_status_changes_from",
+        ),
+        CheckConstraint(f"to_status IN ({_STATUS_VALUES})", name="ck_appointment_status_changes_to"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    appointment_id = Column(Integer, ForeignKey("appointments.id"), nullable=False, index=True)
+    clinic_id = Column(Integer, ForeignKey("clinics.id"), nullable=False)
+    from_status = Column(String, nullable=True)
+    to_status = Column(String, nullable=False)
+    # Nota corta del seguimiento («Confirmó por teléfono»); nada clínico.
+    note = Column(String(255))
+    changed_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    changed_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    appointment = relationship(
+        "Appointment", back_populates="status_changes", foreign_keys=[appointment_id]
+    )
+    changed_by = relationship("User", foreign_keys=[changed_by_user_id])
