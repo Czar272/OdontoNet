@@ -93,6 +93,7 @@ Doctor 1 ── * Patient (asignación opcional; misma clínica, garantizado por
 - Documentación interactiva en `/docs` y especificación en `/openapi.json`. Todas las respuestas exitosas tienen un esquema Pydantic; una prueba lo verifica.
 - `/health` comprueba la API y la conexión con PostgreSQL (`503` si la base no responde).
 - **Formato único de errores** (`backend/app/core/errors.py`): toda respuesta de error es `{"detail": "<mensaje en español>"}`. Los errores de validación (`422`) agregan `errors: [{"field", "message"}]`. Los `500` nunca exponen trazas.
+- **Listados paginados** (por ahora `GET /patients/`, ODON-126): responden `{"items", "total", "page", "page_size"}` con `page` desde 1 y `page_size` de 1 a 100 (20 por defecto). Búsqueda y filtros se resuelven en el backend, siempre dentro de la clínica del token. La búsqueda ignora tildes y mayúsculas con `translate`/`lower` (sin la extensión `unaccent`) y el orden usa `COLLATE "C"` sobre el texto normalizado, así que no depende de la collation de la base.
 - Códigos: `401` sin sesión válida (con `WWW-Authenticate: Bearer`), `403` sin permiso por rol, `404` recurso inexistente o de otra clínica, `409` conflicto (duplicado), `422` datos inválidos.
 
 ## Limitaciones conocidas

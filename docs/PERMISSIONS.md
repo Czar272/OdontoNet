@@ -40,7 +40,7 @@
 | `GET /patients/`, `GET /patients/{id}` | ✅ | ✅ | ✅ |
 | `POST /patients/` | ✅ | ✅ | ✅ |
 | `PATCH /patients/{id}` (editar datos y reasignar doctor) | ✅ | ✅ | ✅ |
-| `GET /patients/?archived=true` (listar archivados; por defecto solo activos) | ✅ | ✅ | ✅ |
+| `GET /patients/` con `archived`, `q`, `doctor_id`, `page`, `page_size` (listado paginado; por defecto activos) | ✅ | ✅ | ✅ |
 | `POST /patients/{id}/archive`, `POST /patients/{id}/reactivate` | ✅ | ✅ | ✅ |
 | `GET /doctors/` (filtro `?active=true/false`), `GET /doctors/{id}` | ✅ | ✅ | ✅ |
 | `POST /doctors/` (crear perfil de doctor), `PATCH /doctors/{id}` (editar perfil) | ✅ | ⛔ | ⛔ |
@@ -71,7 +71,7 @@ Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_users.py`, `bac
 - `GET /patients/` devuelve solo activos; `?archived=true` devuelve solo archivados. La ficha `GET /patients/{id}` funciona en ambos estados.
 - Un paciente archivado no se edita (`409 El paciente está archivado. Reactívalo para editar sus datos.`); primero se reactiva.
 - Archivar y reactivar son idempotentes y quedan en el log `odontonet.audit` (solo ids). Un paciente de otra clínica responde `404`.
-- El correo de un paciente archivado sigue reservado en su clínica: crear otro paciente con ese correo responde `409`.
+- El correo de un paciente archivado sigue reservado en su clínica: crear o editar otro paciente con ese correo responde `409 Ya existe un paciente archivado con ese correo en la clínica. Reactívalo desde la lista de archivados.`
 
 ## Módulos futuros (decidido el 2026-10-31)
 
