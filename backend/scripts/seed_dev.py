@@ -1,11 +1,14 @@
 """Seed sintético de desarrollo (ODON-34).
 
 Crea dos clínicas de demostración, cada una con administración, recepción,
-dos doctores y pacientes ficticios relacionados. Sirve para probar la
+dos doctores, pacientes ficticios relacionados y una agenda de citas
+alrededor de la fecha de ejecución (ODON-138). Sirve para probar la
 aplicación y el aislamiento entre clínicas sin datos reales.
 
 Garantías:
-- Idempotente: se puede ejecutar varias veces sin duplicar registros.
+- Idempotente: se puede ejecutar varias veces sin duplicar registros. Las
+  citas solo se crean si la clínica todavía no tiene ninguna, para no
+  cruzarse con una agenda que ya existe.
 - No borra ni modifica datos existentes; solo agrega lo que falte.
 - Transaccional: si algo falla, no queda nada a medias.
 - Solo desarrollo: se niega a correr si la base no es local o si
@@ -21,7 +24,7 @@ Uso, desde backend/ con odonto_venv activo:
 import os
 import random
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -32,11 +35,19 @@ from sqlalchemy.engine import make_url  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
 from app.auth.security import hash_password  # noqa: E402
-from app.models import Clinic, Doctor, Patient, User  # noqa: E402
+from app.models import Appointment, Clinic, Doctor, Patient, User  # noqa: E402
 
 LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 EMAIL_DOMAIN = "odontonet-demo.com"
 PATIENTS_PER_CLINIC = 15
+
+# Agenda demo: días hábiles desde 3 días antes hasta 10 después de hoy.
+APPOINTMENT_DAYS = range(-3, 11)
+# Horas por doctor (índice en STAFF de doctores): no se cruzan entre doctores,
+# así un paciente nunca queda con dos citas a la vez.
+DOCTOR_HOURS = [(9, 11, 15), (10, 14, 16)]
+APPOINTMENT_REASONS = ["Limpieza", "Control", "Evaluación periodontal", "Raspado y alisado", "Consulta"]
+CLINIC_TZ = timezone(timedelta(hours=-6))  # America/Guatemala, sin horario de verano
 
 CLINICS = [
     {
@@ -145,7 +156,7 @@ def _patient_data(clinic_slug: str, index: int) -> dict:
 
 def seed(db: Session, password: str) -> dict:
     """Crea los datos que falten y devuelve cuántos registros nuevos agregó."""
-    created = {"clinics": 0, "users": 0, "doctors": 0, "patients": 0}
+    created = {"clinics": 0, "users": 0, "doctors": 0, "patients": 0, "appointments": 0}
     password_hash = None
 
     for spec in CLINICS:
@@ -162,6 +173,7 @@ def seed(db: Session, password: str) -> dict:
             created["clinics"] += 1
 
         doctors = []
+        receptionist = None
         for prefix, name, role, specialization in STAFF:
             email = staff_email(prefix, spec["slug"])
             user = db.query(User).filter(User.email == email).first()
@@ -178,6 +190,9 @@ def seed(db: Session, password: str) -> dict:
                 db.add(user)
                 db.flush()
                 created["users"] += 1
+
+            if role == "receptionist":
+                receptionist = user
 
             if role == "doctor":
                 doctor = db.query(Doctor).filter(Doctor.user_id == user.id).first()
@@ -211,10 +226,62 @@ def seed(db: Session, password: str) -> dict:
             )
             created["patients"] += 1
 
+        db.flush()
+        created["appointments"] += _seed_appointments(db, clinic, doctors, receptionist)
+
     db.flush()
     validate_relations(db)
     db.commit()
     return created
+
+
+def _seed_appointments(db: Session, clinic: Clinic, doctors: list, author: User) -> int:
+    """Agenda demo de la clínica, solo si todavía no tiene citas.
+
+    Pasadas: atendidas y algunas «No asistió». Futuras: programadas, algunas
+    confirmadas y algunas canceladas. Siempre son de pacientes de la clínica."""
+    if db.query(Appointment.id).filter(Appointment.clinic_id == clinic.id).first():
+        return 0
+
+    patients = (
+        db.query(Patient)
+        .filter(Patient.clinic_id == clinic.id, Patient.archived_at.is_(None))
+        .order_by(Patient.id)
+        .all()
+    )
+    if not patients or not doctors:
+        return 0
+
+    rng = random.Random(f"agenda-{clinic.name}")
+    today = date.today()
+    now = datetime.now(timezone.utc)
+    count = 0
+    for offset in APPOINTMENT_DAYS:
+        day = today + timedelta(days=offset)
+        if day.weekday() >= 5:  # sábado y domingo sin citas
+            continue
+        for doctor_index, doctor in enumerate(doctors):
+            for hour in DOCTOR_HOURS[doctor_index % len(DOCTOR_HOURS)]:
+                starts_at = datetime.combine(day, time(hour, rng.choice((0, 30))), CLINIC_TZ)
+                if starts_at > now:
+                    roll = rng.random()
+                    status = "cancelled" if roll < 0.1 else "confirmed" if roll < 0.4 else "scheduled"
+                else:
+                    status = "no_show" if rng.random() < 0.15 else "completed"
+                db.add(
+                    Appointment(
+                        clinic_id=clinic.id,
+                        patient_id=patients[count % len(patients)].id,
+                        doctor_id=doctor.id,
+                        starts_at=starts_at,
+                        duration_minutes=rng.choice((30, 45, 60)),
+                        status=status,
+                        reason=rng.choice(APPOINTMENT_REASONS),
+                        created_by_user_id=author.id,
+                    )
+                )
+                count += 1
+    return count
 
 
 def validate_relations(db: Session) -> None:

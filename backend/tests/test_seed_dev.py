@@ -1,7 +1,7 @@
 """Seed sintético de desarrollo (ODON-34 / ODON-35 / ODON-36)."""
 import pytest
 
-from app.models import Clinic, Doctor, Patient, User
+from app.models import Appointment, Clinic, Doctor, Patient, User
 from scripts.seed_dev import (
     CLINICS,
     PATIENTS_PER_CLINIC,
@@ -27,18 +27,22 @@ def counts(db):
         "users": db.query(User).count(),
         "doctors": db.query(Doctor).count(),
         "patients": db.query(Patient).count(),
+        "appointments": db.query(Appointment).count(),
     }
 
 
 def test_seed_creates_related_data(db):
     created = seed(db, PASSWORD)
 
+    appointments = created.pop("appointments")
     assert created == {
         "clinics": len(CLINICS),
         "users": len(CLINICS) * len(STAFF),
         "doctors": len(CLINICS) * 2,
         "patients": len(CLINICS) * PATIENTS_PER_CLINIC,
     }
+    # 14 días alrededor de hoy: entre 9 y 10 hábiles, 6 citas por día y clínica.
+    assert len(CLINICS) * 6 * 9 <= appointments <= len(CLINICS) * 6 * 10
     validate_relations(db)
 
 
@@ -48,7 +52,7 @@ def test_seed_is_idempotent(db):
 
     second = seed(db, PASSWORD)
 
-    assert second == {"clinics": 0, "users": 0, "doctors": 0, "patients": 0}
+    assert second == {"clinics": 0, "users": 0, "doctors": 0, "patients": 0, "appointments": 0}
     assert counts(db) == before
 
 
@@ -111,3 +115,26 @@ def test_accepts_local_development_database():
 def test_requires_strong_enough_password(value):
     with pytest.raises(SeedError):
         read_password(value)
+
+
+@pytest.mark.appointments
+def test_seeded_agenda_is_coherent(db):
+    seed(db, PASSWORD)
+
+    for clinic in db.query(Clinic).all():
+        appointments = db.query(Appointment).filter(Appointment.clinic_id == clinic.id).all()
+        assert appointments
+        assert all(a.patient.clinic_id == clinic.id and a.doctor.clinic_id == clinic.id for a in appointments)
+        statuses = {a.status for a in appointments}
+        assert {"completed", "scheduled"} <= statuses
+
+
+@pytest.mark.appointments
+def test_seed_does_not_add_appointments_to_an_existing_agenda(db):
+    seed(db, PASSWORD)
+    db.query(Appointment).filter(Appointment.status == "cancelled").delete()
+    db.commit()
+    before = db.query(Appointment).count()
+
+    assert seed(db, PASSWORD)["appointments"] == 0
+    assert db.query(Appointment).count() == before
