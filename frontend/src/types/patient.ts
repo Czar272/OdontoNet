@@ -15,6 +15,14 @@ export interface Patient {
   archived_at?: string | null;
 }
 
+/** Una página del listado (ODON-126). */
+export interface PatientPage {
+  items: Patient[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
 /** Edición parcial: "" borra los opcionales y doctor_id null quita el doctor. */
 export interface UpdatePatientDTO {
   first_name?: string;

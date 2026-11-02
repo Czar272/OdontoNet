@@ -1,9 +1,10 @@
-import { fireEvent, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { PatientFilters } from "../../services/patientService";
 import { renderWithAuth } from "../../test/renderWithAuth";
 import type { Doctor } from "../../types/doctor";
-import type { Patient } from "../../types/patient";
+import type { Patient, PatientPage } from "../../types/patient";
 import PatientsPage from "./PatientsPage";
 
 function doctor(id: number, name: string, isActive = true): Doctor {
@@ -32,12 +33,20 @@ const patient = (id: number, first: string, last: string, doc: Doctor | null): P
   doctor: doc,
 });
 
-const state = vi.hoisted(() => ({ patients: [] as unknown[], archived: [] as unknown[] }));
+const ALL = [
+  patient(1, "José", "Pérez", ana),
+  patient(2, "María", "López", luis),
+  patient(3, "Carlos", "Ruiz", null),
+];
+
+// El backend filtra y pagina: el mock responde según la prueba y se verifica
+// qué parámetros se le enviaron.
+const state = vi.hoisted(() => ({
+  respond: (() => null) as (filters: PatientFilters) => unknown,
+}));
 
 vi.mock("../../services/patientService", () => ({
-  getPatients: vi.fn(async (filters?: { archived?: boolean }) =>
-    filters?.archived ? state.archived : state.patients,
-  ),
+  getPatients: vi.fn(async (filters: PatientFilters) => state.respond(filters)),
   createPatient: vi.fn(),
 }));
 
@@ -45,79 +54,127 @@ vi.mock("../../services/doctorService", () => ({
   getDoctors: vi.fn(async () => [ana, luis]),
 }));
 
-const ALL = [
-  patient(1, "José", "Pérez", ana),
-  patient(2, "María", "López", luis),
-  patient(3, "Carlos", "Ruiz", null),
-];
-
 const { getPatients } = await import("../../services/patientService");
 
+function page(items: Patient[], total = items.length, pageNumber = 1): PatientPage {
+  return { items, total, page: pageNumber, page_size: 20 };
+}
+
+function lastFilters(): PatientFilters {
+  const calls = vi.mocked(getPatients).mock.calls;
+  return calls[calls.length - 1][0] as PatientFilters;
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  state.respond = (f) => page(ALL, ALL.length, f.page);
+});
+
 describe("PatientsPage", () => {
-  it("busca por nombre o apellido sin importar tildes ni orden", async () => {
-    state.patients = ALL;
+  it("pide la primera página de activos y muestra el total", async () => {
+    renderWithAuth(<PatientsPage />, "receptionist");
+
+    expect(await screen.findByText("José Pérez")).toBeInTheDocument();
+    expect(screen.getByText("3 pacientes · Página 1 de 1")).toBeInTheDocument();
+    expect(getPatients).toHaveBeenCalledWith({
+      archived: false, search: "", doctorId: undefined, page: 1, pageSize: 20,
+    });
+  });
+
+  it("envía la búsqueda al backend cuando se deja de escribir", async () => {
     renderWithAuth(<PatientsPage />, "receptionist");
     await screen.findByText("José Pérez");
 
-    fireEvent.change(screen.getByLabelText("Buscar pacientes"), { target: { value: "perez jose" } });
+    state.respond = () => page([ALL[0]]);
+    fireEvent.change(screen.getByLabelText("Buscar pacientes"), { target: { value: "  perez jose " } });
 
+    await waitFor(() => expect(lastFilters()).toMatchObject({ search: "perez jose", page: 1 }));
+    await waitFor(() => expect(screen.queryByText("María López")).not.toBeInTheDocument());
     expect(screen.getByText("José Pérez")).toBeInTheDocument();
-    expect(screen.queryByText("María López")).not.toBeInTheDocument();
+    // Una sola consulta por la búsqueda completa, no una por tecla.
+    expect(vi.mocked(getPatients).mock.calls.filter(([f]) => (f as PatientFilters).search)).toHaveLength(1);
   });
 
-  it("filtra por doctor de la clínica y marca a los inactivos", async () => {
-    state.patients = ALL;
+  it("filtra por doctor en el backend y marca a los inactivos", async () => {
     renderWithAuth(<PatientsPage />, "doctor");
     await screen.findByText("José Pérez");
 
     expect(await screen.findByRole("option", { name: "Dr. Luis Herrera (inactivo)" })).toBeInTheDocument();
+    state.respond = () => page([ALL[1]]);
     fireEvent.change(screen.getByLabelText("Filtrar por doctor"), { target: { value: "2" } });
 
-    expect(screen.getByText("María López")).toBeInTheDocument();
+    await waitFor(() => expect(lastFilters()).toMatchObject({ doctorId: 2, page: 1 }));
+    expect(await screen.findByText("1 paciente · Página 1 de 1")).toBeInTheDocument();
     expect(screen.queryByText("José Pérez")).not.toBeInTheDocument();
-    expect(screen.queryByText("Carlos Ruiz")).not.toBeInTheDocument();
   });
 
-  it("estado vacío por búsqueda sin resultados, con opción de limpiar", async () => {
-    state.patients = ALL;
+  it("pagina con Anterior y Siguiente", async () => {
+    state.respond = (f) => page(f.page === 2 ? [ALL[2]] : [ALL[0], ALL[1]], 45, f.page);
     renderWithAuth(<PatientsPage />, "admin");
-    await screen.findByText("José Pérez");
+    await screen.findByText("45 pacientes · Página 1 de 3");
 
-    fireEvent.change(screen.getByLabelText("Buscar pacientes"), { target: { value: "zzz" } });
-    expect(screen.getByText(/No hay pacientes que coincidan/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Anterior" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Siguiente" }));
 
-    fireEvent.click(screen.getByRole("button", { name: "Limpiar filtros" }));
-    expect(screen.getByText("Carlos Ruiz")).toBeInTheDocument();
+    expect(await screen.findByText("45 pacientes · Página 2 de 3")).toBeInTheDocument();
+    expect(await screen.findByText("Carlos Ruiz")).toBeInTheDocument();
+    expect(lastFilters()).toMatchObject({ page: 2 });
+    expect(screen.getByRole("button", { name: "Anterior" })).toBeEnabled();
   });
 
-  it("estado vacío cuando la clínica no tiene pacientes", async () => {
-    state.patients = [];
+  it("cambiar un filtro vuelve a la primera página", async () => {
+    state.respond = (f) => page(ALL, 45, f.page);
+    renderWithAuth(<PatientsPage />, "admin");
+    await screen.findByText("45 pacientes · Página 1 de 3");
+    fireEvent.click(screen.getByRole("button", { name: "Siguiente" }));
+    await screen.findByText("45 pacientes · Página 2 de 3");
+
+    fireEvent.change(screen.getByLabelText("Filtrar por estado"), { target: { value: "archived" } });
+
+    await waitFor(() => expect(lastFilters()).toMatchObject({ archived: true, page: 1 }));
+  });
+
+  it("sin paginación cuando no hay resultados", async () => {
+    state.respond = () => page([]);
     renderWithAuth(<PatientsPage />, "admin");
 
     expect(await screen.findByText("Todavía no hay pacientes registrados en la clínica.")).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Paginación de pacientes" })).not.toBeInTheDocument();
+  });
+
+  it("estado vacío por búsqueda sin resultados, con opción de limpiar", async () => {
+    renderWithAuth(<PatientsPage />, "admin");
+    await screen.findByText("José Pérez");
+
+    state.respond = (f) => (f.search ? page([]) : page(ALL));
+    fireEvent.change(screen.getByLabelText("Buscar pacientes"), { target: { value: "zzz" } });
+    expect(await screen.findByText(/No hay pacientes que coincidan/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Limpiar filtros" }));
+
+    expect(await screen.findByText("Carlos Ruiz")).toBeInTheDocument();
+    expect(screen.getByLabelText("Buscar pacientes")).toHaveValue("");
   });
 
   it("muestra los archivados al cambiar el estado, pidiéndolos al backend", async () => {
-    state.patients = ALL;
-    state.archived = [{ ...patient(9, "Rosa", "Archivada", ana), archived_at: "2026-11-02T10:00:00Z" }];
     renderWithAuth(<PatientsPage />, "receptionist");
     await screen.findByText("José Pérez");
     expect(screen.queryByText("Archivado")).not.toBeInTheDocument();
 
+    state.respond = () => page([{ ...patient(9, "Rosa", "Archivada", ana), archived_at: "2026-11-02T10:00:00Z" }]);
     fireEvent.change(screen.getByLabelText("Filtrar por estado"), { target: { value: "archived" } });
 
     expect(await screen.findByText("Rosa Archivada")).toBeInTheDocument();
     expect(screen.getByText("Archivado")).toBeInTheDocument();
     expect(screen.queryByText("José Pérez")).not.toBeInTheDocument();
-    expect(getPatients).toHaveBeenLastCalledWith({ archived: true });
+    expect(lastFilters()).toMatchObject({ archived: true });
   });
 
   it("estado vacío propio cuando no hay archivados", async () => {
-    state.patients = ALL;
-    state.archived = [];
     renderWithAuth(<PatientsPage />, "admin");
     await screen.findByText("José Pérez");
 
+    state.respond = () => page([]);
     fireEvent.change(screen.getByLabelText("Filtrar por estado"), { target: { value: "archived" } });
 
     expect(await screen.findByText("No hay pacientes archivados.")).toBeInTheDocument();

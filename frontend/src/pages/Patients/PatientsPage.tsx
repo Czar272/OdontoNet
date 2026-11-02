@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 
 import Button from "../../components/basic/Button";
@@ -10,25 +10,42 @@ import PageHeader from "../../components/basic/PageHeader";
 import Select from "../../components/basic/Select";
 import Table from "../../components/basic/Table";
 import PatientForm from "../../components/patients/PatientForm";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { usePermission } from "../../hooks/usePermission";
 import { getDoctors } from "../../services/doctorService";
 import { getPatients } from "../../services/patientService";
 
-/** Minúsculas y sin tildes: "jose" encuentra a "José". */
-function normalize(text: string): string {
-  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-}
+const PAGE_SIZE = 5;
 
 type StatusFilter = "active" | "archived";
 
 const PatientsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
-  const archived = statusFilter === "archived";
+  const [search, setSearch] = useState("");
+  const [doctorFilter, setDoctorFilter] = useState<number | undefined>();
+  const [page, setPage] = useState(1);
 
-  // Activos y archivados se piden por separado: el backend filtra (ODON-122).
-  const { data: patients, isLoading, isError } = useQuery({
-    queryKey: ["patients", "list", { archived }],
-    queryFn: () => getPatients({ archived }),
+  const archived = statusFilter === "archived";
+  // Se consulta al backend cuando se deja de escribir, no en cada tecla.
+  const debouncedSearch = useDebouncedValue(search.trim(), 300);
+
+  // Búsqueda, filtros y paginación se resuelven en el backend (ODON-126).
+  const { data, isLoading, isError, isFetching } = useQuery({
+    queryKey: [
+      "patients",
+      "list",
+      { archived, search: debouncedSearch, doctorFilter, page },
+    ],
+    queryFn: () =>
+      getPatients({
+        archived,
+        search: debouncedSearch,
+        doctorId: doctorFilter,
+        page,
+        pageSize: PAGE_SIZE,
+      }),
+    // Mantiene la página anterior visible mientras llega la siguiente.
+    placeholderData: keepPreviousData,
   });
 
   // Todos los doctores, incluidos inactivos: sus pacientes siguen en el historial.
@@ -40,27 +57,27 @@ const PatientsPage: React.FC = () => {
   const canCreate = usePermission("patients:create");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [doctorFilter, setDoctorFilter] = useState<number | undefined>();
-
-  const filteredPatients = useMemo(() => {
-    if (!patients) return [];
-
-    const term = normalize(search.trim());
-
-    return patients.filter((p) => {
-      const fullName = normalize(`${p.first_name} ${p.last_name}`);
-      const reversed = normalize(`${p.last_name} ${p.first_name}`);
-      const matchesSearch = fullName.includes(term) || reversed.includes(term);
-      const matchesDoctor = !doctorFilter || p.doctor?.id === doctorFilter;
-
-      return matchesSearch && matchesDoctor;
-    });
-  }, [patients, search, doctorFilter]);
 
   if (isLoading) {
     return <LoadingSpinner />;
   }
+
+  const patients = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const hasFilters = Boolean(debouncedSearch || doctorFilter);
+
+  // Cambiar un filtro vuelve a la primera página.
+  const changeFilter = (apply: () => void) => {
+    apply();
+    setPage(1);
+  };
+
+  const clearFilters = () =>
+    changeFilter(() => {
+      setSearch("");
+      setDoctorFilter(undefined);
+    });
 
   return (
     <div>
@@ -80,7 +97,8 @@ const PatientsPage: React.FC = () => {
             aria-label="Buscar pacientes"
             placeholder="Buscar por nombre..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            maxLength={100}
+            onChange={(e) => changeFilter(() => setSearch(e.target.value))}
           />
         </div>
 
@@ -88,7 +106,11 @@ const PatientsPage: React.FC = () => {
           aria-label="Filtrar por doctor"
           value={doctorFilter ?? ""}
           onChange={(e) =>
-            setDoctorFilter(e.target.value ? Number(e.target.value) : undefined)
+            changeFilter(() =>
+              setDoctorFilter(
+                e.target.value ? Number(e.target.value) : undefined,
+              ),
+            )
           }
         >
           <option value="">Todos los doctores</option>
@@ -104,7 +126,9 @@ const PatientsPage: React.FC = () => {
         <Select
           aria-label="Filtrar por estado"
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+          onChange={(e) =>
+            changeFilter(() => setStatusFilter(e.target.value as StatusFilter))
+          }
         >
           <option value="active">Activos</option>
           <option value="archived">Archivados</option>
@@ -132,8 +156,10 @@ const PatientsPage: React.FC = () => {
           </tr>
         </thead>
 
-        <tbody>
-          {filteredPatients.map((patient) => (
+        <tbody
+          className={isFetching ? "opacity-60 transition-opacity" : undefined}
+        >
+          {patients.map((patient) => (
             <tr key={patient.id} className="border-t">
               <td className="p-4">
                 <Link
@@ -154,29 +180,30 @@ const PatientsPage: React.FC = () => {
 
               <td className="p-4">{patient.phone ?? "—"}</td>
 
-              <td className="p-4">{patient.doctor?.user.name ?? "Sin asignar"}</td>
+              <td className="p-4">
+                {patient.doctor?.user.name ?? "Sin asignar"}
+              </td>
             </tr>
           ))}
 
-          {filteredPatients.length === 0 && (
+          {patients.length === 0 && (
             <tr className="border-t">
               <td colSpan={4} className="p-6 text-center text-gray-500">
                 {isError ? (
                   "No se pudieron cargar los pacientes."
-                ) : patients && patients.length > 0 ? (
+                ) : hasFilters ? (
                   <>
                     No hay pacientes que coincidan con la búsqueda.{" "}
                     <button
                       type="button"
-                      onClick={() => {
-                        setSearch("");
-                        setDoctorFilter(undefined);
-                      }}
+                      onClick={clearFilters}
                       className="underline text-gray-700 hover:text-gray-900"
                     >
                       Limpiar filtros
                     </button>
                   </>
+                ) : total > 0 ? (
+                  "No hay pacientes en esta página."
                 ) : archived ? (
                   "No hay pacientes archivados."
                 ) : (
@@ -187,6 +214,36 @@ const PatientsPage: React.FC = () => {
           )}
         </tbody>
       </Table>
+
+      {total > 0 && (
+        <nav
+          aria-label="Paginación de pacientes"
+          className="mt-4 flex items-center justify-between text-sm text-gray-600"
+        >
+          <span>
+            {total === 1 ? "1 paciente" : `${total} pacientes`} · Página{" "}
+            {data?.page ?? page} de {totalPages}
+          </span>
+
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => setPage((p) => p - 1)}
+              disabled={page <= 1 || isFetching}
+            >
+              Anterior
+            </Button>
+
+            <Button
+              variant="secondary"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page >= totalPages || isFetching}
+            >
+              Siguiente
+            </Button>
+          </div>
+        </nav>
+      )}
     </div>
   );
 };
