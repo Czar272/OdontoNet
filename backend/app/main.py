@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.api.appointment_routes import router as appointment_router
 from app.api.auth_routes import router as auth_router
 from app.api.clinic_routes import router as clinic_router
 from app.api.doctor_routes import router as doctor_router
@@ -40,6 +41,7 @@ app.include_router(clinic_router)
 app.include_router(patient_router)
 app.include_router(doctor_router)
 app.include_router(user_router)
+app.include_router(appointment_router)
 
 # Orígenes permitidos separados por coma (CORS_ORIGINS en backend/.env).
 origins = [

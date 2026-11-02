@@ -79,6 +79,18 @@ class Appointment(Base):
             using="gist",
             where=text(f"status IN ({_BLOCKING_VALUES})"),
         ),
+        # Un paciente tampoco tiene dos citas activas que se crucen, aunque
+        # sean con doctores distintos (ODON-134).
+        ExcludeConstraint(
+            ("patient_id", "="),
+            (
+                text("tstzrange(starts_at, appointment_end(starts_at, duration_minutes), '[)')"),
+                "&&",
+            ),
+            name="ex_appointments_patient_overlap",
+            using="gist",
+            where=text(f"status IN ({_BLOCKING_VALUES})"),
+        ),
     )
 
     id = Column(Integer, primary_key=True, index=True)

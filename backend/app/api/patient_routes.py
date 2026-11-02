@@ -14,6 +14,8 @@ from app.models.doctor import Doctor
 from app.models.patient import Patient
 from app.models.user import User
 from app.schemas.patient_schema import PatientCreate, PatientPage, PatientResponse, PatientUpdate
+from app.services.appointment_service import count_upcoming_appointments
+from app.services.doctor_service import ensure_assignable_doctor
 
 # Eventos de auditoría (sin datos personales: solo ids y nombres de campos).
 # La auditoría persistente se diseña en ODON-222.
@@ -80,29 +82,6 @@ def _clinic_patients(db: Session, clinic_id: int) -> Query:
     )
 
 
-def _ensure_doctor_in_clinic(db: Session, doctor_id: int, clinic_id: int) -> None:
-    doctor = (
-        db.query(Doctor)
-        .options(joinedload(Doctor.user))
-        .filter(Doctor.id == doctor_id, Doctor.clinic_id == clinic_id)
-        .first()
-    )
-
-    if not doctor:
-        # Mismo mensaje si no existe o si es de otra clínica: no se revela nada.
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="El doctor seleccionado no pertenece a la clínica.",
-        )
-
-    if doctor.user.is_active is False:
-        # Los pacientes ya asignados lo conservan (ODON-94); no se asignan nuevos.
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="El doctor seleccionado está inactivo.",
-        )
-
-
 def _get_clinic_patient(db: Session, patient_id: int, clinic_id: int) -> Patient:
     """Paciente de la clínica o 404 (también si es de otra clínica)."""
     patient = _clinic_patients(db, clinic_id).filter(Patient.id == patient_id).first()
@@ -154,7 +133,7 @@ def create_patient(
 ):
 
     if patient.doctor_id is not None:
-        _ensure_doctor_in_clinic(db, patient.doctor_id, clinic_id)
+        ensure_assignable_doctor(db, patient.doctor_id, clinic_id)
 
     new_patient = Patient(**patient.dict(), clinic_id=clinic_id)
 
@@ -267,7 +246,7 @@ def update_patient(
     # Solo se valida si cambia: editar el teléfono de un paciente cuyo doctor
     # se desactivó no debe fallar.
     if new_doctor_id != previous_doctor_id and new_doctor_id is not None:
-        _ensure_doctor_in_clinic(db, new_doctor_id, clinic_id)
+        ensure_assignable_doctor(db, new_doctor_id, clinic_id)
 
     changed = [field for field, value in data.items() if getattr(patient, field) != value]
     for field in changed:
@@ -295,6 +274,18 @@ def _set_archived(
     """Archiva o reactiva sin borrar nada. Es idempotente: repetir la acción
     no cambia la fecha de archivo ni genera un evento de auditoría nuevo."""
     patient = _get_clinic_patient(db, patient_id, clinic_id)
+
+    if archived and patient.archived_at is None:
+        # Decisión del 2026-11-02: no se archiva con citas pendientes (ODON-134).
+        upcoming = count_upcoming_appointments(db, patient.id)
+        if upcoming:
+            detail = (
+                "El paciente tiene 1 cita próxima. Cancélala o reprográmala antes de archivarlo."
+                if upcoming == 1
+                else f"El paciente tiene {upcoming} citas próximas. "
+                "Cancélalas o reprográmalas antes de archivarlo."
+            )
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
     if (patient.archived_at is not None) is not archived:
         patient.archived_at = datetime.now(timezone.utc) if archived else None
