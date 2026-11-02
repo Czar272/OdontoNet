@@ -80,11 +80,12 @@ Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_users.py`, `bac
 - La clínica de la cita sale del token; el estado inicial es siempre «Programada» y el autor es el usuario de la sesión. `clinic_id`, `status` y `created_by_user_id` enviados se ignoran.
 - Paciente y doctor deben ser de la clínica (`422`). El doctor debe estar activo (`422 El doctor seleccionado está inactivo.`). No se agenda a un paciente archivado (`409`).
 - El inicio lleva zona horaria, es exacto al minuto y no puede estar en el pasado (`422`). La duración va de 5 a 480 minutos (30 por defecto).
-- Ni el doctor ni el paciente pueden tener dos citas activas que se crucen (`409 El doctor/El paciente ya tiene una cita que se cruza con ese horario.`). Cancelada y No asistió liberan el horario. La base lo garantiza aunque dos peticiones lleguen a la vez.
+- Ni el doctor ni el paciente pueden tener dos citas activas que se crucen (`409`). El mensaje nombra al doctor («Dra. Ana Morales ya tiene una cita…» o «El paciente ya tiene una cita con Dra. Ana Morales…») y la respuesta incluye `conflict` con la cita que choca; la agenda agrega su horario en hora local. Cancelada y No asistió liberan el horario. La base lo garantiza aunque dos peticiones lleguen a la vez.
 - Solo se reprograman citas programadas o confirmadas (`409`). El paciente de una cita no cambia.
 - No se borra ninguna cita (no hay `DELETE`): se cancelan con los estados de ODON-146.
 - Un paciente con citas próximas pendientes (programadas o confirmadas que aún no terminan) no se archiva (`409 El paciente tiene N citas próximas...`).
 - Las horas se muestran en la hora local del navegador (decisión del 2026-11-02).
+- En el frontend, `appointments:view` (menú «Agenda» y ruta `/agenda`) y `appointments:manage` (agendar, arrastrar y reprogramar) son para los tres roles.
 
 ## Módulos futuros (decidido el 2026-10-31)
 

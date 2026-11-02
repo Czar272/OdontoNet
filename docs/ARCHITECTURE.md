@@ -23,13 +23,14 @@ PostgreSQL 16 (Docker Compose)
 
 ### Frontend
 
-- `src/pages/`: inicio de sesión, inicio (dashboard) y pacientes. Interfaz en español.
+- `src/pages/`: inicio de sesión, inicio (dashboard), agenda, pacientes, doctores, usuarios y clínica. Interfaz en español.
+- `src/pages/Agenda/`: calendario compartido de la clínica con FullCalendar 6 (MIT: vistas de mes, semana y día, más el plugin de interacción). Se carga con `React.lazy` en un archivo aparte. Pide al backend solo el rango visible, filtra por doctor en el backend y por estado en el navegador, y muestra las horas en la hora local del navegador. Seleccionar un horario abre «Nueva cita»; arrastrar o estirar una cita pendiente y futura la reprograma, y si el backend responde 409 vuelve a su lugar.
 - `src/routes/`: router, ruta protegida (espera la verificación de sesión y recuerda la ruta solicitada), `RequirePermission` (página "Acceso denegado" si el rol no tiene permiso) y ruta comodín.
 - `src/auth/permissions.ts`, `src/config/navigation.ts`, `src/hooks/usePermission.ts`: permisos por rol reflejados de `PERMISSIONS.md`; el menú y las acciones se muestran según el rol. El backend sigue siendo la autoridad.
 - `src/layouts/`: barra lateral con clínica, usuario, rol, navegación activa y cierre de sesión.
 - `src/context/AuthContext.tsx`: sesión con estados `loading` / `authenticated` / `unauthenticated`; restaura usuario y clínica con `/auth/me` al cargar; login, logout y cierre automático ante un `401`.
 - `src/services/`: cliente Axios (`VITE_API_URL`) con interceptor de `401`, `session.ts` (token), servicios por recurso y `apiError.ts` para mostrar el `detail` de la API.
-- `src/components/basic/`: Button, Input, Select, Modal, Table, Card, PageHeader, LoadingSpinner (accesibles); `src/components/<dominio>/`: formularios de pacientes y usuarios.
+- `src/components/basic/`: Button, Input, Select, Modal, Table, Card, PageHeader, LoadingSpinner (accesibles); `src/components/<dominio>/`: formularios de pacientes, usuarios, doctores y citas (con buscador de pacientes en el backend).
 - `src/types/`: contratos TypeScript mantenidos manualmente.
 
 ### Backend
@@ -101,7 +102,7 @@ Doctor  1 ── * Appointment (misma clínica; sin cruces de horario por doctor
 
 - Documentación interactiva en `/docs` y especificación en `/openapi.json`. Todas las respuestas exitosas tienen un esquema Pydantic; una prueba lo verifica.
 - `/health` comprueba la API y la conexión con PostgreSQL (`503` si la base no responde).
-- **Formato único de errores** (`backend/app/core/errors.py`): toda respuesta de error es `{"detail": "<mensaje en español>"}`. Los errores de validación (`422`) agregan `errors: [{"field", "message"}]`. Los `500` nunca exponen trazas.
+- **Formato único de errores** (`backend/app/core/errors.py`): toda respuesta de error es `{"detail": "<mensaje en español>"}`. Los errores de validación (`422`) agregan `errors: [{"field", "message"}]`. Un error de negocio puede agregar datos para la interfaz sin sustituir a `detail`: el `409` por cruce de citas incluye `conflict` (la cita con la que choca, con horas ISO que el navegador muestra en su hora local). Los `500` nunca exponen trazas.
 - **Listados paginados** (por ahora `GET /patients/`, ODON-126): responden `{"items", "total", "page", "page_size"}` con `page` desde 1 y `page_size` de 1 a 100 (20 por defecto). Búsqueda y filtros se resuelven en el backend, siempre dentro de la clínica del token. La búsqueda (`q`) cubre nombre y apellidos en cualquier orden, correo y, si el término solo tiene dígitos y separadores (basta un dígito), el teléfono comparado por dígitos. Ignora tildes y mayúsculas con `translate`/`lower` (sin la extensión `unaccent`). El orden usa `COLLATE "C"` sobre el texto normalizado, con la «ñ» después de la «n», así que no depende de la collation de la base.
 - Códigos: `401` sin sesión válida (con `WWW-Authenticate: Bearer`), `403` sin permiso por rol, `404` recurso inexistente o de otra clínica, `409` conflicto (duplicado), `422` datos inválidos.
 

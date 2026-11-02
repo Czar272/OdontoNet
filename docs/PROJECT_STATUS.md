@@ -2,7 +2,7 @@
 
 > Documento de continuidad técnica. Jira es la fuente de verdad de los estados de los tickets y Git es la fuente de verdad del código.
 
-**Última actualización:** 2026-11-02 — ODON-130 cerrada; ODON-134 (CRUD de citas y conflictos) en Testing.
+**Última actualización:** 2026-11-02 — ODON-134 cerrada; ODON-138 (agenda compartida) en Testing.
 
 ## Alcance
 
@@ -16,7 +16,7 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 
 ## Estado verificado
 
-- **Calidad:** 408 pruebas backend en unos 38 s (login y «Recuérdame», `/auth/me`, aislamiento, modelo y datos de clínicas, modelo, listado paginado y búsqueda, ficha, edición y archivo de pacientes, modelo, integridad, API y concurrencia de citas, roles, gestión y desactivación de usuarios, listado, integridad y perfiles de doctores, contrato de API, seed); CI en GitHub Actions en cada push. Frontend: 108 pruebas unitarias (Vitest), `lint` y `build` sin errores, 0 vulnerabilidades npm en producción, pruebas E2E de sesión, gestión de usuarios, archivo de pacientes y listado paginado.
+- **Calidad:** 411 pruebas backend en unos 38 s (login y «Recuérdame», `/auth/me`, aislamiento, modelo y datos de clínicas, modelo, listado paginado y búsqueda, ficha, edición y archivo de pacientes, modelo, integridad, API y concurrencia de citas, roles, gestión y desactivación de usuarios, listado, integridad y perfiles de doctores, contrato de API, seed); CI en GitHub Actions en cada push. Frontend: 139 pruebas unitarias (Vitest), `lint` y `build` sin errores, 0 vulnerabilidades npm en producción, pruebas E2E de sesión, gestión de usuarios, archivo de pacientes, listado paginado y agenda (crear, cruce, reprogramar y arrastrar).
 - **Seguridad:** aislamiento por `clinic_id` del token (ODON-62); RBAC con `require_roles` (ODON-66); usuarios inactivos bloqueados; errores unificados en español sin trazas (ODON-22).
 - **Infraestructura:** Docker healthy, persistencia y puerto local verificados con `scripts/dev/verify-infra.ps1` (ODON-26). Migraciones lineales `e7aac1fc989e` → `4c1d2e8f9a10` → `7b3e9d2c5a61` → `9d4f1a7b2c83` → `b2e6c4a8d915` → `c4f8a1d2e6b3` → `d7a3b9e15c42`, probadas desde base vacía (ODON-30) y con `alembic check` sin diferencias.
 - **Datos de desarrollo:** `backend/scripts/seed_dev.py`, idempotente y solo local (ODON-34).
@@ -45,14 +45,14 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 - **ODON-1 Arquitectura e infraestructura — Done:** ODON-14, 18, 22, 26, 30, 34.
 - **ODON-3 Clínicas y autorización — Done:** ODON-58, 62, 66, 70 y 74.
 - **ODON-5 Pacientes — Done:** ODON-98, 102, 106, 110, 114, 118, 122 y 126.
-- **ODON-6 Agenda y citas — In Progress:** ODON-130 Done; ODON-134 (CRUD y conflictos) en Testing; siguen 138 (calendario), 142 (disponibilidad) y 146 (estados).
+- **ODON-6 Agenda y citas — In Progress:** ODON-130 y 134 Done; ODON-138 (agenda compartida) en Testing; siguen 142 (disponibilidad) y 146 (estados).
 - **ODON-2 Autenticación — In Progress:** ODON-38, 42, 46, 50 y 52 Done; ODON-255 («Recuérdame») Done; pendiente ODON-54 (recuperación de contraseña).
 - **ODON-4 Personal y doctores — Done:** ODON-78, 82, 86, 90 y 94.
 - **ODON-11 Calidad:** ODON-254 (categorías de pruebas backend) Done; ODON-256 (pruebas rápidas y CI) Done.
 
 ## Próximo paso
 
-1. ODON-6: validar ODON-134 y seguir con ODON-138 (calendario compartido en el frontend).
+1. ODON-6: validar ODON-138 y seguir con ODON-146 (estados: confirmar, atender, cancelar, no asistió) y ODON-142 (disponibilidad de doctores).
 2. El alta de clínicas por `superadmin` se planifica aparte según el modelo de roles aprobado.
 3. ODON-54 (recuperación de contraseña).
 
