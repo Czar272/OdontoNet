@@ -198,22 +198,42 @@ def test_requires_session(client, agenda):
 
 # --- Cruces (ODON-136) ---------------------------------------------------------------
 
-def test_doctor_overlap_is_409(client, agenda):
-    created_id(client, agenda)
+def test_doctor_overlap_is_409_with_the_conflicting_appointment(client, agenda):
+    existing = created_id(client, agenda)
 
     response = create(client, agenda, patient_id=agenda["patients"][1], starts_at=NINE + timedelta(minutes=15))
 
     assert response.status_code == 409
-    assert response.json()["detail"] == "El doctor ya tiene una cita que se cruza con ese horario."
+    body = response.json()
+    assert body["detail"] == "Dr. Clinica Citas ya tiene una cita que se cruza con ese horario."
+    conflict = body["conflict"]
+    assert conflict["appointment_id"] == existing
+    assert datetime.fromisoformat(conflict["starts_at"]) == NINE
+    assert datetime.fromisoformat(conflict["ends_at"]) == NINE + timedelta(minutes=30)
+    assert conflict["doctor_name"] == "Dr. Clinica Citas"
+    assert conflict["patient_name"] == "Paciente0 Agenda"
 
 
 def test_patient_overlap_with_other_doctor_is_409(client, agenda):
-    created_id(client, agenda)
+    existing = created_id(client, agenda)
 
     response = create(client, agenda, doctor_id=agenda["second"], starts_at=NINE + timedelta(minutes=10))
 
     assert response.status_code == 409
-    assert response.json()["detail"] == "El paciente ya tiene una cita que se cruza con ese horario."
+    body = response.json()
+    assert body["detail"] == "El paciente ya tiene una cita con Dr. Clinica Citas que se cruza con ese horario."
+    assert body["conflict"]["appointment_id"] == existing
+    assert body["conflict"]["doctor_id"] == agenda["doctor"]
+
+
+def test_doctor_conflict_is_reported_before_patient_conflict(client, agenda):
+    created_id(client, agenda, patient_id=agenda["patients"][1])
+    created_id(client, agenda, doctor_id=agenda["second"], starts_at=NINE + timedelta(minutes=30))
+
+    # Choca con el doctor (09:00) y con el propio paciente (09:30 con la segunda doctora).
+    response = create(client, agenda, starts_at=NINE + timedelta(minutes=15), duration_minutes=30)
+
+    assert response.json()["detail"].startswith("Dr. Clinica Citas ya tiene")
 
 
 def test_back_to_back_is_allowed(client, agenda):
@@ -375,7 +395,7 @@ def test_changing_to_a_busy_doctor_is_409(client, agenda):
     response = patch(client, agenda, appointment_id, {"doctor_id": agenda["second"]})
 
     assert response.status_code == 409
-    assert response.json()["detail"] == "El doctor ya tiene una cita que se cruza con ese horario."
+    assert response.json()["detail"] == "Dra. Segunda ya tiene una cita que se cruza con ese horario."
 
 
 @pytest.mark.parametrize(
@@ -522,6 +542,8 @@ def test_database_overlap_is_translated_when_validation_is_skipped(client, agend
     assert by_doctor.json()["detail"] == "El doctor ya tiene una cita que se cruza con ese horario."
     assert by_patient.status_code == 409
     assert by_patient.json()["detail"] == "El paciente ya tiene una cita que se cruza con ese horario."
+    # Sin detalle de la otra cita: llegó en paralelo y no hay datos fiables.
+    assert "conflict" not in by_doctor.json()
 
 
 def test_simultaneous_requests_book_the_slot_only_once(agenda, db):

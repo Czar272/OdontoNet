@@ -70,9 +70,13 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
     detail = exc.detail
     if isinstance(detail, str):
         detail = _DEFAULT_DETAILS.get(detail, detail)
+    content = {"detail": detail}
+    # Datos adicionales opcionales para la interfaz (p. ej. la cita con la que
+    # choca un horario, ODON-134). Nunca sustituyen a "detail".
+    content.update(getattr(exc, "extra", None) or {})
     return JSONResponse(
         status_code=exc.status_code,
-        content={"detail": detail},
+        content=content,
         headers=getattr(exc, "headers", None),
     )
 

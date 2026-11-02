@@ -4,9 +4,10 @@ from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, status
 from sqlalchemy import func, literal
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.appointment import Appointment, AppointmentStatus, BLOCKING_STATUSES
+from app.models.doctor import Doctor
 
 # Citas que todavía se pueden reprogramar y que cuentan como pendientes.
 PENDING_STATUSES = (AppointmentStatus.SCHEDULED.value, AppointmentStatus.CONFIRMED.value)
@@ -18,6 +19,27 @@ _CONSTRAINT_DETAILS = {
     "ex_appointments_doctor_overlap": DOCTOR_OVERLAP_DETAIL,
     "ex_appointments_patient_overlap": PATIENT_OVERLAP_DETAIL,
 }
+
+
+class AppointmentConflict(HTTPException):
+    """409 por cruce de horario, con la cita que choca en "conflict".
+
+    El mensaje nombra al doctor; las horas van en "conflict" (ISO con zona
+    horaria) para que el navegador las muestre en su hora local."""
+
+    def __init__(self, detail: str, appointment: Appointment | None = None):
+        super().__init__(status_code=status.HTTP_409_CONFLICT, detail=detail)
+        self.extra = {}
+        if appointment is not None:
+            self.extra["conflict"] = {
+                "appointment_id": appointment.id,
+                "starts_at": appointment.starts_at.isoformat(),
+                "ends_at": appointment.ends_at.isoformat(),
+                "doctor_id": appointment.doctor_id,
+                "doctor_name": appointment.doctor.user.name,
+                "patient_id": appointment.patient_id,
+                "patient_name": f"{appointment.patient.first_name} {appointment.patient.last_name}",
+            }
 
 
 def _ends_at_sql():
@@ -65,20 +87,37 @@ def ensure_no_overlap(
     Es la validación con mensaje claro; las restricciones de exclusión de la
     base son la garantía final cuando dos peticiones llegan a la vez."""
     ends_at = starts_at + timedelta(minutes=duration_minutes)
-    overlapping = db.query(Appointment.doctor_id, Appointment.patient_id).filter(
-        Appointment.status.in_(BLOCKING_STATUSES),
-        Appointment.starts_at < literal(ends_at),
-        _ends_at_sql() > literal(starts_at),
-        (Appointment.doctor_id == doctor_id) | (Appointment.patient_id == patient_id),
+    overlapping = (
+        db.query(Appointment)
+        .options(
+            joinedload(Appointment.patient),
+            joinedload(Appointment.doctor).joinedload(Doctor.user),
+        )
+        .filter(
+            Appointment.status.in_(BLOCKING_STATUSES),
+            Appointment.starts_at < literal(ends_at),
+            _ends_at_sql() > literal(starts_at),
+            (Appointment.doctor_id == doctor_id) | (Appointment.patient_id == patient_id),
+        )
+        .order_by(Appointment.starts_at)
     )
     if exclude_id is not None:
         overlapping = overlapping.filter(Appointment.id != exclude_id)
 
     rows = overlapping.all()
-    if any(row.doctor_id == doctor_id for row in rows):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=DOCTOR_OVERLAP_DETAIL)
+    # Primero el cruce del doctor (es el que se resuelve cambiando el horario).
+    by_doctor = next((row for row in rows if row.doctor_id == doctor_id), None)
+    if by_doctor is not None:
+        raise AppointmentConflict(
+            f"{by_doctor.doctor.user.name} ya tiene una cita que se cruza con ese horario.",
+            by_doctor,
+        )
     if rows:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=PATIENT_OVERLAP_DETAIL)
+        raise AppointmentConflict(
+            f"El paciente ya tiene una cita con {rows[0].doctor.user.name} "
+            "que se cruza con ese horario.",
+            rows[0],
+        )
 
 
 def commit_appointment(db: Session) -> None:
@@ -91,5 +130,6 @@ def commit_appointment(db: Session) -> None:
         message = str(exc.orig)
         for constraint, detail in _CONSTRAINT_DETAILS.items():
             if constraint in message:
-                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail) from exc
+                # La otra cita llegó en paralelo: no hay detalle fiable que mostrar.
+                raise AppointmentConflict(detail) from exc
         raise
