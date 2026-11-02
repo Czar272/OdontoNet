@@ -44,6 +44,7 @@
 | `POST /patients/{id}/archive`, `POST /patients/{id}/reactivate` | ✅ | ✅ | ✅ |
 | `GET /appointments/` (rango `start`–`end` o `patient_id`; filtros `doctor_id`, `status`), `GET /appointments/{id}` | ✅ | ✅ | ✅ |
 | `POST /appointments/`, `PATCH /appointments/{id}` (agendar y reprogramar) | ✅ | ✅ | ✅ |
+| `POST /appointments/{id}/status` (confirmar, cancelar, atendida, no asistió, reactivar), `GET /appointments/{id}/history` | ✅ | ✅ | ✅ |
 | `GET /doctors/` (filtro `?active=true/false`), `GET /doctors/{id}` | ✅ | ✅ | ✅ |
 | `POST /doctors/` (crear perfil de doctor), `PATCH /doctors/{id}` (editar perfil) | ✅ | ⛔ | ⛔ |
 
@@ -82,7 +83,22 @@ Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_users.py`, `bac
 - El inicio lleva zona horaria, es exacto al minuto y no puede estar en el pasado (`422`). La duración va de 5 a 480 minutos (30 por defecto).
 - Ni el doctor ni el paciente pueden tener dos citas activas que se crucen (`409`). El mensaje nombra al doctor («Dra. Ana Morales ya tiene una cita…» o «El paciente ya tiene una cita con Dra. Ana Morales…») y la respuesta incluye `conflict` con la cita que choca; la agenda agrega su horario en hora local. Cancelada y No asistió liberan el horario. La base lo garantiza aunque dos peticiones lleguen a la vez.
 - Solo se reprograman citas programadas o confirmadas (`409`). El paciente de una cita no cambia.
-- No se borra ninguna cita (no hay `DELETE`): se cancelan con los estados de ODON-146.
+- No se borra ninguna cita (no hay `DELETE`): se cancelan.
+
+### Estados de citas (ODON-146)
+
+| Desde \ hacia | Programada | Confirmada | Atendida | No asistió | Cancelada |
+| --- | :---: | :---: | :---: | :---: | :---: |
+| Programada | — | ✅ antes de terminar | ✅ desde que empieza | ✅ desde que empieza | ✅ antes de terminar |
+| Confirmada | ✅ antes de terminar | — | ✅ desde que empieza | ✅ desde que empieza | ✅ antes de terminar |
+| Cancelada | ✅ si aún no empieza (reactivar) | ⛔ | ⛔ | ⛔ | — |
+| Atendida | ⛔ | ⛔ | — | ✅ (corrección) | ⛔ |
+| No asistió | ⛔ | ⛔ | ✅ (corrección) | — | ⛔ |
+
+- Un cambio no permitido responde `409` en español («Una cita atendida no puede pasar a cancelada.», «La cita todavía no empieza…», «La cita ya terminó…»). Repetir el estado actual no cambia nada.
+- Reactivar una cancelada vuelve a ocupar el horario: se valida como una cita nueva (inicio futuro, doctor activo, paciente no archivado y sin cruces, `409` con `conflict`).
+- Cada cambio queda en `appointment_status_changes`, con estado anterior, nuevo estado, nota opcional (hasta 255 caracteres, sin datos clínicos), usuario y fecha. Las citas creadas desde esta versión registran también su creación. El historial no se edita ni se borra.
+- `GET /appointments/` devuelve el teléfono del paciente para que recepción llame a confirmar. La pestaña «Por confirmar» de la Agenda lista las programadas del periodo elegido y permite confirmar o cancelar desde ahí.
 - Un paciente con citas próximas pendientes (programadas o confirmadas que aún no terminan) no se archiva (`409 El paciente tiene N citas próximas...`).
 - Las horas se muestran en la hora local del navegador (decisión del 2026-11-02).
 - En el frontend, `appointments:view` (menú «Agenda» y ruta `/agenda`) y `appointments:manage` (agendar, arrastrar y reprogramar) son para los tres roles.
