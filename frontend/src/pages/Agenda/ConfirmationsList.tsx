@@ -14,13 +14,10 @@ import type { Appointment } from "../../types/appointment";
 import { formatDay, formatTimeRange } from "./appointmentFormData";
 import {
   CONFIRMATION_WINDOWS,
+  groupByDay,
   toConfirmQuery,
   type ConfirmationWindow,
 } from "./confirmations";
-
-function capitalize(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
 
 /**
  * Citas programadas pero no confirmadas, para que recepción llame y confirme
@@ -48,14 +45,8 @@ export default function ConfirmationsList({
   if (isLoading) return <LoadingSpinner />;
 
   const appointments = data ?? [];
-  // Agrupadas por día (ya vienen ordenadas por inicio): más fácil de llamar en orden.
-  const groups: { label: string; items: Appointment[] }[] = [];
-  for (const appointment of appointments) {
-    const label = capitalize(formatDay(appointment.starts_at));
-    const last = groups[groups.length - 1];
-    if (last?.label === label) last.items.push(appointment);
-    else groups.push({ label, items: [appointment] });
-  }
+  // Agrupadas por día local y en orden: más fácil de llamar en secuencia.
+  const groups = groupByDay(appointments);
   const columns = canManage ? 5 : 4;
 
   return (
@@ -95,7 +86,7 @@ export default function ConfirmationsList({
           className={isFetching ? "opacity-60 transition-opacity" : undefined}
         >
           {groups.map((day) => (
-            <Fragment key={day.label}>
+            <Fragment key={day.key}>
               <tr className="border-t bg-gray-50">
                 <th
                   colSpan={columns}

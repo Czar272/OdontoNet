@@ -98,4 +98,17 @@ describe("ConfirmationsList", () => {
 
     expect(screen.queryByRole("button", { name: /Confirmar cita/ })).not.toBeInTheDocument();
   });
+
+  it("agrupa bien aunque la API las devuelva desordenadas, sin avisos de React", async () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const later = { ...appointment(3, "Zoe", null), starts_at: toLocalIso(new Date(start.getTime() + 86400000)) };
+    state.items = [appointment(1, "Lucía", null), later, appointment(2, "Mario", null)];
+    renderWithAuth(<ConfirmationsList canManage />, "receptionist");
+    await screen.findByText("Zoe Ruiz");
+
+    expect(screen.getAllByRole("rowheader")).toHaveLength(2);
+    expect(screen.getAllByRole("rowheader")[0]).toHaveTextContent("2 citas");
+    expect(errors).not.toHaveBeenCalled();
+    errors.mockRestore();
+  });
 });
