@@ -40,10 +40,12 @@
 | `GET /patients/`, `GET /patients/{id}` | ✅ | ✅ | ✅ |
 | `POST /patients/` | ✅ | ✅ | ✅ |
 | `PATCH /patients/{id}` (editar datos y reasignar doctor) | ✅ | ✅ | ✅ |
+| `GET /patients/?archived=true` (listar archivados; por defecto solo activos) | ✅ | ✅ | ✅ |
+| `POST /patients/{id}/archive`, `POST /patients/{id}/reactivate` | ✅ | ✅ | ✅ |
 | `GET /doctors/` (filtro `?active=true/false`), `GET /doctors/{id}` | ✅ | ✅ | ✅ |
 | `POST /doctors/` (crear perfil de doctor), `PATCH /doctors/{id}` (editar perfil) | ✅ | ⛔ | ⛔ |
 
-Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_users.py` y `backend/tests/test_user_deactivation.py`.
+Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_users.py`, `backend/tests/test_user_deactivation.py` y `backend/tests/test_patient_archive.py`.
 
 ### Reglas de gestión de usuarios (ODON-86)
 
@@ -63,13 +65,20 @@ Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_users.py` y `ba
 - El perfil de doctor (especialidad, colegiado, teléfono) solo se crea para un usuario con rol `doctor` o `admin` de la misma clínica (`422` si no; decisión del 2026-11-01: el administrador que atiende puede tener pacientes asignados) y es único por usuario (`409`). Su estado activo es el del usuario: se cambia en Usuarios (ODON-90).
 - Un doctor inactivo sigue en el historial y en `GET /doctors/` sin filtro, pero no se le pueden asignar pacientes nuevos (`422 El doctor seleccionado está inactivo.`, ODON-82). El formulario de pacientes solo ofrece doctores activos.
 
+### Archivo de pacientes (ODON-122)
+
+- Archivar no borra nada: datos, doctor asignado (aunque esté inactivo) e historial se conservan. `archived_at` guarda la fecha; `null` es activo.
+- `GET /patients/` devuelve solo activos; `?archived=true` devuelve solo archivados. La ficha `GET /patients/{id}` funciona en ambos estados.
+- Un paciente archivado no se edita (`409 El paciente está archivado. Reactívalo para editar sus datos.`); primero se reactiva.
+- Archivar y reactivar son idempotentes y quedan en el log `odontonet.audit` (solo ids). Un paciente de otra clínica responde `404`.
+- El correo de un paciente archivado sigue reservado en su clínica: crear otro paciente con ese correo responde `409`.
+
 ## Módulos futuros (decidido el 2026-10-31)
 
 Se implementarán con esta matriz cuando se desarrolle cada módulo.
 
 | Recurso | admin | doctor | receptionist |
 | --- | :---: | :---: | :---: |
-| Archivar pacientes | ✅ | ✅ | ✅ |
 | Citas y agenda | ✅ | ✅ | ✅ |
 | Disponibilidad de doctores | ✅ | ✅ la propia | ✅ |
 | Expediente clínico (antecedentes, notas, tratamientos) | ✅ | ✅ | ⛔ |
