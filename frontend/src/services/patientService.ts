@@ -4,7 +4,7 @@ import api from "./api";
 export interface PatientFilters {
   /** false (por defecto): solo activos · true: solo archivados. */
   archived?: boolean;
-  /** Nombre y/o apellidos; el backend ignora tildes, mayúsculas y orden. */
+  /** Nombre y apellidos (sin tildes ni mayúsculas, en cualquier orden), correo o teléfono. */
   search?: string;
   doctorId?: number;
   page?: number;

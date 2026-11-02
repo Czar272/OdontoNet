@@ -15,7 +15,7 @@ import { usePermission } from "../../hooks/usePermission";
 import { getDoctors } from "../../services/doctorService";
 import { getPatients } from "../../services/patientService";
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 20;
 
 type StatusFilter = "active" | "archived";
 
@@ -95,7 +95,7 @@ const PatientsPage: React.FC = () => {
         <div className="flex-1">
           <Input
             aria-label="Buscar pacientes"
-            placeholder="Buscar por nombre..."
+            placeholder="Buscar por nombre, correo o teléfono..."
             value={search}
             maxLength={100}
             onChange={(e) => changeFilter(() => setSearch(e.target.value))}

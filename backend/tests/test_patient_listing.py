@@ -177,3 +177,47 @@ def test_search_and_total_never_include_other_clinic(client, clinic):
     assert mine["total"] == 2
     assert names(theirs) == ["José Pérez Ajeno"]
     assert theirs["total"] == 1
+
+
+# --- Correo, teléfono y orden con ñ (mejoras posteriores a ODON-126) ------------------
+
+@pytest.fixture
+def contacts(db, clinic):
+    db.add_all([
+        Patient(first_name="Rita", last_name="Correo", email="Rita.Contacto@Mail.com", phone="5555-0101", clinic_id=clinic["clinic"]),
+        Patient(first_name="Tomás", last_name="Fono", phone="(502) 4321 9876", clinic_id=clinic["clinic"]),
+    ])
+    db.commit()
+
+
+@pytest.mark.parametrize(
+    ("term", "expected"),
+    [
+        ("contacto@mail", ["Rita Correo"]),
+        ("RITA.CONTACTO", ["Rita Correo"]),
+        ("5555-0101", ["Rita Correo"]),
+        ("5555 0101", ["Rita Correo"]),
+        ("0101", ["Rita Correo"]),
+        ("4321-98", ["Tomás Fono"]),
+        ("(502)", ["Tomás Fono"]),
+    ],
+)
+def test_search_by_email_or_phone(client, clinic, contacts, term, expected):
+    assert names(get_page(client, clinic, q=term)) == expected
+
+
+def test_short_or_mixed_numbers_do_not_search_phone(client, clinic, contacts):
+    assert get_page(client, clinic, q="55")["items"] == []
+    assert get_page(client, clinic, q="rita 5555")["items"] == []
+
+
+def test_ene_sorts_after_n_and_is_searchable_without_tilde(client, clinic, db):
+    for last in ("Ochoa", "Ñandú", "Nzeta", "Nuñez", "Nava"):
+        db.add(Patient(first_name="Orden", last_name=last, clinic_id=clinic["clinic"]))
+    db.commit()
+
+    ordered = [n for n in names(get_page(client, clinic, q="orden"))]
+
+    assert ordered == ["Orden Nava", "Orden Nuñez", "Orden Nzeta", "Orden Ñandú", "Orden Ochoa"]
+    assert names(get_page(client, clinic, q="nunez")) == ["Orden Nuñez"]
+    assert names(get_page(client, clinic, q="nandu")) == ["Orden Ñandú"]

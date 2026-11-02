@@ -3,7 +3,7 @@ import unicodedata
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query as QueryParam, status
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, joinedload
 
@@ -36,8 +36,32 @@ DEFAULT_PAGE_SIZE = 20
 MAX_PAGE_SIZE = 100
 
 
+# Para ordenar, la ñ va después de la n: "n~" queda entre "nz" y "o" en
+# COLLATE "C" ('~' es mayor que cualquier letra ASCII).
+_ACCENTED_NO_ENE = _ACCENTED.replace("Ñ", "").replace("ñ", "")
+_PLAIN_NO_ENE = _PLAIN[:_ACCENTED.index("Ñ")] + _PLAIN[_ACCENTED.index("Ñ") + 1 : _ACCENTED.index("ñ")] + _PLAIN[_ACCENTED.index("ñ") + 1 :]
+
+# Un término de solo dígitos y separadores también busca en el teléfono.
+_MIN_PHONE_DIGITS = 3
+
+
 def _normalized_sql(column):
+    """Texto para buscar: sin tildes ni mayúsculas ("Núñez" → "nunez")."""
     return func.lower(func.translate(column, _ACCENTED, _PLAIN))
+
+
+def _sort_key_sql(column):
+    """Texto para ordenar alfabéticamente en español ("Núñez" → "nun~ez")."""
+    plain = func.translate(column, _ACCENTED_NO_ENE, _PLAIN_NO_ENE)
+    return func.lower(func.replace(func.replace(plain, "ñ", "n~"), "Ñ", "n~")).collate("C")
+
+
+def _phone_digits(term: str) -> str | None:
+    """Dígitos del término si parece un teléfono ("5555-01" → "555501")."""
+    if not all(ch.isdigit() or ch in " -+()" for ch in term):
+        return None
+    digits = "".join(ch for ch in term if ch.isdigit())
+    return digits if len(digits) >= _MIN_PHONE_DIGITS else None
 
 
 def _normalized_text(text_value: str) -> str:
@@ -148,7 +172,8 @@ def get_patients(
     ),
     q: str | None = QueryParam(
         None, max_length=100,
-        description="Nombre y/o apellidos, en cualquier orden, sin importar tildes ni mayúsculas.",
+        description="Nombre y/o apellidos (en cualquier orden, sin tildes ni mayúsculas), "
+        "correo o teléfono (solo dígitos, mínimo 3).",
     ),
     doctor_id: int | None = QueryParam(None, description="Solo pacientes de este doctor."),
     page: int = QueryParam(1, ge=1),
@@ -168,20 +193,28 @@ def get_patients(
     if term:
         first = _normalized_sql(Patient.first_name)
         last = _normalized_sql(Patient.last_name)
-        filters.append(
-            (first.concat(" ").concat(last)).contains(term, autoescape=True)
-            | (last.concat(" ").concat(first)).contains(term, autoescape=True)
-        )
+        conditions = [
+            (first.concat(" ").concat(last)).contains(term, autoescape=True),
+            (last.concat(" ").concat(first)).contains(term, autoescape=True),
+            func.lower(Patient.email).contains(term, autoescape=True),
+        ]
+        digits = _phone_digits(term)
+        if digits:
+            # El teléfono se compara solo por dígitos: "5555 0101" encuentra "5555-0101".
+            conditions.append(
+                func.regexp_replace(Patient.phone, "[^0-9]", "", "g").contains(digits, autoescape=True)
+            )
+        filters.append(or_(*conditions))
 
     total = db.query(func.count(Patient.id)).filter(*filters).scalar()
 
     items = (
         _clinic_patients(db, clinic_id)
         .filter(*filters)
-        # COLLATE "C": mismo orden en Windows (en_US) y en CI (C.UTF-8).
+        # COLLATE "C" (en _sort_key_sql): mismo orden en Windows (en_US) y en CI (C.UTF-8).
         .order_by(
-            _normalized_sql(Patient.last_name).collate("C"),
-            _normalized_sql(Patient.first_name).collate("C"),
+            _sort_key_sql(Patient.last_name),
+            _sort_key_sql(Patient.first_name),
             Patient.id,
         )
         .offset((page - 1) * page_size)
