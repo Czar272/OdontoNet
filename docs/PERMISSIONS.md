@@ -42,10 +42,12 @@
 | `PATCH /patients/{id}` (editar datos y reasignar doctor) | ✅ | ✅ | ✅ |
 | `GET /patients/` con `archived`, `q`, `doctor_id`, `page`, `page_size` (listado paginado; por defecto activos) | ✅ | ✅ | ✅ |
 | `POST /patients/{id}/archive`, `POST /patients/{id}/reactivate` | ✅ | ✅ | ✅ |
+| `GET /appointments/` (rango `start`–`end` o `patient_id`; filtros `doctor_id`, `status`), `GET /appointments/{id}` | ✅ | ✅ | ✅ |
+| `POST /appointments/`, `PATCH /appointments/{id}` (agendar y reprogramar) | ✅ | ✅ | ✅ |
 | `GET /doctors/` (filtro `?active=true/false`), `GET /doctors/{id}` | ✅ | ✅ | ✅ |
 | `POST /doctors/` (crear perfil de doctor), `PATCH /doctors/{id}` (editar perfil) | ✅ | ⛔ | ⛔ |
 
-Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_users.py`, `backend/tests/test_user_deactivation.py` y `backend/tests/test_patient_archive.py`.
+Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_users.py`, `backend/tests/test_user_deactivation.py`, `backend/tests/test_patient_archive.py` y `backend/tests/test_appointment_api.py`.
 
 ### Reglas de gestión de usuarios (ODON-86)
 
@@ -73,13 +75,23 @@ Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_users.py`, `bac
 - Archivar y reactivar son idempotentes y quedan en el log `odontonet.audit` (solo ids). Un paciente de otra clínica responde `404`.
 - El correo de un paciente archivado sigue reservado en su clínica: crear o editar otro paciente con ese correo responde `409 Ya existe un paciente archivado con ese correo en la clínica. Reactívalo desde la lista de archivados.`
 
+### Citas (ODON-134)
+
+- La clínica de la cita sale del token; el estado inicial es siempre «Programada» y el autor es el usuario de la sesión. `clinic_id`, `status` y `created_by_user_id` enviados se ignoran.
+- Paciente y doctor deben ser de la clínica (`422`). El doctor debe estar activo (`422 El doctor seleccionado está inactivo.`). No se agenda a un paciente archivado (`409`).
+- El inicio lleva zona horaria, es exacto al minuto y no puede estar en el pasado (`422`). La duración va de 5 a 480 minutos (30 por defecto).
+- Ni el doctor ni el paciente pueden tener dos citas activas que se crucen (`409 El doctor/El paciente ya tiene una cita que se cruza con ese horario.`). Cancelada y No asistió liberan el horario. La base lo garantiza aunque dos peticiones lleguen a la vez.
+- Solo se reprograman citas programadas o confirmadas (`409`). El paciente de una cita no cambia.
+- No se borra ninguna cita (no hay `DELETE`): se cancelan con los estados de ODON-146.
+- Un paciente con citas próximas pendientes (programadas o confirmadas que aún no terminan) no se archiva (`409 El paciente tiene N citas próximas...`).
+- Las horas se muestran en la hora local del navegador (decisión del 2026-11-02).
+
 ## Módulos futuros (decidido el 2026-10-31)
 
 Se implementarán con esta matriz cuando se desarrolle cada módulo.
 
 | Recurso | admin | doctor | receptionist |
 | --- | :---: | :---: | :---: |
-| Citas y agenda | ✅ | ✅ | ✅ |
 | Disponibilidad de doctores | ✅ | ✅ la propia | ✅ |
 | Expediente clínico (antecedentes, notas, tratamientos) | ✅ | ✅ | ⛔ |
 | Imágenes clínicas | ✅ | ✅ | ⛔ |
