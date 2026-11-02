@@ -10,6 +10,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { to: "/dashboard", label: "Inicio" },
+  { to: "/agenda", label: "Agenda", permission: "appointments:view" },
   { to: "/patients", label: "Pacientes", permission: "patients:view" },
   { to: "/doctors", label: "Doctores", permission: "doctors:view" },
   { to: "/users", label: "Usuarios", permission: "users:manage" },

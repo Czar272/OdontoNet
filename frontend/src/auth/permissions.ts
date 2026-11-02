@@ -12,6 +12,8 @@ export const PERMISSIONS = {
   "patients:create": ["admin", "doctor", "receptionist"],
   "patients:edit": ["admin", "doctor", "receptionist"],
   "patients:archive": ["admin", "doctor", "receptionist"],
+  "appointments:view": ["admin", "doctor", "receptionist"],
+  "appointments:manage": ["admin", "doctor", "receptionist"],
   "doctors:view": ["admin", "doctor", "receptionist"],
   "doctors:manage": ["admin"],
   "users:manage": ["admin"],

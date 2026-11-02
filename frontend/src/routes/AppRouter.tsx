@@ -1,5 +1,7 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 
+import LoadingSpinner from "../components/basic/LoadingSpinner";
 import LoginPage from "../pages/Auth/LoginPage";
 import DashboardPage from "../pages/Dashboard/DashboardPage";
 import ClinicPage from "../pages/Clinic/ClinicPage";
@@ -11,6 +13,10 @@ import UsersPage from "../pages/Users/UsersPage";
 import MainLayout from "../layouts/MainLayout";
 import ProtectedRoute from "./ProtectedRoute";
 import RequirePermission from "./RequirePermission";
+
+// La agenda carga el calendario (FullCalendar) en un archivo aparte:
+// el resto de la aplicación no paga su peso.
+const AgendaPage = lazy(() => import("../pages/Agenda/AgendaPage"));
 
 export default function AppRouter() {
   return (
@@ -28,6 +34,17 @@ export default function AppRouter() {
           }
         >
           <Route path="/dashboard" element={<DashboardPage />} />
+
+          <Route
+            path="/agenda"
+            element={
+              <RequirePermission permission="appointments:view">
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AgendaPage />
+                </Suspense>
+              </RequirePermission>
+            }
+          />
 
           <Route
             path="/patients"
