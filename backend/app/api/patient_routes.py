@@ -1,6 +1,7 @@
 import logging
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query as QueryParam, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, joinedload
 
@@ -56,6 +57,18 @@ def _ensure_doctor_in_clinic(db: Session, doctor_id: int, clinic_id: int) -> Non
         )
 
 
+def _get_clinic_patient(db: Session, patient_id: int, clinic_id: int) -> Patient:
+    """Paciente de la clínica o 404 (también si es de otra clínica)."""
+    patient = _clinic_patients(db, clinic_id).filter(Patient.id == patient_id).first()
+
+    if not patient:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Paciente no encontrado."
+        )
+
+    return patient
+
+
 def _commit(db: Session) -> None:
     """Guarda y traduce las restricciones de la base a errores de la API."""
     try:
@@ -96,11 +109,20 @@ def create_patient(
 
 @router.get("/", response_model=list[PatientResponse])
 def get_patients(
+    archived: bool = QueryParam(
+        False, description="false: solo activos (por defecto) · true: solo archivados."
+    ),
     db: Session = Depends(get_db),
     clinic_id: int = Depends(get_current_clinic_id),
 ):
 
-    return _clinic_patients(db, clinic_id).order_by(Patient.id).all()
+    query = _clinic_patients(db, clinic_id)
+    if archived:
+        query = query.filter(Patient.archived_at.is_not(None))
+    else:
+        query = query.filter(Patient.archived_at.is_(None))
+
+    return query.order_by(Patient.id).all()
 
 
 @router.get("/{patient_id}", response_model=PatientResponse)
@@ -110,14 +132,8 @@ def get_patient(
     clinic_id: int = Depends(get_current_clinic_id),
 ):
 
-    patient = _clinic_patients(db, clinic_id).filter(Patient.id == patient_id).first()
-
-    if not patient:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Paciente no encontrado."
-        )
-
-    return patient
+    # Los archivados también se consultan: su ficha e historial se conservan.
+    return _get_clinic_patient(db, patient_id, clinic_id)
 
 
 @router.patch("/{patient_id}", response_model=PatientResponse)
@@ -129,11 +145,12 @@ def update_patient(
     clinic_id: int = Depends(get_current_clinic_id),
 ):
     """Edita datos del paciente o reasigna su doctor (ODON-118)."""
-    patient = _clinic_patients(db, clinic_id).filter(Patient.id == patient_id).first()
+    patient = _get_clinic_patient(db, patient_id, clinic_id)
 
-    if not patient:
+    if patient.archived_at is not None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Paciente no encontrado."
+            status_code=status.HTTP_409_CONFLICT,
+            detail="El paciente está archivado. Reactívalo para editar sus datos.",
         )
 
     data = changes.dict(exclude_unset=True)
@@ -170,3 +187,46 @@ def update_patient(
 
     db.expire_all()
     return _clinic_patients(db, clinic_id).filter(Patient.id == patient_id).one()
+
+
+def _set_archived(
+    db: Session, patient_id: int, clinic_id: int, current_user: User, archived: bool
+) -> Patient:
+    """Archiva o reactiva sin borrar nada. Es idempotente: repetir la acción
+    no cambia la fecha de archivo ni genera un evento de auditoría nuevo."""
+    patient = _get_clinic_patient(db, patient_id, clinic_id)
+
+    if (patient.archived_at is not None) is not archived:
+        patient.archived_at = datetime.now(timezone.utc) if archived else None
+        db.commit()
+        audit_logger.info(
+            "patient.%s patient_id=%s user_id=%s clinic_id=%s",
+            "archived" if archived else "reactivated",
+            patient.id, current_user.id, clinic_id,
+        )
+
+    db.expire_all()
+    return _clinic_patients(db, clinic_id).filter(Patient.id == patient_id).one()
+
+
+@router.post("/{patient_id}/archive", response_model=PatientResponse)
+def archive_patient(
+    patient_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    clinic_id: int = Depends(get_current_clinic_id),
+):
+    """Archiva al paciente (ODON-122): sale del listado de activos, pero sus
+    datos e historial se conservan y se puede reactivar."""
+    return _set_archived(db, patient_id, clinic_id, current_user, archived=True)
+
+
+@router.post("/{patient_id}/reactivate", response_model=PatientResponse)
+def reactivate_patient(
+    patient_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    clinic_id: int = Depends(get_current_clinic_id),
+):
+    """Devuelve un paciente archivado al listado de activos (ODON-122)."""
+    return _set_archived(db, patient_id, clinic_id, current_user, archived=False)

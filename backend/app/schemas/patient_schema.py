@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr, constr, validator
@@ -70,6 +70,8 @@ class PatientResponse(BaseModel):
     doctor_id: int | None = None
     doctor: DoctorResponse | None
     clinic_id: int
+    # null = activo; con fecha = archivado (ODON-122).
+    archived_at: datetime | None = None
 
     class Config:
         orm_mode = True

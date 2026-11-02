@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Date, ForeignKey, ForeignKeyConstraint, Integer, String, UniqueConstraint
+from sqlalchemy import Column, Date, DateTime, ForeignKey, ForeignKeyConstraint, Integer, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.database.connection import Base
@@ -30,6 +30,8 @@ class Patient(Base):
     address = Column(String)
     doctor_id = Column(Integer, ForeignKey("doctors.id"), nullable=True)
     clinic_id = Column(Integer, ForeignKey("clinics.id"), nullable=False, index=True)
+    # NULL = activo. Archivar conserva todos los datos y el historial (ODON-122).
+    archived_at = Column(DateTime(timezone=True), nullable=True)
 
     doctor = relationship("Doctor", back_populates="patients", foreign_keys=[doctor_id])
     clinic = relationship("Clinic", back_populates="patients", foreign_keys=[clinic_id])
