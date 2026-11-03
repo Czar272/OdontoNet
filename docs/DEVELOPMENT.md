@@ -122,6 +122,7 @@ Cada prueba pertenece al menos a una categoría (marcador de pytest), según el 
 | `isolation` | Aislamiento entre clínicas (transversal) |
 | `rbac` | Permisos por rol (transversal) |
 | `appointments` | Modelo, integridad y endpoints de citas |
+| `records` | Expediente clínico: historia médica y odontológica |
 
 ```powershell
 python -m pytest -m auth                      # solo autenticación
@@ -131,6 +132,36 @@ python -m pytest --markers                    # listar categorías
 ```
 
 Una prueba sin categoría o con un marcador mal escrito detiene la ejecución con un error.
+
+#### Qué correr según el cambio
+
+Durante el desarrollo y al verificar un ticket basta con las categorías del área tocada; la suite completa corre en GitHub Actions en cada push y al cerrar una épica. En cada entrega, el asistente indica el comando exacto.
+
+| Si cambia... | Backend | Frontend |
+| --- | --- | --- |
+| Login, sesión, contraseñas (`auth_routes`, `app/auth/`) | `python -m pytest -m "auth or users or rbac"` | `npx vitest run src/pages/Auth src/pages/Account src/services src/context` |
+| Usuarios (`/users`) | `python -m pytest -m "users or rbac"` | `npx vitest run src/pages/Users src/components/users` |
+| Pacientes | `python -m pytest -m "patients or isolation"` | `npx vitest run src/pages/Patients src/components/patients` |
+| Historia médica / expediente | `python -m pytest -m "records or rbac"` | `npx vitest run src/components/patients src/pages/Patients src/auth` |
+| Doctores y horarios | `python -m pytest -m "doctors or appointments"` | `npx vitest run src/pages/Doctors src/components/doctors src/pages/Agenda` |
+| Agenda y citas | `python -m pytest -m "appointments or doctors"` | `npx vitest run src/pages/Agenda src/components/appointments` |
+| Clínica | `python -m pytest -m isolation` | `npx vitest run src/pages/Clinic` |
+| Permisos (`permissions.py` / `permissions.ts`) | `python -m pytest -m "rbac or isolation"` | `npx vitest run src/auth src/config src/routes` |
+| Seed | `python -m pytest -m seed` | — |
+| Migración nueva, modelo compartido, `conftest.py`, `core/errors.py` | `python -m pytest` (completa) | — |
+| Componentes base (`components/basic`), `api.ts`, dependencias | — | `npm test` (completa) |
+
+Atajos útiles:
+
+```powershell
+python -m pytest --lf                 # solo las que fallaron la vez anterior
+python -m pytest -x                   # se detiene en el primer fallo
+python -m pytest tests/test_auth.py   # un archivo
+python -m pytest -k "reset and not admin"   # por nombre
+npx vitest related src/pages/Auth/LoginPage.tsx --run   # pruebas que importan ese archivo
+```
+
+**Velocidad (CAL-ENH03):** antes de cada prueba se vacían las tablas con `DELETE` en orden inverso de dependencias y se reinician las secuencias. Es unas 15 veces más barato que `TRUNCATE ... CASCADE`, que recrea los archivos de cada tabla. Las conexiones de pytest usan `synchronous_commit=off` (sin esperar al disco en cada commit), algo inocuo en una base de pruebas. La lista de tablas sale de los modelos, así que una tabla nueva se limpia sola. Para ver qué tarda: `python -m pytest --durations=15`.
 
 La URL de pruebas se deriva de `DATABASE_URL` en `backend/.env` cambiando el nombre de la base a `<nombre>_test`; no hace falta escribir la contraseña. Para usar otra base, define `TEST_DATABASE_URL`. Si la conexión falla, pytest muestra el error completo y cómo crear la base.
 
@@ -145,7 +176,7 @@ Las pruebas usan bcrypt con costo 4 (`BCRYPT_ROUNDS`, fijado en `tests/conftest.
 | Momento | Quién | Qué |
 | --- | --- | --- |
 | Al entregar un ticket | Asistente | Suite completa, E2E y build |
-| Al verificar un ticket | Desarrollador | `python -m pytest` (segundos) y `npm test`; `lint`/`build` solo si cambió el frontend; prueba manual |
+| Al verificar un ticket | Desarrollador | Las categorías del área tocada (ver «Qué correr según el cambio»); `lint`/`build` solo si cambió el frontend; prueba manual |
 | En cada push | GitHub Actions | Todo, automáticamente; revisar que quede en ✔ |
 | Al cerrar una épica | Desarrollador | Suite completa, `lint`, `build` y `verify-infra.ps1` |
 

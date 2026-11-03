@@ -51,8 +51,10 @@
 | `POST /doctors/` (crear perfil de doctor), `PATCH /doctors/{id}` (editar perfil) | ✅ | ⛔ | ⛔ |
 | `GET /doctors/availability`, `GET /doctors/{id}/availability` (horarios) | ✅ | ✅ | ✅ |
 | `PUT /doctors/{id}/availability` (reemplaza el horario semanal) | ✅ | ✅ solo el propio | ✅ |
+| `GET /patients/{id}/medical-history`, `.../versions`, `.../versions/{n}` (historia médica vigente y versiones) | ✅ | ✅ | ✅ |
+| `POST /patients/{id}/medical-history` (guardar una versión nueva) | ✅ | ✅ | ⛔ |
 
-Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_password_reset.py`, `backend/tests/test_users.py`, `backend/tests/test_user_deactivation.py`, `backend/tests/test_patient_archive.py`, `backend/tests/test_appointment_api.py` y `backend/tests/test_doctor_availability.py`.
+Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_password_reset.py`, `backend/tests/test_users.py`, `backend/tests/test_user_deactivation.py`, `backend/tests/test_patient_archive.py`, `backend/tests/test_appointment_api.py`, `backend/tests/test_doctor_availability.py` y `backend/tests/test_medical_history.py`.
 
 ### Reglas de gestión de usuarios (ODON-86)
 
@@ -123,7 +125,8 @@ Se implementarán con esta matriz cuando se desarrolle cada módulo.
 
 | Recurso | admin | doctor | receptionist |
 | --- | :---: | :---: | :---: |
-| Expediente clínico (antecedentes, notas, tratamientos) | ✅ | ✅ | ⛔ |
+| Historia médica y odontológica (antecedentes, ODON-150) | ✅ | ✅ | 👁️ solo lectura |
+| Expediente clínico (consultas, notas, tratamientos) | ✅ | ✅ | ⛔ |
 | Imágenes clínicas | ✅ | ✅ | ⛔ |
 | Periodontograma | ✅ | ✅ | ⛔ |
 | Reportes operativos | ✅ | ✅ | ✅ sin datos clínicos |
@@ -132,6 +135,7 @@ Se implementarán con esta matriz cuando se desarrolle cada módulo.
 
 - **El administrador tiene acceso clínico.** En clínicas pequeñas el administrador suele ser también odontólogo. Se mantiene un solo rol por usuario.
 - **Recepción no accede a datos clínicos:** ni expediente, ni imágenes, ni periodontograma. Gestiona datos demográficos y agenda.
+- **Excepción, decidida el 2026-11-02 (ODON-150):** Recepción lee la historia médica y odontológica completa (vigente y versiones anteriores), pero no la edita (`403`). Así ve alergias y condiciones al agendar o recibir al paciente. Las consultas, notas y tratamientos siguen fuera de su alcance.
 
 ## Modelo de roles objetivo (aprobado el 2026-11-01)
 
@@ -142,7 +146,7 @@ Recoge la visión del desarrollador sin cambiar lo implementado. Cada fila se ap
 | Plataforma | `superadmin` (nuevo) | Crear y administrar clínicas, soporte. No pertenece a una clínica; actúa sobre una clínica de forma explícita y auditada. Un solo usuario por ahora. | Con ODON-74 (alta de clínicas) |
 | Clínica | `admin` («Administración») | Toda su clínica: personal, configuración, pacientes y agenda. Puede tener perfil de doctor. | Implementado |
 | Clínica | `doctor` | Atención clínica completa. Edita su propio perfil; no gestiona usuarios ni roles y no puede desactivarse. | Implementado; falta «Mi perfil» |
-| Clínica | `receptionist` («Recepción») | Pacientes (datos generales, doctor asignado), agenda e información médica básica. Sin periodontograma, diagnósticos ni notas clínicas. | Ajustar con el expediente (ODON-7) |
+| Clínica | `receptionist` («Recepción») | Pacientes (datos generales, doctor asignado), agenda y lectura de la historia médica. Sin periodontograma, diagnósticos ni notas clínicas. | Historia médica: ODON-150 |
 | Externo | `patient` | Solo lectura de su propia información, con autenticación separada (portal). | Después del MVP |
 
 Pautas para no rehacer trabajo:

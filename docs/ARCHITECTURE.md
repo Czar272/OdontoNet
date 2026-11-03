@@ -30,13 +30,13 @@ PostgreSQL 16 (Docker Compose)
 - `src/layouts/`: barra lateral con clínica, usuario, rol, navegación activa y cierre de sesión.
 - `src/context/AuthContext.tsx`: sesión con estados `loading` / `authenticated` / `unauthenticated`; restaura usuario y clínica con `/auth/me` al cargar; login, logout y cierre automático ante un `401`.
 - `src/services/`: cliente Axios (`VITE_API_URL`) con interceptor de `401`, `session.ts` (token), servicios por recurso y `apiError.ts` para mostrar el `detail` de la API.
-- `src/components/basic/`: Button, Input, Select, Modal, Table, Card, PageHeader, LoadingSpinner (accesibles); `src/components/<dominio>/`: formularios de pacientes, usuarios, doctores y citas (con buscador de pacientes en el backend).
+- `src/components/basic/`: Button, Input, Select, Textarea, Modal, Table, Card, PageHeader, LoadingSpinner (accesibles); `src/components/<dominio>/`: formularios de pacientes, usuarios, doctores y citas (con buscador de pacientes en el backend). `components/patients/MedicalHistoryCard.tsx` muestra la historia médica en la ficha del paciente: edición en dos pasos, selector de versiones anteriores en solo lectura y aviso si otra persona guardó antes.
 - `src/types/`: contratos TypeScript mantenidos manualmente.
 
 ### Backend
 
 - `app/main.py`: instancia FastAPI, routers, manejadores de error, CORS (`CORS_ORIGINS`) y `/health`.
-- `app/api/`: rutas `/auth`, `/clinic`, `/patients`, `/doctors`, `/users`. `/clinic` no recibe id: siempre opera sobre la clínica de la sesión.
+- `app/api/`: rutas `/auth`, `/clinic`, `/patients`, `/patients/{id}/medical-history`, `/doctors`, `/users`, `/appointments`. `/clinic` no recibe id: siempre opera sobre la clínica de la sesión.
 - `app/services/`: reglas de negocio compartidas entre rutas (`user_service.py`: alta y edición de usuarios).
 - `app/auth/`: hash de contraseñas, JWT, usuario actual (`get_current_user`), clínica actual (`get_current_clinic_id`) y roles (`permissions.py`, `require_roles`).
 - `app/core/errors.py`: formato único de errores.
@@ -84,6 +84,7 @@ Doctor  1 ── * DoctorAvailabilityBlock (horario semanal; misma clínica, gar
 5. **Pruebas:** pytest contra una base PostgreSQL `*_test` que aplica todas las migraciones; incluyen aislamiento entre dos clínicas, matriz de roles, contrato de la API y seed.
 6. **Separación de IA:** no acoplar PyTorch/OpenCV al backend clínico; definir posteriormente contratos versionados y controles de acceso.
 7. **Datos clínicos:** almacenamiento de imágenes, auditoría de accesos y políticas de retención siguen pendientes.
+8. **Historia médica versionada (ODON-150):** `patient_medical_histories` guarda una fila por versión (1, 2, 3...) con autor (`created_by_user_id`) y fecha; ninguna se modifica ni se borra, y la vigente es la de mayor versión. Cada guardado envía la historia completa y `base_version` (la versión que se editaba). Si no coincide con la vigente, la API responde `409` con `current_version` en vez de pisar el cambio de otra persona; la restricción única `(patient_id, version)` cubre los guardados simultáneos. Las condiciones médicas son una lista fija en JSONB (`MEDICAL_CONDITIONS`, cada una con `present` sí/no/sin dato y `detail`); hábitos y antecedentes odontológicos son columnas, para poder consultarlos (por ejemplo tabaquismo y diabetes, factores del grado periodontal). Las FKs compuestas aseguran que paciente y autor sean de la clínica de la historia. Un paciente archivado conserva su historia en solo lectura. La auditoría registra `medical_history.created` solo con ids.
 
 ## Sesión y tokens
 

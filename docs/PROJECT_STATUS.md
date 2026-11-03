@@ -2,7 +2,7 @@
 
 > Documento de continuidad técnica. Jira es la fuente de verdad de los estados de los tickets y Git es la fuente de verdad del código.
 
-**Última actualización:** 2026-11-02 — ODON-6 (Agenda y citas) cerrada; ODON-54 (recuperación y cambio de contraseña) en Testing.
+**Última actualización:** 2026-11-02 — ODON-54 Done; ODON-150 (historia médica) y ODON-259 (CAL-ENH03) en Testing.
 
 ## Alcance
 
@@ -16,9 +16,9 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 
 ## Estado verificado
 
-- **Calidad:** 505 pruebas backend en unos 55 s (login y «Recuérdame», recuperación y cambio de contraseña, `/auth/me`, aislamiento, modelo y datos de clínicas, modelo, listado paginado y búsqueda, ficha, edición y archivo de pacientes, modelo, integridad, API, concurrencia, estados e historial de citas, horario de doctores y zona horaria de la clínica, roles, gestión y desactivación de usuarios, listado, integridad y perfiles de doctores, contrato de API, seed); CI en GitHub Actions en cada push. Frontend: 223 pruebas unitarias (Vitest), `lint` y `build` sin errores, 0 vulnerabilidades npm en producción, pruebas E2E de sesión, recuperación y cambio de contraseña, gestión de usuarios, archivo de pacientes, listado paginado y agenda (crear, cruce, reprogramar, arrastrar, confirmar y cancelar desde «Por confirmar», historial, horario de doctores con sombreado y aviso fuera de horario).
+- **Calidad:** 536 pruebas backend en unos 40 s en Linux (limpieza con `DELETE`, CAL-ENH03) (login y «Recuérdame», recuperación y cambio de contraseña, historia médica versionada, `/auth/me`, aislamiento, modelo y datos de clínicas, modelo, listado paginado y búsqueda, ficha, edición y archivo de pacientes, modelo, integridad, API, concurrencia, estados e historial de citas, horario de doctores y zona horaria de la clínica, roles, gestión y desactivación de usuarios, listado, integridad y perfiles de doctores, contrato de API, seed); CI en GitHub Actions en cada push. Frontend: 245 pruebas unitarias (Vitest), `lint` y `build` sin errores, 0 vulnerabilidades npm en producción, pruebas E2E de sesión, recuperación y cambio de contraseña, historia médica (versiones, conflicto de edición, lectura de recepción), gestión de usuarios, archivo de pacientes, listado paginado y agenda (crear, cruce, reprogramar, arrastrar, confirmar y cancelar desde «Por confirmar», historial, horario de doctores con sombreado y aviso fuera de horario).
 - **Seguridad:** aislamiento por `clinic_id` del token (ODON-62); RBAC con `require_roles` (ODON-66); usuarios inactivos bloqueados; un cambio de contraseña cierra las demás sesiones (ODON-54); errores unificados en español sin trazas (ODON-22).
-- **Infraestructura:** Docker healthy, persistencia y puerto local verificados con `scripts/dev/verify-infra.ps1` (ODON-26). Migraciones lineales `e7aac1fc989e` → `4c1d2e8f9a10` → `7b3e9d2c5a61` → `9d4f1a7b2c83` → `b2e6c4a8d915` → `c4f8a1d2e6b3` → `d7a3b9e15c42` → `e5c2f8a9b471` → `f3a7d1c9b264` → `a8c3e5f7b192`, probadas desde base vacía (ODON-30) y con `alembic check` sin diferencias.
+- **Infraestructura:** Docker healthy, persistencia y puerto local verificados con `scripts/dev/verify-infra.ps1` (ODON-26). Migraciones lineales `e7aac1fc989e` → `4c1d2e8f9a10` → `7b3e9d2c5a61` → `9d4f1a7b2c83` → `b2e6c4a8d915` → `c4f8a1d2e6b3` → `d7a3b9e15c42` → `e5c2f8a9b471` → `f3a7d1c9b264` → `a8c3e5f7b192` → `b5d9e2f4c731`, probadas desde base vacía (ODON-30) y con `alembic check` sin diferencias.
 - **Datos de desarrollo:** `backend/scripts/seed_dev.py`, idempotente y solo local (ODON-34).
 
 ## Riesgos y deuda técnica
@@ -47,15 +47,17 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 - **ODON-3 Clínicas y autorización — Done:** ODON-58, 62, 66, 70 y 74.
 - **ODON-5 Pacientes — Done:** ODON-98, 102, 106, 110, 114, 118, 122 y 126.
 - **ODON-6 Agenda y citas — Done:** ODON-130, 134, 138, 142, 146 y 257 (CIT-ENH01). ODON-258 (CIT-ENH02, ausencias de doctores) se pospuso: queda en el backlog sin épica, con la etiqueta `cit`.
-- **ODON-2 Autenticación — In Progress:** ODON-38, 42, 46, 50 y 52 Done; ODON-255 («Recuérdame») Done; ODON-54 (recuperación y cambio de contraseña) en Testing.
+- **ODON-2 Autenticación — In Progress:** todas las historias Done (ODON-38, 42, 46, 50, 52, 54 y 255); falta el cierre con `verify-infra`.
+- **ODON-7 Expediente clínico — In Progress:** ODON-150 (historia médica y odontológica) en Testing; ODON-154, 158 y 162 en To Do.
 - **ODON-4 Personal y doctores — Done:** ODON-78, 82, 86, 90 y 94.
-- **ODON-11 Calidad:** ODON-254 (categorías de pruebas backend) Done; ODON-256 (pruebas rápidas y CI) Done.
+- **ODON-11 Calidad:** ODON-254 (categorías de pruebas backend) Done; ODON-256 (pruebas rápidas y CI) Done; ODON-259 (CAL-ENH03, pytest más rápido y guía por área) en Testing.
 
 ## Próximo paso
 
-1. ODON-54 en Testing: al confirmarla se cierra ODON-2 con suite completa, lint, build y `verify-infra`.
-2. El alta de clínicas por `superadmin` se planifica aparte según el modelo de roles aprobado.
-3. ODON-258 (ausencias de doctores) queda para después del MVP.
+1. Cerrar ODON-2 con `verify-infra`; confirmar ODON-150 y ODON-259.
+2. ODON-154 (consultas clínicas y notas).
+3. El alta de clínicas por `superadmin` se planifica aparte según el modelo de roles aprobado.
+4. ODON-258 (ausencias de doctores) queda para después del MVP.
 
 ## Convenciones de colaboración
 
