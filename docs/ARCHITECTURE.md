@@ -23,7 +23,7 @@ PostgreSQL 16 (Docker Compose)
 
 ### Frontend
 
-- `src/pages/`: inicio de sesión, inicio (dashboard), agenda, pacientes, doctores, usuarios y clínica. Interfaz en español.
+- `src/pages/`: inicio de sesión, recuperación y cambio de contraseña, inicio (dashboard), agenda, pacientes, doctores, usuarios y clínica. Interfaz en español.
 - `src/pages/Agenda/`: calendario compartido de la clínica con FullCalendar 6 (MIT: vistas de mes, semana y día, más el plugin de interacción). Se carga con `React.lazy` en un archivo aparte. Pide al backend solo el rango visible, filtra por doctor en el backend y por estado en el navegador, y muestra las horas en la hora local del navegador. Seleccionar un horario abre «Nueva cita»; arrastrar o estirar una cita pendiente y futura la reprograma, y si el backend responde 409 vuelve a su lugar. Cada doctor tiene un color estable (`agendaColors.ts`, según el orden de los ids y distinto de los colores de estado): la cita lleva fondo claro y franja de ese color, arriba el nombre del doctor (corto en la semana, y solo sus iniciales en columnas muy angostas, mediante una container query en `index.css`), luego el paciente y la hora con un punto del color de su estado. Las citas simultáneas se muestran una al lado de la otra (`slotEventOverlap={false}`), y la leyenda de doctores filtra con un clic. Las columnas por doctor (vista de recursos) son una función de pago de FullCalendar; la alternativa gratuita es la vista de día, que ocupa todo el ancho.
 - `src/routes/`: router, ruta protegida (espera la verificación de sesión y recuerda la ruta solicitada), `RequirePermission` (página "Acceso denegado" si el rol no tiene permiso) y ruta comodín.
 - `src/auth/permissions.ts`, `src/config/navigation.ts`, `src/hooks/usePermission.ts`: permisos por rol reflejados de `PERMISSIONS.md`; el menú y las acciones se muestran según el rol. El backend sigue siendo la autoridad.
@@ -89,6 +89,14 @@ Doctor  1 ── * DoctorAvailabilityBlock (horario semanal; misma clínica, gar
 
 **Flujo:** `POST /auth/login` → JWT (expira en `ACCESS_TOKEN_EXPIRE_MINUTES`, 60 por defecto; con «Recuérdame», `REMEMBER_ME_EXPIRE_DAYS`, 7 por defecto) → `GET /auth/me` carga usuario y clínica. Al recargar, la app muestra un cargador mientras verifica el token con `/auth/me`; si responde `401`, limpia la sesión. Cualquier `401` posterior (token expirado o usuario desactivado) cierra la sesión, avisa al usuario y redirige al login recordando la ruta; un cierre voluntario no la recuerda. Al cerrar sesión se vacía la caché de React Query. Ningún error de login se imprime en consola (el error de Axios incluye el cuerpo con la contraseña).
 
+**Recuperación y cambio de contraseña (ODON-54):**
+
+- `POST /auth/password-reset/request` responde siempre `202` con el mismo mensaje, exista o no la cuenta. Si es una cuenta activa, crea un token aleatorio (`secrets.token_urlsafe`), guarda solo su hash SHA-256 en `password_reset_tokens` y envía el enlace `FRONTEND_URL/reset-password?token=…` en segundo plano. El enlace vence en `PASSWORD_RESET_EXPIRE_MINUTES` (30) y solo vale el último solicitado. Hay un máximo de `PASSWORD_RESET_MAX_PER_HOUR` (3) solicitudes por cuenta: las que lo superan se ignoran en silencio.
+- `POST /auth/password-reset/confirm` acepta el token una sola vez (con bloqueo de fila) y responde `400` con el mismo mensaje si es desconocido, usado, vencido o de un usuario inactivo. El frontend quita el token de la barra de direcciones al abrir la página.
+- `POST /auth/change-password` (cualquier rol) pide la contraseña actual, rechaza repetirla y devuelve un token nuevo que se guarda en el mismo almacenamiento («Recuérdame» se conserva).
+- **Cierre de sesiones:** cambiar o restablecer la contraseña (también por administración en `PATCH /users/{id}`) fija `users.password_changed_at`, y `get_current_user` rechaza con `401` los JWT cuyo `iat` sea anterior. El `iat` lleva fracción de segundo para que no sobreviva un token emitido en el mismo segundo. Es una revocación parcial: el logout sigue sin revocar el token.
+- **Correo:** `app/services/email_service.py` envía por SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_STARTTLS`). Sin `SMTP_HOST`, el correo se escribe en el log `odontonet.email`, solo para desarrollo. Un fallo de SMTP se registra sin el cuerpo y no cambia la respuesta.
+
 **Evaluación de almacenamiento y refresh (ODON-52):**
 
 | Opción | Ventajas | Riesgos / costo |
@@ -113,7 +121,7 @@ Doctor  1 ── * DoctorAvailabilityBlock (horario semanal; misma clínica, gar
 
 - No existe todavía el alta segura de la primera clínica y su administrador (ODON-74); en desarrollo se usa `seed_dev.py`.
 - Faltan edición y desactivación de usuarios (ODON-86, ODON-94) y la navegación por rol en el frontend (ODON-70).
-- Token en el almacenamiento del navegador y sin revocación del lado del servidor hasta producción (ver "Sesión y tokens").
+- Token en el almacenamiento del navegador; el servidor solo revoca sesiones al desactivar un usuario o cambiar su contraseña, no en el logout (ver "Sesión y tokens").
 - Sin auditoría de acciones clínicas, respaldos verificados ni endurecimiento para producción (épica CAL).
 - No hay mecanismo de importación validada de datos de clínicas existentes.
 

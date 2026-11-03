@@ -15,7 +15,7 @@ Cada clínica es un espacio aislado: la API filtra todos los datos por la clíni
 | Área | Estado actual |
 | --- | --- |
 | Interfaz React (español), rutas, layout y componentes reutilizables | Implementado |
-| Login JWT, `GET /auth/me`, logout | Implementado; restauración de sesión y expiración en frontend pendientes (AUT03/AUT04) |
+| Login JWT, `GET /auth/me`, logout, «Recuérdame», recuperación y cambio de contraseña | Implementado |
 | Aislamiento por clínica y permisos por rol | Implementado y cubierto por pruebas |
 | Alta de usuarios por administrador (`POST /auth/register`) | Implementado; edición y desactivación pendientes |
 | Pacientes | Listado, detalle, creación con validación y filtros; edición y archivado pendientes |

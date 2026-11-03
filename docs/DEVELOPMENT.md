@@ -19,6 +19,8 @@ Copy-Item backend/.env.example backend/.env
 
 En `.env` de la raíz configura `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` y `POSTGRES_PORT`. En `backend/.env` configura `DATABASE_URL`, `SECRET_KEY`, `ALGORITHM=HS256`, `ACCESS_TOKEN_EXPIRE_MINUTES` y, opcionalmente, `REMEMBER_ME_EXPIRE_DAYS` (7 por defecto).
 
+Recuperación de contraseña (ODON-54): `FRONTEND_URL` (para armar el enlace), `PASSWORD_RESET_EXPIRE_MINUTES` y `PASSWORD_RESET_MAX_PER_HOUR` tienen valores por defecto. Con `SMTP_HOST` vacío no se envía nada: el correo, con el enlace, aparece en la consola de uvicorn (logger `odontonet.email`). Para probar con un servidor real, completa las variables `SMTP_*` de `backend/.env.example`.
+
 La contraseña, usuario, base y puerto de `DATABASE_URL` deben coincidir con los de Docker. Si una contraseña contiene caracteres reservados de URL (`@`, `:`, `/`, `#`, etc.), codifícala en la URL.
 
 Para generar una clave JWT local:

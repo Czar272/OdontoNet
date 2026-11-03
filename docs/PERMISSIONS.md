@@ -31,6 +31,8 @@
 | --- | :---: | :---: | :---: |
 | `POST /auth/login` | público | público | público |
 | `GET /auth/me` | ✅ | ✅ | ✅ |
+| `POST /auth/password-reset/request`, `POST /auth/password-reset/confirm` (recuperación por correo) | público | público | público |
+| `POST /auth/change-password` (contraseña propia) | ✅ | ✅ | ✅ |
 | `GET /clinic` (datos de la propia clínica) | ✅ | ✅ | ✅ |
 | `PATCH /clinic` (editar la propia clínica) | ✅ | ⛔ | ⛔ |
 | `POST /auth/register` (crear usuario en su clínica; equivale a `POST /users/`) | ✅ | ⛔ | ⛔ |
@@ -50,7 +52,7 @@
 | `GET /doctors/availability`, `GET /doctors/{id}/availability` (horarios) | ✅ | ✅ | ✅ |
 | `PUT /doctors/{id}/availability` (reemplaza el horario semanal) | ✅ | ✅ solo el propio | ✅ |
 
-Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_users.py`, `backend/tests/test_user_deactivation.py`, `backend/tests/test_patient_archive.py`, `backend/tests/test_appointment_api.py` y `backend/tests/test_doctor_availability.py`.
+Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_password_reset.py`, `backend/tests/test_users.py`, `backend/tests/test_user_deactivation.py`, `backend/tests/test_patient_archive.py`, `backend/tests/test_appointment_api.py` y `backend/tests/test_doctor_availability.py`.
 
 ### Reglas de gestión de usuarios (ODON-86)
 
@@ -58,7 +60,8 @@ Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_users.py`, `bac
 - El correo es único en todo el sistema (identifica el inicio de sesión): `409` si ya existe.
 - Un administrador no puede cambiar su propio rol, para que la clínica no se quede sin administración.
 - El rol de un usuario con perfil de doctor no se puede cambiar mientras exista el perfil (`409`).
-- La contraseña nunca se devuelve; enviarla en `PATCH` la restablece.
+- La contraseña nunca se devuelve; enviarla en `PATCH` la restablece, cierra las sesiones abiertas de ese usuario y anula sus enlaces de recuperación pendientes (ODON-54).
+- Un administrador no cambia su propia contraseña con `PATCH /users/{id}` (`409`): usa `POST /auth/change-password`, que pide la contraseña actual.
 - Cambiar el correo de un usuario invalida su sesión actual (el token se identifica por correo), así que debe volver a iniciar sesión.
 
 ### Desactivación (ODON-94)
