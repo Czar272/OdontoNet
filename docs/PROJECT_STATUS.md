@@ -2,7 +2,7 @@
 
 > Documento de continuidad técnica. Jira es la fuente de verdad de los estados de los tickets y Git es la fuente de verdad del código.
 
-**Última actualización:** 2026-11-03 — ODON-158 Done; ODON-162 (historial cronológico), ODON-260 (EXP-ENH01, odontograma) y ODON-261 (EXP-ENH02, pestañas en la ficha) en Testing; ODON-8 definida; ODON-7 lista para cerrar.
+**Última actualización:** 2026-11-03 — ODON-162, ODON-260 y ODON-261 Done; ODON-7 pendiente de `verify-infra` para cerrar; ODON-8 (imágenes) en curso: ODON-166 (almacenamiento privado) en Testing.
 
 ## Alcance
 
@@ -18,7 +18,7 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 
 - **Calidad:** 633 pruebas backend en unos 60 s en Linux (137 s en Windows con 536) (limpieza con `DELETE`, CAL-ENH03) (login y «Recuérdame», recuperación y cambio de contraseña, historia médica versionada, consultas clínicas con revisiones y anulación, plan de tratamiento con estados y concurrencia, historial cronológico paginado, `/auth/me`, aislamiento, modelo y datos de clínicas, modelo, listado paginado y búsqueda, ficha, edición y archivo de pacientes, modelo, integridad, API, concurrencia, estados e historial de citas, horario de doctores y zona horaria de la clínica, roles, gestión y desactivación de usuarios, listado, integridad y perfiles de doctores, contrato de API, seed); CI en GitHub Actions en cada push. Frontend: 329 pruebas unitarias (Vitest), `lint` y `build` sin errores, 0 vulnerabilidades npm en producción, pruebas E2E de sesión, recuperación y cambio de contraseña, historia médica (versiones, conflicto de edición, lectura de recepción), consultas clínicas (registro, edición rastreada, anulación, permisos), plan de tratamiento (pieza FDI con odontograma, estados, completar con consulta, cancelar con motivo, historial), historial cronológico (eventos en vivo, páginas de 20, filtros), gestión de usuarios, archivo de pacientes, listado paginado y agenda (crear, cruce, reprogramar, arrastrar, confirmar y cancelar desde «Por confirmar», historial, horario de doctores con sombreado y aviso fuera de horario).
 - **Seguridad:** aislamiento por `clinic_id` del token (ODON-62); RBAC con `require_roles` (ODON-66); usuarios inactivos bloqueados; un cambio de contraseña cierra las demás sesiones (ODON-54); errores unificados en español sin trazas (ODON-22).
-- **Infraestructura:** Docker healthy, persistencia y puerto local verificados con `scripts/dev/verify-infra.ps1` (ODON-26). Migraciones lineales `e7aac1fc989e` → `4c1d2e8f9a10` → `7b3e9d2c5a61` → `9d4f1a7b2c83` → `b2e6c4a8d915` → `c4f8a1d2e6b3` → `d7a3b9e15c42` → `e5c2f8a9b471` → `f3a7d1c9b264` → `a8c3e5f7b192` → `b5d9e2f4c731` → `c7e1a4b8d520` → `d2f6b8c1e937`, probadas desde base vacía (ODON-30) y con `alembic check` sin diferencias.
+- **Infraestructura:** Docker healthy, persistencia y puerto local verificados con `scripts/dev/verify-infra.ps1` (ODON-26). Migraciones lineales `e7aac1fc989e` → `4c1d2e8f9a10` → `7b3e9d2c5a61` → `9d4f1a7b2c83` → `b2e6c4a8d915` → `c4f8a1d2e6b3` → `d7a3b9e15c42` → `e5c2f8a9b471` → `f3a7d1c9b264` → `a8c3e5f7b192` → `b5d9e2f4c731` → `c7e1a4b8d520` → `d2f6b8c1e937` → `e9a4c2d7f815`, probadas desde base vacía (ODON-30) y con `alembic check` sin diferencias.
 - **Datos de desarrollo:** `backend/scripts/seed_dev.py`, idempotente y solo local (ODON-34).
 
 ## Riesgos y deuda técnica
@@ -29,7 +29,7 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 4. **Frontend:** layout sin versión móvil.
 5. **Dependencias de desarrollo:** aviso moderado de `minimatch` (<11.0.1) vía ESLint, publicado después de ODON-15; npm lo reporta como 12 moderadas porque cuenta cada paquete de la cadena de ESLint. Solo afecta herramientas de desarrollo (producción: 0 vulnerabilidades). No hay corrección compatible (ESLint 10.14 aún usa minimatch 10) y `npm audit fix --force` degradaría `typescript-eslint`: revisar al actualizar ESLint.
 6. **Dependencias:** `requirements.txt` es un `pip freeze` completo (incluye `pydantic-core`, que Pydantic 1 no usa); conviene separar dependencias directas. FastAPI 0.103/Starlette usan el atajo `app=` de httpx y el módulo `multipart` antiguo: esos dos avisos se silencian en `pytest.ini` hasta actualizar FastAPI. `passlib` usa el módulo `crypt` (se elimina en Python 3.13; solo se ve en Linux): revisar antes de cambiar de versión de Python.
-7. **Producción:** faltan auditoría, respaldos, endurecimiento y despliegue (épicas CAL y LAN).
+7. **Producción:** faltan auditoría, respaldos automáticos, endurecimiento y despliegue (épicas CAL y LAN). Las imágenes tienen procedimiento de respaldo y `verify_images.py` (ODON-166).
 8. **Correo y abuso:** sin `SMTP_HOST` los enlaces de recuperación van al log (solo desarrollo; en producción SMTP es obligatorio). El límite de solicitudes es por cuenta, no por IP; un rate limit global queda para la épica CAL.
 
 ## Decisiones vigentes
@@ -48,14 +48,15 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 - **ODON-5 Pacientes — Done:** ODON-98, 102, 106, 110, 114, 118, 122 y 126.
 - **ODON-6 Agenda y citas — Done:** ODON-130, 134, 138, 142, 146 y 257 (CIT-ENH01). ODON-258 (CIT-ENH02, ausencias de doctores) se pospuso: queda en el backlog sin épica, con la etiqueta `cit`.
 - **ODON-2 Autenticación — Done:** ODON-38, 42, 46, 50, 52, 54 y 255.
-- **ODON-7 Expediente clínico — In Progress:** ODON-150, ODON-154 y ODON-158 Done; ODON-162 (historial cronológico), ODON-260 (EXP-ENH01, odontograma para elegir la pieza) y ODON-261 (EXP-ENH02, ficha del paciente en pestañas) en Testing. Imágenes y periodontogramas se sumarán al historial en ODON-174 y ODON-194.
+- **ODON-7 Expediente clínico — In Progress (lista para cerrar):** ODON-150, 154, 158, 162, 260 (EXP-ENH01, odontograma para elegir la pieza) y 261 (EXP-ENH02, ficha en pestañas) Done. Falta `verify-infra` de cierre. Imágenes y periodontogramas se sumarán al historial en ODON-174 y ODON-194.
+- **ODON-8 Imágenes clínicas — In Progress:** definida el 2026-11-03 (comentario en la épica). ODON-166 (IMG01, almacenamiento privado, `patient_images`, descarga autenticada y `verify_images.py`) en Testing; siguen ODON-170 (subida y validación, con consentimiento clínico por paciente), ODON-174 (galería) y ODON-178 (metadatos y retención).
 - **ODON-4 Personal y doctores — Done:** ODON-78, 82, 86, 90 y 94.
 - **ODON-11 Calidad:** ODON-254 (categorías de pruebas backend) Done; ODON-256 (pruebas rápidas y CI) Done; ODON-259 (CAL-ENH03, pytest más rápido y guía por área) Done.
 
 ## Próximo paso
 
-1. Confirmar ODON-162, ODON-260 y ODON-261 y cerrar ODON-7 con suite completa, lint, build y `verify-infra`.
-2. Siguiente épica: ODON-8 (imágenes clínicas), ya definida (ver comentario en Jira): disco privado detrás de `ImageStorage`, JPEG/PNG/WebP ≤ 10 MB con MIME real y sin EXIF, consulta y pieza opcionales, solo Doctor y Admin, consentimiento clínico por paciente. Empieza por ODON-166 (IMG01).
+1. Correr `verify-infra` y cerrar ODON-7.
+2. Confirmar ODON-166 y seguir con ODON-170 (subida: MIME real, sin EXIF, consentimiento clínico por paciente). Decisiones de la épica: disco privado detrás de `ImageStorage`, JPEG/PNG/WebP ≤ 10 MB, consulta y pieza opcionales, solo Doctor y Admin; el uso para investigación se rige por el protocolo vigente del comité de ética.
 3. El alta de clínicas por `superadmin` se planifica aparte según el modelo de roles aprobado.
 4. ODON-258 (ausencias de doctores) queda para después del MVP.
 

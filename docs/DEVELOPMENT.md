@@ -94,6 +94,19 @@ Si `odonto_venv` ya existe, omite su creación. `alembic current` y `alembic hea
 
 Los endpoints `/auth/me`, `/patients/`, `/doctors/` y `/users/` **requieren** JWT y devuelven solo datos de la clínica del usuario autenticado. Para probarlo, usa `POST /auth/login`, copia `access_token`, presiona `Authorize` en Swagger y ejecuta `GET /auth/me`. Sin token, la API responde `401 {"detail": "No autenticado."}`; es lo esperado al abrir un endpoint protegido en el navegador.
 
+### Imágenes clínicas y respaldos
+
+Las fotografías se guardan en `IMAGE_STORAGE_DIR` (por defecto `backend/storage/images`, ignorada por Git). Esa carpeta es privada: nunca se sirve como estática ni se copia al repositorio, y los nombres de archivo son aleatorios. Que una foto no tenga nombre no la hace anónima. En desarrollo solo se usan imágenes sintéticas.
+
+Respaldo (hasta que la épica CAL lo automatice): la base y la carpeta de imágenes se respaldan **juntas**, en ese orden y sin subidas entre ambas, y se restauran juntas. Después de restaurar, o periódicamente:
+
+```powershell
+cd backend
+python -m scripts.verify_images
+```
+
+El script solo lee. Termina en `0` si base y carpeta coinciden; si no, lista por clave e id (sin datos del paciente) los registros sin archivo, los archivos alterados (SHA-256 distinto), los archivos sin registro y los ajenos (p. ej. temporales de una escritura interrumpida). Las pruebas usan una carpeta temporal y nunca tocan `IMAGE_STORAGE_DIR`.
+
 ### Pruebas automatizadas del backend
 
 Las pruebas usan una base PostgreSQL separada cuyo nombre **debe terminar en `_test`**: vacían sus tablas antes de cada prueba y aplican las migraciones con Alembic. Nunca apuntes `TEST_DATABASE_URL` a la base de desarrollo.
@@ -123,6 +136,7 @@ Cada prueba pertenece al menos a una categoría (marcador de pytest), según el 
 | `rbac` | Permisos por rol (transversal) |
 | `appointments` | Modelo, integridad y endpoints de citas |
 | `records` | Expediente clínico: historia médica, consultas, plan de tratamiento e historial cronológico |
+| `images` | Imágenes clínicas: almacenamiento privado, descarga, verificación de respaldos |
 
 ```powershell
 python -m pytest -m auth                      # solo autenticación
@@ -143,6 +157,7 @@ Durante el desarrollo y al verificar un ticket basta con las categorías del ár
 | Usuarios (`/users`) | `python -m pytest -m "users or rbac"` | `npx vitest run src/pages/Users src/components/users` |
 | Pacientes | `python -m pytest -m "patients or isolation"` | `npx vitest run src/pages/Patients src/components/patients` |
 | Historia médica / expediente | `python -m pytest -m "records or rbac"` | `npx vitest run src/components/patients src/pages/Patients src/auth` |
+| Imágenes clínicas (`image_storage`, `patient_image_*`, `verify_images`) | `python -m pytest -m "images or rbac"` | — |
 | Doctores y horarios | `python -m pytest -m "doctors or appointments"` | `npx vitest run src/pages/Doctors src/components/doctors src/pages/Agenda` |
 | Agenda y citas | `python -m pytest -m "appointments or doctors"` | `npx vitest run src/pages/Agenda src/components/appointments` |
 | Clínica | `python -m pytest -m isolation` | `npx vitest run src/pages/Clinic` |
