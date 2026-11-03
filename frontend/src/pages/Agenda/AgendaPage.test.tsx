@@ -1,4 +1,5 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { AxiosError, AxiosHeaders } from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderWithAuth } from "../../test/renderWithAuth";
@@ -94,7 +95,14 @@ vi.mock("../../services/appointmentService", () => ({
   getAppointmentHistory: vi.fn(async () => []),
   changeAppointmentStatus: vi.fn(),
 }));
-vi.mock("../../services/doctorService", () => ({ getDoctors: vi.fn(async () => [ana]) }));
+const luis = doctor(2, "Dr. Luis");
+vi.mock("../../services/doctorService", () => ({
+  getDoctors: vi.fn(async () => [ana, luis]),
+  getClinicAvailability: vi.fn(async () => [
+    { doctor_id: 1, timezone: "America/Guatemala", blocks: [{ weekday: 0, start_time: "08:00:00", end_time: "12:00:00" }] },
+    { doctor_id: 2, timezone: "America/Guatemala", blocks: [] },
+  ]),
+}));
 vi.mock("../../services/patientService", () => ({ getPatients: vi.fn() }));
 vi.mock("react-hot-toast", () => {
   const toast = Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() });
@@ -198,6 +206,65 @@ describe("AgendaPage", () => {
 
     await waitFor(() => expect(updateAppointment).toHaveBeenCalledWith(1, { starts_at: toLocalIso(start) }));
     await waitFor(() => expect(revert).toHaveBeenCalled());
+  });
+
+  it("sombrea fuera del horario y avisa de quien no tiene horario", async () => {
+    renderWithAuth(<AgendaPage />, "receptionist");
+    await screen.findByText("Ana Paz · Dra. Ana");
+
+    expect(await screen.findByText(/Dr\. Luis no tiene horario registrado/)).toBeInTheDocument();
+    expect(calendar.props.businessHours).toEqual([{ daysOfWeek: [1], startTime: "08:00", endTime: "12:00" }]);
+  });
+
+  it("mover fuera de horario pide confirmar y reenvía con permiso", async () => {
+    vi.mocked(updateAppointment).mockRejectedValueOnce(
+      new AxiosError("409", "ERR", undefined, undefined, {
+        status: 409, statusText: "Conflict", headers: {}, config: { headers: new AxiosHeaders() },
+        data: { detail: "Dra. Ana no atiende en ese horario. No atiende los sábados.", outside_schedule: true },
+      }),
+    );
+    renderWithAuth(<AgendaPage />, "receptionist");
+    await screen.findByText("Ana Paz · Dra. Ana");
+    const start = new Date(future.getTime() + 3600000);
+    const revert = vi.fn();
+    const drop = {
+      event: { start, end: new Date(start.getTime() + 30 * 60000), extendedProps: { appointment: APPOINTMENTS[0] } },
+      revert,
+    };
+
+    calendar.props.eventDrop(drop);
+    const dialog = await screen.findByRole("dialog", { name: "Fuera de horario" });
+    expect(dialog).toHaveTextContent("No atiende los sábados.");
+    expect(revert).not.toHaveBeenCalled();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Mover de todas formas" }));
+    await waitFor(() =>
+      expect(updateAppointment).toHaveBeenLastCalledWith(1, { starts_at: toLocalIso(start), allow_outside_schedule: true }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Fuera de horario" })).not.toBeInTheDocument());
+    expect(revert).not.toHaveBeenCalled();
+  });
+
+  it("al no confirmar el movimiento fuera de horario la cita vuelve a su lugar", async () => {
+    vi.mocked(updateAppointment).mockRejectedValueOnce(
+      new AxiosError("409", "ERR", undefined, undefined, {
+        status: 409, statusText: "Conflict", headers: {}, config: { headers: new AxiosHeaders() },
+        data: { detail: "Dra. Ana no atiende en ese horario.", outside_schedule: true },
+      }),
+    );
+    renderWithAuth(<AgendaPage />, "receptionist");
+    await screen.findByText("Ana Paz · Dra. Ana");
+    const revert = vi.fn();
+
+    calendar.props.eventDrop({
+      event: { start: future, end: new Date(future.getTime() + 30 * 60000), extendedProps: { appointment: APPOINTMENTS[0] } },
+      revert,
+    });
+    const dialog = await screen.findByRole("dialog", { name: "Fuera de horario" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Dejar como estaba" }));
+
+    expect(revert).toHaveBeenCalled();
+    expect(updateAppointment).toHaveBeenCalledTimes(1);
   });
 
   it("en la vista de mes, elegir un día abre la vista de ese día", async () => {

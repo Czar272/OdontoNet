@@ -8,12 +8,18 @@ import Card from "../../components/basic/Card";
 import Input from "../../components/basic/Input";
 import LoadingSpinner from "../../components/basic/LoadingSpinner";
 import PageHeader from "../../components/basic/PageHeader";
+import Select from "../../components/basic/Select";
 import { useAuth } from "../../context/AuthContext";
 import { usePermission } from "../../hooks/usePermission";
 import { getApiErrorMessage } from "../../services/apiError";
 import { getClinic, updateClinic } from "../../services/clinicService";
 import type { Clinic } from "../../types/clinic";
-import { buildClinicChanges, initialClinicData, type ClinicFormData } from "./clinicFormData";
+import {
+  buildClinicChanges,
+  initialClinicData,
+  timezoneOptions,
+  type ClinicFormData,
+} from "./clinicFormData";
 
 interface ClinicFormProps {
   clinic: Clinic;
@@ -28,7 +34,9 @@ const ClinicForm: React.FC<ClinicFormProps> = ({ clinic, canManage }) => {
   const queryClient = useQueryClient();
   const { refreshUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState<ClinicFormData>(() => initialClinicData(clinic));
+  const [formData, setFormData] = useState<ClinicFormData>(() =>
+    initialClinicData(clinic),
+  );
 
   const mutation = useMutation({
     mutationFn: () => updateClinic(buildClinicChanges(clinic, formData)),
@@ -42,11 +50,15 @@ const ClinicForm: React.FC<ClinicFormProps> = ({ clinic, canManage }) => {
     },
 
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, "No se pudieron guardar los cambios"));
+      toast.error(
+        getApiErrorMessage(error, "No se pudieron guardar los cambios"),
+      );
     },
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -127,11 +139,31 @@ const ClinicForm: React.FC<ClinicFormProps> = ({ clinic, canManage }) => {
           onChange={handleChange}
           maxLength={255}
         />
+
+        <Select
+          name="timezone"
+          label="Zona horaria"
+          value={formData.timezone}
+          onChange={handleChange}
+        >
+          {timezoneOptions(clinic.timezone).map((zone) => (
+            <option key={zone} value={zone}>
+              {zone.replace("America/", "").replaceAll("_", " ")}
+            </option>
+          ))}
+        </Select>
       </fieldset>
+      <p className="mt-2 text-xs text-gray-500">
+        Los horarios de los doctores se escriben en la hora local de la clínica.
+      </p>
 
       {isEditing && (
         <div className="mt-6 flex justify-end gap-3">
-          <Button variant="secondary" onClick={handleCancel} disabled={mutation.isPending}>
+          <Button
+            variant="secondary"
+            onClick={handleCancel}
+            disabled={mutation.isPending}
+          >
             Cancelar
           </Button>
 
@@ -153,7 +185,11 @@ const ClinicForm: React.FC<ClinicFormProps> = ({ clinic, canManage }) => {
 /** Datos de la clínica de la sesión (ODON-74). Todos consultan; administración edita. */
 const ClinicPage: React.FC = () => {
   const canManage = usePermission("clinic:manage");
-  const { data: clinic, isLoading, isError } = useQuery({
+  const {
+    data: clinic,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["clinic"],
     queryFn: getClinic,
   });
@@ -168,10 +204,16 @@ const ClinicPage: React.FC = () => {
 
       <Card className="max-w-3xl">
         {isError || !clinic ? (
-          <p className="text-gray-500">No se pudieron cargar los datos de la clínica.</p>
+          <p className="text-gray-500">
+            No se pudieron cargar los datos de la clínica.
+          </p>
         ) : (
           // key: reinicia el formulario si los datos cambian desde otra parte.
-          <ClinicForm key={`${clinic.id}-${clinic.name}`} clinic={clinic} canManage={canManage} />
+          <ClinicForm
+            key={`${clinic.id}-${clinic.name}`}
+            clinic={clinic}
+            canManage={canManage}
+          />
         )}
       </Card>
     </div>

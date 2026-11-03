@@ -6,12 +6,16 @@ import Button from "../basic/Button";
 import Input from "../basic/Input";
 import Select from "../basic/Select";
 import PatientPicker from "./PatientPicker";
-import { createAppointment, updateAppointment } from "../../services/appointmentService";
+import {
+  createAppointment,
+  updateAppointment,
+} from "../../services/appointmentService";
 import { getDoctors } from "../../services/doctorService";
 import type { Appointment } from "../../types/appointment";
 import {
   appointmentErrorMessage,
   appointmentToFormData,
+  isOutsideSchedule,
   buildAppointmentChanges,
   buildCreateAppointment,
   DURATION_OPTIONS,
@@ -36,17 +40,22 @@ export default function AppointmentForm({
   const isEdit = Boolean(appointment);
 
   const [formData, setFormData] = useState<AppointmentFormData>(() =>
-    appointment ? appointmentToFormData(appointment) : (initialData as AppointmentFormData),
-  );
-  const [patient, setPatient] = useState<{ id: number; name: string } | null>(() =>
     appointment
-      ? {
-          id: appointment.patient.id,
-          name: `${appointment.patient.first_name} ${appointment.patient.last_name}`,
-        }
-      : null,
+      ? appointmentToFormData(appointment)
+      : (initialData as AppointmentFormData),
+  );
+  const [patient, setPatient] = useState<{ id: number; name: string } | null>(
+    () =>
+      appointment
+        ? {
+            id: appointment.patient.id,
+            name: `${appointment.patient.first_name} ${appointment.patient.last_name}`,
+          }
+        : null,
   );
   const [error, setError] = useState<string | null>(null);
+  // Aviso de «fuera de horario» (ODON-142): se puede guardar de todas formas.
+  const [outsideWarning, setOutsideWarning] = useState<string | null>(null);
 
   // Solo doctores activos; el actual se conserva aunque se haya desactivado.
   const { data: activeDoctors } = useQuery({
@@ -54,22 +63,36 @@ export default function AppointmentForm({
     queryFn: () => getDoctors({ active: true }),
   });
   const doctorOptions = [...(activeDoctors ?? [])];
-  if (appointment && !doctorOptions.some((d) => d.id === appointment.doctor_id)) {
+  if (
+    appointment &&
+    !doctorOptions.some((d) => d.id === appointment.doctor_id)
+  ) {
     doctorOptions.push(appointment.doctor);
   }
 
   const durations = DURATION_OPTIONS.includes(Number(formData.duration_minutes))
     ? DURATION_OPTIONS
-    : [...DURATION_OPTIONS, Number(formData.duration_minutes)].sort((a, b) => a - b);
+    : [...DURATION_OPTIONS, Number(formData.duration_minutes)].sort(
+        (a, b) => a - b,
+      );
 
   const mutation = useMutation({
-    mutationFn: () => {
+    mutationFn: (allowOutsideSchedule: boolean) => {
+      const confirm = allowOutsideSchedule
+        ? { allow_outside_schedule: true }
+        : {};
       if (appointment) {
-        return updateAppointment(appointment.id, buildAppointmentChanges(appointment, formData));
+        return updateAppointment(appointment.id, {
+          ...buildAppointmentChanges(appointment, formData),
+          ...confirm,
+        });
       }
-      const data = buildCreateAppointment({ ...formData, patient_id: patient?.id ?? null });
+      const data = buildCreateAppointment({
+        ...formData,
+        patient_id: patient?.id ?? null,
+      });
       if (!data) throw new Error("Formulario incompleto");
-      return createAppointment(data);
+      return createAppointment({ ...data, ...confirm });
     },
 
     onSuccess: (saved) => {
@@ -79,18 +102,29 @@ export default function AppointmentForm({
     },
 
     onError: (err) => {
+      if (isOutsideSchedule(err)) {
+        setOutsideWarning(
+          appointmentErrorMessage(err, "Fuera del horario del doctor"),
+        );
+        return;
+      }
       const message = appointmentErrorMessage(
         err,
-        isEdit ? "No se pudo reprogramar la cita" : "No se pudo agendar la cita",
+        isEdit
+          ? "No se pudo reprogramar la cita"
+          : "No se pudo agendar la cita",
       );
       setError(message);
       toast.error(message);
     },
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setError(null);
+    setOutsideWarning(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -100,12 +134,15 @@ export default function AppointmentForm({
       setError("Selecciona un paciente.");
       return;
     }
-    if (appointment && Object.keys(buildAppointmentChanges(appointment, formData)).length === 0) {
+    if (
+      appointment &&
+      Object.keys(buildAppointmentChanges(appointment, formData)).length === 0
+    ) {
       toast("No hay cambios que guardar");
       return;
     }
 
-    mutation.mutate();
+    mutation.mutate(false);
   };
 
   return (
@@ -177,17 +214,46 @@ export default function AppointmentForm({
       />
 
       {error && (
-        <p role="alert" className="text-sm text-red-700 bg-red-50 rounded-xl p-3">
+        <p
+          role="alert"
+          className="text-sm text-red-700 bg-red-50 rounded-xl p-3"
+        >
           {error}
         </p>
       )}
 
+      {outsideWarning && (
+        <div
+          role="alert"
+          className="flex flex-col gap-3 text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-xl p-3"
+        >
+          <p>{outsideWarning}</p>
+          <div className="flex justify-end">
+            <Button
+              variant="secondary"
+              onClick={() => mutation.mutate(true)}
+              disabled={mutation.isPending}
+            >
+              {isEdit ? "Guardar de todas formas" : "Agendar de todas formas"}
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-end gap-3">
-        <Button variant="secondary" onClick={onCancel} disabled={mutation.isPending}>
+        <Button
+          variant="secondary"
+          onClick={onCancel}
+          disabled={mutation.isPending}
+        >
           Cancelar
         </Button>
         <Button type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? "Guardando..." : isEdit ? "Guardar cambios" : "Agendar cita"}
+          {mutation.isPending
+            ? "Guardando..."
+            : isEdit
+              ? "Guardar cambios"
+              : "Agendar cita"}
         </Button>
       </div>
     </form>

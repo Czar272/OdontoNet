@@ -16,6 +16,8 @@ export const PERMISSIONS = {
   "appointments:manage": ["admin", "doctor", "receptionist"],
   "doctors:view": ["admin", "doctor", "receptionist"],
   "doctors:manage": ["admin"],
+  // Horario de cualquier doctor; un doctor edita además el suyo (ODON-142).
+  "availability:manage": ["admin", "receptionist"],
   "users:manage": ["admin"],
   "clinic:view": ["admin", "doctor", "receptionist"],
   "clinic:manage": ["admin"],

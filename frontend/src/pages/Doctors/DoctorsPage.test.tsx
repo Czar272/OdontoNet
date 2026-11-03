@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { renderWithAuth } from "../../test/renderWithAuth";
@@ -27,6 +27,11 @@ vi.mock("../../services/doctorService", () => ({
   getDoctors: vi.fn(async () => doctors),
   createDoctor: vi.fn(),
   updateDoctor: vi.fn(),
+  getClinicAvailability: vi.fn(async () => [
+    { doctor_id: 1, timezone: "America/Guatemala", blocks: [{ weekday: 0, start_time: "08:00:00", end_time: "12:00:00" }] },
+    { doctor_id: 2, timezone: "America/Guatemala", blocks: [] },
+  ]),
+  updateDoctorAvailability: vi.fn(),
 }));
 
 const sinPerfil = { id: 200, name: "Dr. Sin Perfil", email: "sp@odontonet-demo.com", role: "doctor" as const, clinic_id: 1, is_active: true };
@@ -99,5 +104,31 @@ describe("DoctorsPage", () => {
     expect(screen.queryByRole("button", { name: "Nuevo perfil" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Editar perfil/ })).not.toBeInTheDocument();
     expect(getUsers).not.toHaveBeenCalled();
+  });
+
+  it("recepción edita el horario de cualquier doctor", async () => {
+    renderWithAuth(<DoctorsPage />, "receptionist");
+    await screen.findByText("Dra. Ana Morales");
+
+    const button = await screen.findByRole("button", { name: "Horario de Dra. Ana Morales" });
+    await waitFor(() => expect(button).toBeEnabled());
+    fireEvent.click(button);
+
+    const dialog = await screen.findByRole("dialog", { name: "Horario de Dra. Ana Morales" });
+    expect(within(dialog).getByLabelText("Lunes, bloque 1, desde")).toHaveValue("08:00");
+    expect(within(dialog).getByRole("button", { name: "Guardar horario" })).toBeInTheDocument();
+  });
+
+  it("un doctor ve el horario de otro solo en lectura", async () => {
+    renderWithAuth(<DoctorsPage />, "doctor");
+    await screen.findByText("Dra. Ana Morales");
+
+    const button = await screen.findByRole("button", { name: "Horario de Dr. Luis Herrera" });
+    await waitFor(() => expect(button).toBeEnabled());
+    fireEvent.click(button);
+
+    const dialog = await screen.findByRole("dialog", { name: "Horario de Dr. Luis Herrera" });
+    expect(within(dialog).getAllByText("No atiende")).toHaveLength(7);
+    expect(within(dialog).queryByRole("button", { name: "Guardar horario" })).not.toBeInTheDocument();
   });
 });

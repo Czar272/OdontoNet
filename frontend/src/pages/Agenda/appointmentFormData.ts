@@ -165,3 +165,15 @@ export function appointmentErrorMessage(error: unknown, fallback: string): strin
 
   return message;
 }
+
+/**
+ * true si el backend avisó que la cita queda fuera del horario del doctor
+ * (409 con outside_schedule). Se puede reenviar con allow_outside_schedule.
+ */
+export function isOutsideSchedule(error: unknown): boolean {
+  return (
+    axios.isAxiosError<{ outside_schedule?: boolean }>(error) &&
+    error.response?.status === 409 &&
+    error.response.data?.outside_schedule === true
+  );
+}

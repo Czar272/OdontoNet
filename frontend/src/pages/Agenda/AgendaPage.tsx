@@ -24,6 +24,7 @@ import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import Button from "../../components/basic/Button";
+import ConfirmDialog from "../../components/basic/ConfirmDialog";
 import Modal from "../../components/basic/Modal";
 import PageHeader from "../../components/basic/PageHeader";
 import Select from "../../components/basic/Select";
@@ -35,7 +36,10 @@ import {
   getAppointments,
   updateAppointment,
 } from "../../services/appointmentService";
-import { getDoctors } from "../../services/doctorService";
+import {
+  getClinicAvailability,
+  getDoctors,
+} from "../../services/doctorService";
 import {
   APPOINTMENT_STATUSES,
   PENDING_STATUSES,
@@ -47,6 +51,7 @@ import {
 } from "../../types/appointment";
 import {
   appointmentErrorMessage,
+  isOutsideSchedule,
   durationBetween,
   formatDay,
   formatTimeRange,
@@ -60,6 +65,7 @@ import {
   doctorInitials,
   lighten,
 } from "./agendaColors";
+import { toBusinessHours, withoutSchedule } from "./agendaSchedule";
 import ConfirmationsList from "./ConfirmationsList";
 import { toConfirmQuery } from "./confirmations";
 
@@ -221,21 +227,49 @@ export default function AgendaPage() {
     [appointments, visible, canManage, doctorColors],
   );
 
+  // Horarios de los doctores (ODON-142): sombrean la agenda y avisan.
+  const { data: availability } = useQuery({
+    queryKey: ["availability"],
+    queryFn: getClinicAvailability,
+  });
+  const activeDoctorIds = (doctors ?? [])
+    .filter((d) => d.user.is_active)
+    .map((d) => d.id);
+  const shownDoctorIds = doctorFilter ? [doctorFilter] : activeDoctorIds;
+  const businessHours = toBusinessHours(availability ?? [], shownDoctorIds);
+  const unscheduledNames = availability
+    ? withoutSchedule(availability, shownDoctorIds).map(
+        (id) => doctors?.find((d) => d.id === id)?.user.name ?? `Doctor ${id}`,
+      )
+    : [];
+
+  type Move = { id: number; changes: UpdateAppointmentDTO; revert: () => void };
+  // Movimiento fuera de horario esperando confirmación.
+  const [outsideMove, setOutsideMove] = useState<{
+    move: Move;
+    message: string;
+  } | null>(null);
+
   const moveMutation = useMutation({
-    mutationFn: ({
-      id,
-      changes,
-    }: {
-      id: number;
-      changes: UpdateAppointmentDTO;
-      revert: () => void;
-    }) => updateAppointment(id, changes),
+    mutationFn: ({ id, changes }: Move) => updateAppointment(id, changes),
     onSuccess: () => {
       toast.success("Cita reprogramada");
+      setOutsideMove(null);
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
     },
-    onError: (error, { revert }) => {
-      revert();
+    onError: (error, move) => {
+      if (isOutsideSchedule(error) && !move.changes.allow_outside_schedule) {
+        setOutsideMove({
+          move,
+          message: appointmentErrorMessage(
+            error,
+            "Fuera del horario del doctor",
+          ),
+        });
+        return;
+      }
+      move.revert();
+      setOutsideMove(null);
       toast.error(
         appointmentErrorMessage(error, "No se pudo reprogramar la cita"),
       );
@@ -471,6 +505,16 @@ export default function AgendaPage() {
           </p>
         )}
 
+        {unscheduledNames.length > 0 && (
+          <p className="mb-4 text-sm text-gray-600 bg-gray-50 border rounded-xl p-3">
+            {unscheduledNames.length === 1
+              ? `${unscheduledNames[0]} no tiene horario registrado`
+              : `Sin horario registrado: ${unscheduledNames.join(", ")}`}
+            : se puede agendar a cualquier hora. El horario se registra en
+            Doctores.
+          </p>
+        )}
+
         <div className="bg-white rounded-2xl shadow-sm p-4">
           <FullCalendar
             plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
@@ -489,6 +533,8 @@ export default function AgendaPage() {
             slotDuration="00:15:00"
             slotLabelInterval="01:00"
             nowIndicator
+            // Fuera del horario del doctor (o de todos) queda sombreado.
+            businessHours={businessHours}
             height="auto"
             events={events}
             datesSet={handleDatesSet}
@@ -520,6 +566,29 @@ export default function AgendaPage() {
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={outsideMove !== null}
+        title="Fuera de horario"
+        message={outsideMove?.message}
+        confirmLabel="Mover de todas formas"
+        cancelLabel="Dejar como estaba"
+        isPending={moveMutation.isPending}
+        onConfirm={() =>
+          outsideMove &&
+          moveMutation.mutate({
+            ...outsideMove.move,
+            changes: {
+              ...outsideMove.move.changes,
+              allow_outside_schedule: true,
+            },
+          })
+        }
+        onCancel={() => {
+          outsideMove?.move.revert();
+          setOutsideMove(null);
+        }}
+      />
 
       <Modal
         isOpen={modal !== null}

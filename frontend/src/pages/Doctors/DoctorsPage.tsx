@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Pencil } from "lucide-react";
+import { Clock, Pencil } from "lucide-react";
 
 import Button from "../../components/basic/Button";
 import Input from "../../components/basic/Input";
@@ -10,8 +10,13 @@ import PageHeader from "../../components/basic/PageHeader";
 import Select from "../../components/basic/Select";
 import Table from "../../components/basic/Table";
 import DoctorProfileForm from "../../components/doctors/DoctorProfileForm";
+import DoctorScheduleEditor from "../../components/doctors/DoctorScheduleEditor";
+import { useAuth } from "../../context/AuthContext";
 import { usePermission } from "../../hooks/usePermission";
-import { getDoctors } from "../../services/doctorService";
+import {
+  getClinicAvailability,
+  getDoctors,
+} from "../../services/doctorService";
 import { getUsers } from "../../services/userService";
 import { CLINICAL_PROFILE_ROLES } from "../../types/auth";
 import type { Doctor } from "../../types/doctor";
@@ -23,12 +28,29 @@ type ModalState = null | "new" | Doctor;
 
 /** Profesionales de la clínica. Todos los roles consultan; administración crea y edita perfiles. */
 const DoctorsPage: React.FC = () => {
-  const { data: doctors, isLoading, isError } = useQuery({
+  const {
+    data: doctors,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["doctors"],
     queryFn: () => getDoctors(),
   });
 
   const canManage = usePermission("doctors:manage");
+  const canManageSchedules = usePermission("availability:manage");
+  const { user } = useAuth();
+
+  // Horarios (ODON-142): todos los consultan; administración y recepción
+  // editan cualquiera y cada doctor el suyo.
+  const { data: availability } = useQuery({
+    queryKey: ["availability"],
+    queryFn: getClinicAvailability,
+  });
+  const [scheduleFor, setScheduleFor] = useState<Doctor | null>(null);
+  const canEditSchedule = (doctor: Doctor) =>
+    canManageSchedules ||
+    (user?.role === "doctor" && doctor.user_id === user.id);
 
   // Usuarios que pueden tener perfil clínico (doctor o administración),
   // para ofrecer los que aún no lo tienen.
@@ -77,7 +99,9 @@ const DoctorsPage: React.FC = () => {
         title="Doctores"
         description="Profesionales de la clínica y su especialidad"
         action={
-          canManage && <Button onClick={() => setModal("new")}>Nuevo perfil</Button>
+          canManage && (
+            <Button onClick={() => setModal("new")}>Nuevo perfil</Button>
+          )
         }
       />
 
@@ -92,6 +116,24 @@ const DoctorsPage: React.FC = () => {
           candidates={candidates}
           onSuccess={closeModal}
         />
+      </Modal>
+
+      <Modal
+        isOpen={scheduleFor !== null}
+        onClose={() => setScheduleFor(null)}
+        title={scheduleFor ? `Horario de ${scheduleFor.user.name}` : undefined}
+      >
+        {scheduleFor && (
+          <DoctorScheduleEditor
+            key={scheduleFor.id}
+            doctor={scheduleFor}
+            availability={availability?.find(
+              (a) => a.doctor_id === scheduleFor.id,
+            )}
+            canEdit={canEditSchedule(scheduleFor)}
+            onClose={() => setScheduleFor(null)}
+          />
+        )}
       </Modal>
 
       <div className="flex gap-4 mb-6">
@@ -130,11 +172,9 @@ const DoctorsPage: React.FC = () => {
 
             <th className="text-left p-4">Estado</th>
 
-            {canManage && (
-              <th className="p-4">
-                <span className="sr-only">Acciones</span>
-              </th>
-            )}
+            <th className="p-4">
+              <span className="sr-only">Acciones</span>
+            </th>
           </tr>
         </thead>
 
@@ -163,8 +203,20 @@ const DoctorsPage: React.FC = () => {
                 </span>
               </td>
 
-              {canManage && (
-                <td className="p-4 text-right">
+              <td className="p-4 text-right whitespace-nowrap">
+                <button
+                  type="button"
+                  onClick={() => setScheduleFor(doctor)}
+                  disabled={!availability}
+                  aria-label={`Horario de ${doctor.user.name}`}
+                  title={
+                    canEditSchedule(doctor) ? "Editar horario" : "Ver horario"
+                  }
+                  className="p-2 rounded-lg hover:bg-gray-100 transition"
+                >
+                  <Clock size={18} />
+                </button>
+                {canManage && (
                   <button
                     type="button"
                     onClick={() => setModal(doctor)}
@@ -174,14 +226,14 @@ const DoctorsPage: React.FC = () => {
                   >
                     <Pencil size={18} />
                   </button>
-                </td>
-              )}
+                )}
+              </td>
             </tr>
           ))}
 
           {filteredDoctors.length === 0 && (
             <tr className="border-t">
-              <td colSpan={canManage ? 7 : 6} className="p-6 text-center text-gray-500">
+              <td colSpan={7} className="p-6 text-center text-gray-500">
                 {isError
                   ? "No se pudieron cargar los doctores."
                   : "No hay doctores que coincidan con la búsqueda."}

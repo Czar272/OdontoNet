@@ -69,6 +69,8 @@ export interface CreateAppointmentDTO {
   starts_at: string;
   duration_minutes: number;
   reason?: string;
+  /** Confirmación para agendar fuera del horario del doctor (ODON-142). */
+  allow_outside_schedule?: boolean;
 }
 
 /** Reprogramación parcial: el paciente y el estado no cambian aquí. */
@@ -77,6 +79,7 @@ export interface UpdateAppointmentDTO {
   starts_at?: string;
   duration_minutes?: number;
   reason?: string;
+  allow_outside_schedule?: boolean;
 }
 
 /** La cita con la que choca un horario (409 de la API). */

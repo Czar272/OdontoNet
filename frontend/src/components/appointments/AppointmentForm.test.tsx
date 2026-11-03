@@ -114,6 +114,39 @@ describe("AppointmentForm", () => {
     );
   });
 
+  it("fuera del horario del doctor avisa y permite agendar de todas formas", async () => {
+    vi.mocked(createAppointment).mockRejectedValueOnce(
+      new AxiosError("409", "ERR", undefined, undefined, {
+        status: 409, statusText: "Conflict", headers: {}, config: { headers: new AxiosHeaders() },
+        data: {
+          detail: "Dra. Ana Morales no atiende en ese horario. Su horario del martes es 14:00–18:00.",
+          outside_schedule: true,
+        },
+      }),
+    );
+    const onSaved = vi.fn();
+    renderWithAuth(
+      <AppointmentForm initialData={newAppointmentData(nine, 30, 1)} onSaved={onSaved} onCancel={() => {}} />,
+      "receptionist",
+    );
+    fireEvent.change(screen.getByLabelText("Paciente *"), { target: { value: "eva" } });
+    fireEvent.click(await screen.findByRole("button", { name: /Eva Luna/ }));
+    await screen.findByRole("option", { name: "Dra. Ana Morales" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Agendar cita" }));
+
+    expect(await screen.findByText(/Su horario del martes es 14:00–18:00/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Agendar de todas formas" }));
+
+    await waitFor(() =>
+      expect(createAppointment).toHaveBeenLastCalledWith(
+        expect.objectContaining({ doctor_id: 1, allow_outside_schedule: true }),
+      ),
+    );
+    expect(vi.mocked(createAppointment).mock.calls[0][0]).not.toHaveProperty("allow_outside_schedule");
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(existing));
+  });
+
   it("reprograma enviando solo lo que cambió y conserva al doctor inactivo", async () => {
     renderWithAuth(<AppointmentForm appointment={existing} onSaved={() => {}} onCancel={() => {}} />, "receptionist");
 
