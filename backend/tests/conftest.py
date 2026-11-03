@@ -60,16 +60,16 @@ os.environ.setdefault("SECRET_KEY", "test-only-secret-key")
 from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
-from sqlalchemy import text  # noqa: E402
+from sqlalchemy import event, text  # noqa: E402
 
 from app.auth.security import hash_password  # noqa: E402
-from app.database.connection import SessionLocal, engine  # noqa: E402
+from app.database.connection import Base, SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import Clinic, Doctor, User  # noqa: E402
 
 PASSWORD = "Test-Password-123"
 
-TEST_CATEGORIES = {"auth", "patients", "doctors", "users", "api", "seed", "isolation", "rbac", "appointments"}
+TEST_CATEGORIES = {"auth", "patients", "doctors", "users", "api", "seed", "isolation", "rbac", "appointments", "records"}
 
 
 def pytest_collection_modifyitems(config, items):
@@ -94,10 +94,39 @@ def migrated_database():
     yield
 
 
+@event.listens_for(engine, "connect")
+def _fast_test_commits(dbapi_connection, _record):
+    """La base de pruebas no necesita durabilidad: sin esperar al disco en cada
+    commit (synchronous_commit=off), sobre todo en Docker Desktop. Solo afecta
+    a las conexiones de pytest; la base sigue siendo consistente."""
+    cursor = dbapi_connection.cursor()
+    cursor.execute("SET synchronous_commit TO off")
+    cursor.close()
+
+
+@pytest.fixture(scope="session")
+def cleanup_sql(migrated_database) -> str:
+    """SQL que vacía todas las tablas del modelo y reinicia sus ids.
+
+    DELETE en orden inverso de dependencias en vez de TRUNCATE: con tablas
+    casi vacías es unas 15 veces más rápido, porque TRUNCATE recrea los
+    archivos de cada tabla (en Docker Desktop, todavía más lento). La lista
+    sale de los modelos, así que una tabla nueva se incluye sola."""
+    tables = [table.name for table in reversed(Base.metadata.sorted_tables)]
+    with engine.connect() as conn:
+        sequences = [
+            conn.execute(text("SELECT pg_get_serial_sequence(:t, 'id')"), {"t": table}).scalar()
+            for table in tables
+        ]
+    statements = [f"DELETE FROM {table}" for table in tables]
+    statements += [f"ALTER SEQUENCE {sequence} RESTART" for sequence in sequences if sequence]
+    return "; ".join(statements)
+
+
 @pytest.fixture(autouse=True)
-def clean_tables():
+def clean_tables(cleanup_sql):
     with engine.begin() as conn:
-        conn.execute(text("TRUNCATE password_reset_tokens, doctor_availability_blocks, appointment_status_changes, appointments, patients, doctors, users, clinics RESTART IDENTITY CASCADE"))
+        conn.exec_driver_sql(cleanup_sql)
     yield
 
 
