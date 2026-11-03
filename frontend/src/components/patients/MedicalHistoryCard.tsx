@@ -29,6 +29,7 @@ import {
   type TextField,
   type TriState,
 } from "./medicalHistoryForm";
+import { timelineKey } from "./timelineEvents";
 
 const dateTimeFormat = new Intl.DateTimeFormat("es-GT", {
   dateStyle: "long",
@@ -106,6 +107,7 @@ export default function MedicalHistoryCard({
       toast.success(`Historia médica guardada (versión ${saved.version})`);
       queryClient.setQueryData(historyKey, saved);
       queryClient.invalidateQueries({ queryKey: [...historyKey, "versions"] });
+      queryClient.invalidateQueries({ queryKey: timelineKey(patientId) });
       setSelectedVersion(null);
       setIsEditing(false);
     },

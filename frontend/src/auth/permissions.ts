@@ -30,6 +30,8 @@ export const PERMISSIONS = {
   // Plan de tratamiento (ODON-158): cualquier doctor o admin lo gestiona.
   "treatments:view": ["admin", "doctor"],
   "treatments:manage": ["admin", "doctor"],
+  // Historial cronológico (ODON-162): incluye consultas, así que sin recepción.
+  "timeline:view": ["admin", "doctor"],
   "clinic:manage": ["admin"],
 } as const satisfies Record<string, readonly Role[]>;
 

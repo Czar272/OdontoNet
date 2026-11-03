@@ -18,6 +18,7 @@ import {
 } from "../../services/clinicalVisitService";
 import type { ClinicalVisit } from "../../types/clinicalVisit";
 import VisitForm from "./VisitForm";
+import { timelineKey } from "./timelineEvents";
 import { canModifyVisit } from "./visitFormData";
 
 const dateTime = new Intl.DateTimeFormat("es-GT", {
@@ -143,7 +144,10 @@ export default function ClinicalVisitsCard({
     queryFn: () => getVisits(patientId),
   });
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: visitsKey });
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: visitsKey });
+    queryClient.invalidateQueries({ queryKey: timelineKey(patientId) });
+  };
 
   const voidMutation = useMutation({
     mutationFn: () =>

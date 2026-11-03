@@ -187,4 +187,28 @@ describe("TreatmentsCard", () => {
     expect(within(item("Raspado")).queryByRole("button", { name: "Aceptar" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Historial de Raspado" })).toBeInTheDocument();
   });
+
+  it("la pieza se puede elegir en el odontograma", async () => {
+    renderWithAuth(<TreatmentsCard patientId={5} canManage isArchived={false} />, "doctor");
+    await screen.findByText("Raspado");
+
+    fireEvent.click(screen.getByRole("button", { name: /nuevo tratamiento/i }));
+    const form = await screen.findByRole("form", { name: "Nuevo tratamiento" });
+    fireEvent.change(within(form).getByLabelText("Procedimiento *"), { target: { value: "Resina" } });
+    fireEvent.click(within(form).getByRole("button", { name: "Pieza 26" }));
+
+    expect(within(form).getByLabelText("Pieza dental (FDI)")).toHaveValue("26");
+    fireEvent.click(within(form).getByRole("button", { name: "Registrar tratamiento" }));
+    await waitFor(() => expect(service.createTreatment).toHaveBeenCalledWith(5, expect.objectContaining({ tooth: 26 })));
+  });
+
+  it("al editar, el odontograma marca la pieza registrada", async () => {
+    renderWithAuth(<TreatmentsCard patientId={5} canManage isArchived={false} />, "doctor");
+    await screen.findByText("Raspado");
+
+    fireEvent.click(screen.getByRole("button", { name: "Editar Raspado" }));
+    const form = await screen.findByRole("form", { name: "Editar tratamiento" });
+
+    expect(within(form).getByRole("button", { name: "Pieza 36" })).toHaveAttribute("aria-pressed", "true");
+  });
 });

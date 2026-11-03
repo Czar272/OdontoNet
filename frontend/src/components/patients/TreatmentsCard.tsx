@@ -12,6 +12,8 @@ import Modal from "../basic/Modal";
 import Select from "../basic/Select";
 import Textarea from "../basic/Textarea";
 import { getApiErrorMessage } from "../../services/apiError";
+import ToothChart from "./ToothChart";
+import { timelineKey } from "./timelineEvents";
 import { getVisits } from "../../services/clinicalVisitService";
 import {
   changeTreatmentStatus,
@@ -31,6 +33,7 @@ import {
   buildTreatmentDTO,
   initialTreatmentForm,
   isClosed,
+  isValidTooth,
   validateTreatmentForm,
   type TreatmentFormData,
 } from "./treatmentStatus";
@@ -46,6 +49,12 @@ const dateOnly = new Intl.DateTimeFormat("es-GT", {
 
 const formatDate = (value: string) =>
   dateOnly.format(new Date(`${value}T00:00:00Z`));
+
+/** Pieza escrita en el campo, si es una pieza FDI válida, para resaltarla. */
+const chartTooth = (value: string): number | null => {
+  const tooth = Number(value.trim());
+  return value.trim() && isValidTooth(tooth) ? tooth : null;
+};
 
 const visitLabel = (visit: { visit_at: string; reason: string }) =>
   `${dateTime.format(new Date(visit.visit_at))} · ${visit.reason}`;
@@ -166,6 +175,15 @@ function TreatmentForm({
             onChange={set("planned_date")}
           />
         </div>
+        <ToothChart
+          value={chartTooth(form.tooth)}
+          onChange={(tooth) =>
+            setForm((prev) => ({
+              ...prev,
+              tooth: tooth === null ? "" : String(tooth),
+            }))
+          }
+        />
         <VisitSelect
           label="Consulta en que se propuso"
           visits={visits}
@@ -383,6 +401,7 @@ export default function TreatmentsCard({
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: treatmentsKey });
+    queryClient.invalidateQueries({ queryKey: timelineKey(patientId) });
   };
 
   const close = () => setDialog(null);
