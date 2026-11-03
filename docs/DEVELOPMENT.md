@@ -122,7 +122,7 @@ Cada prueba pertenece al menos a una categoría (marcador de pytest), según el 
 | `isolation` | Aislamiento entre clínicas (transversal) |
 | `rbac` | Permisos por rol (transversal) |
 | `appointments` | Modelo, integridad y endpoints de citas |
-| `records` | Expediente clínico: historia médica y odontológica |
+| `records` | Expediente clínico: historia médica, consultas y plan de tratamiento |
 
 ```powershell
 python -m pytest -m auth                      # solo autenticación

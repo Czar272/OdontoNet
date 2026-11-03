@@ -21,7 +21,7 @@ Cada clínica es un espacio aislado: la API filtra todos los datos por la clíni
 | Pacientes | Listado paginado, búsqueda, detalle, creación, edición y archivado |
 | Doctores | Listado, detalle y alta de perfil (admin) |
 | Agenda y citas | Implementado (calendario compartido, estados, horario de doctores) |
-| Expediente clínico | Historia médica y odontológica versionada y consultas clínicas con historial de cambios; planes de tratamiento pendientes |
+| Expediente clínico | Historia médica versionada, consultas clínicas con historial de cambios y plan de tratamiento con estados |
 | Imágenes, periodontograma manual | Pendientes |
 | IA periodontal | Fuera del MVP inicial; servicio independiente futuro |
 

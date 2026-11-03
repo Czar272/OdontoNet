@@ -56,8 +56,10 @@
 | `GET /patients/{id}/visits`, `.../visits/{v}`, `.../visits/{v}/revisions` (consultas e historial de cambios) | ✅ | ✅ | ⛔ |
 | `POST /patients/{id}/visits` (registrar consulta) | ✅ | ✅ | ⛔ |
 | `PUT /patients/{id}/visits/{v}`, `POST .../visits/{v}/void` (editar o anular) | ✅ cualquiera | ✅ solo las que registró | ⛔ |
+| `GET /patients/{id}/treatments`, `.../treatments/{t}`, `.../treatments/{t}/history` (plan de tratamiento) | ✅ | ✅ | ⛔ |
+| `POST /patients/{id}/treatments`, `PATCH .../treatments/{t}`, `POST .../treatments/{t}/status` (registrar, editar y cambiar estado) | ✅ | ✅ cualquiera | ⛔ |
 
-Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_password_reset.py`, `backend/tests/test_users.py`, `backend/tests/test_user_deactivation.py`, `backend/tests/test_patient_archive.py`, `backend/tests/test_appointment_api.py`, `backend/tests/test_doctor_availability.py`, `backend/tests/test_medical_history.py` y `backend/tests/test_clinical_visits.py`.
+Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_password_reset.py`, `backend/tests/test_users.py`, `backend/tests/test_user_deactivation.py`, `backend/tests/test_patient_archive.py`, `backend/tests/test_appointment_api.py`, `backend/tests/test_doctor_availability.py`, `backend/tests/test_medical_history.py`, `backend/tests/test_clinical_visits.py` y `backend/tests/test_treatments.py`.
 
 ### Reglas de gestión de usuarios (ODON-86)
 
@@ -130,7 +132,7 @@ Se implementarán con esta matriz cuando se desarrolle cada módulo.
 | --- | :---: | :---: | :---: |
 | Historia médica y odontológica (antecedentes, ODON-150) | ✅ | ✅ | 👁️ solo lectura |
 | Consultas clínicas (ODON-154) | ✅ | ✅ (edita o anula solo las propias) | ⛔ |
-| Planes de tratamiento | ✅ | ✅ | ⛔ |
+| Plan de tratamiento (ODON-158) | ✅ | ✅ (cualquier tratamiento; el historial registra quién) | ⛔ |
 | Imágenes clínicas | ✅ | ✅ | ⛔ |
 | Periodontograma | ✅ | ✅ | ⛔ |
 | Reportes operativos | ✅ | ✅ | ✅ sin datos clínicos |
