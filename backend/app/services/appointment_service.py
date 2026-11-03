@@ -1,5 +1,6 @@
 """Reglas de la agenda: cruces de horario y citas pendientes (ODON-134)."""
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, literal
@@ -12,6 +13,8 @@ from app.models.appointment import (
     AppointmentStatus,
     AppointmentStatusChange,
 )
+from app.models.availability import WEEKDAY_LABELS, DoctorAvailabilityBlock
+from app.models.clinic import Clinic
 from app.models.doctor import Doctor
 
 # Citas que todavía se pueden reprogramar y que cuentan como pendientes.
@@ -206,3 +209,66 @@ def status_change(
         note=note,
         changed_by_user_id=user_id,
     )
+
+
+# --- Horario del doctor (ODON-142) ---------------------------------------------------
+
+def _format_blocks(blocks) -> str:
+    ranges = [f"{b.start_time:%H:%M}–{b.end_time:%H:%M}" for b in blocks]
+    return ranges[0] if len(ranges) == 1 else ", ".join(ranges[:-1]) + " y " + ranges[-1]
+
+
+def ensure_within_schedule(
+    db: Session,
+    *,
+    doctor: Doctor,
+    starts_at: datetime,
+    duration_minutes: int,
+    allow_outside: bool,
+) -> None:
+    """409 «fuera de horario» si la cita no cabe en un bloque del doctor.
+
+    Decisión del 2026-11-02: se avisa y se permite. Si el usuario confirma,
+    el frontend reenvía con allow_outside_schedule=true. Un doctor sin horario
+    registrado se agenda libremente."""
+    if allow_outside:
+        return
+
+    blocks = (
+        db.query(DoctorAvailabilityBlock)
+        .filter(DoctorAvailabilityBlock.doctor_id == doctor.id)
+        .order_by(DoctorAvailabilityBlock.weekday, DoctorAvailabilityBlock.start_time)
+        .all()
+    )
+    if not blocks:
+        return
+
+    clinic_tz = ZoneInfo(db.query(Clinic.timezone).filter(Clinic.id == doctor.clinic_id).scalar())
+    local_start = starts_at.astimezone(clinic_tz)
+    local_end = (starts_at + timedelta(minutes=duration_minutes)).astimezone(clinic_tz)
+    weekday = local_start.weekday()
+    day_blocks = [b for b in blocks if b.weekday == weekday]
+
+    fits = local_end.date() == local_start.date() and any(
+        b.start_time <= local_start.time() and local_end.time() <= b.end_time for b in day_blocks
+    )
+    if fits:
+        return
+
+    day = WEEKDAY_LABELS[weekday]
+    # «los sábados», «los domingos»; «los lunes» … «los viernes» no cambian.
+    plural = day + "s" if day in ("sábado", "domingo") else day
+    schedule = (
+        f"Su horario del {day} es {_format_blocks(day_blocks)}."
+        if day_blocks
+        else f"No atiende los {plural}."
+    )
+    raise OutsideSchedule(f"{doctor.user.name} no atiende en ese horario. {schedule}")
+
+
+class OutsideSchedule(HTTPException):
+    """409 que el frontend reconoce por outside_schedule=true para pedir confirmación."""
+
+    def __init__(self, detail: str):
+        super().__init__(status_code=status.HTTP_409_CONFLICT, detail=detail)
+        self.extra = {"outside_schedule": True}

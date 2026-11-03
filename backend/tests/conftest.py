@@ -97,7 +97,7 @@ def migrated_database():
 @pytest.fixture(autouse=True)
 def clean_tables():
     with engine.begin() as conn:
-        conn.execute(text("TRUNCATE appointment_status_changes, appointments, patients, doctors, users, clinics RESTART IDENTITY CASCADE"))
+        conn.execute(text("TRUNCATE doctor_availability_blocks, appointment_status_changes, appointments, patients, doctors, users, clinics RESTART IDENTITY CASCADE"))
     yield
 
 

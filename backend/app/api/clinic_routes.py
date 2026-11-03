@@ -43,10 +43,15 @@ def update_clinic(
     db: Session = Depends(get_db),
     clinic_id: int = Depends(get_current_clinic_id),
 ):
-    """Edita nombre, dirección, teléfono o correo de la propia clínica."""
+    """Edita nombre, dirección, teléfono, correo o zona horaria de la propia clínica."""
     clinic = _current_clinic(db, clinic_id)
 
     data = changes.dict(exclude_unset=True)
+    if data.get("timezone", "") is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="La zona horaria de la clínica es obligatoria.",
+        )
     if "name" in data and data["name"] is None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

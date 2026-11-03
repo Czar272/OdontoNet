@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -5,12 +6,17 @@ from fastapi import Query as QueryParam
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, joinedload
 
-from app.auth.dependencies import get_current_clinic_id
+from app.auth.dependencies import get_current_clinic_id, get_current_user
 from app.auth.permissions import ALL_ROLES, CLINICAL_PROFILE_ROLES, Role, require_roles
 from app.database.dependencies import get_db
+from app.models.availability import DoctorAvailabilityBlock
+from app.models.clinic import Clinic
 from app.models.doctor import Doctor
 from app.models.user import User
+from app.schemas.availability_schema import AvailabilityUpdate, DoctorAvailabilityResponse
 from app.schemas.doctor_schema import DoctorCreate, DoctorResponse, DoctorUpdate
+
+audit_logger = logging.getLogger("odontonet.audit")
 
 # Todos los roles consultan doctores; solo administración crea perfiles (docs/PERMISSIONS.md).
 router = APIRouter(
@@ -98,6 +104,89 @@ def get_doctors(
     elif active is False:
         query = query.filter(User.is_active.is_(False))
     return query.order_by(User.name, Doctor.id).all()
+
+
+# --- Disponibilidad (ODON-142) ------------------------------------------------------
+# Rutas antes de /{doctor_id} para que "availability" no se tome como id.
+
+
+def _availability(doctor: Doctor, timezone: str) -> dict:
+    return {"doctor_id": doctor.id, "timezone": timezone, "blocks": doctor.availability}
+
+
+def _clinic_timezone(db: Session, clinic_id: int) -> str:
+    return db.query(Clinic.timezone).filter(Clinic.id == clinic_id).scalar()
+
+
+@router.get("/availability", response_model=list[DoctorAvailabilityResponse])
+def get_clinic_availability(
+    db: Session = Depends(get_db),
+    clinic_id: int = Depends(get_current_clinic_id),
+):
+    """Horario semanal de todos los doctores de la clínica (para la agenda).
+
+    Un doctor sin bloques no tiene horario registrado: se agenda libremente."""
+    timezone = _clinic_timezone(db, clinic_id)
+    doctors = (
+        _clinic_doctors(db, clinic_id)
+        .options(joinedload(Doctor.availability))
+        .order_by(Doctor.id)
+        .all()
+    )
+    return [_availability(doctor, timezone) for doctor in doctors]
+
+
+@router.get("/{doctor_id}/availability", response_model=DoctorAvailabilityResponse)
+def get_doctor_availability(
+    doctor_id: int,
+    db: Session = Depends(get_db),
+    clinic_id: int = Depends(get_current_clinic_id),
+):
+    doctor = _get_clinic_doctor(db, doctor_id, clinic_id)
+    return _availability(doctor, _clinic_timezone(db, clinic_id))
+
+
+@router.put("/{doctor_id}/availability", response_model=DoctorAvailabilityResponse)
+def replace_doctor_availability(
+    doctor_id: int,
+    data: AvailabilityUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    clinic_id: int = Depends(get_current_clinic_id),
+):
+    """Reemplaza el horario semanal completo del doctor.
+
+    Administración y recepción editan el de cualquier doctor; un doctor, solo
+    el suyo (docs/PERMISSIONS.md)."""
+    doctor = _get_clinic_doctor(db, doctor_id, clinic_id)
+
+    if current_user.role == Role.DOCTOR.value and doctor.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo puedes editar tu propio horario.",
+        )
+
+    doctor.availability = [
+        DoctorAvailabilityBlock(clinic_id=clinic_id, **block.dict()) for block in data.blocks
+    ]
+    db.commit()
+
+    audit_logger.info(
+        "doctor.availability_updated doctor_id=%s user_id=%s clinic_id=%s blocks=%s",
+        doctor.id, current_user.id, clinic_id, len(data.blocks),
+    )
+    db.expire_all()
+    doctor = _get_clinic_doctor(db, doctor_id, clinic_id)
+    return _availability(doctor, _clinic_timezone(db, clinic_id))
+
+
+def _get_clinic_doctor(db: Session, doctor_id: int, clinic_id: int) -> Doctor:
+    doctor = _clinic_doctors(db, clinic_id).filter(Doctor.id == doctor_id).first()
+    if not doctor:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Doctor no encontrado."
+        )
+    return doctor
 
 
 @router.get("/{doctor_id}", response_model=DoctorResponse)

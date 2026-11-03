@@ -35,6 +35,7 @@ def test_seed_creates_related_data(db):
     created = seed(db, PASSWORD)
 
     appointments = created.pop("appointments")
+    assert created.pop("schedules") == len(CLINICS) * 2
     assert created == {
         "clinics": len(CLINICS),
         "users": len(CLINICS) * len(STAFF),
@@ -52,7 +53,7 @@ def test_seed_is_idempotent(db):
 
     second = seed(db, PASSWORD)
 
-    assert second == {"clinics": 0, "users": 0, "doctors": 0, "patients": 0, "appointments": 0}
+    assert second == {"clinics": 0, "users": 0, "doctors": 0, "patients": 0, "appointments": 0, "schedules": 0}
     assert counts(db) == before
 
 
@@ -145,3 +146,21 @@ def test_seed_does_not_add_appointments_to_an_existing_agenda(db):
     # La clínica con su cita no recibe la agenda demo; la otra, sin citas, sí.
     assert db.query(Appointment).count() == before + created
     assert created == 60
+
+
+@pytest.mark.appointments
+def test_seeded_schedules_cover_the_demo_agenda(db):
+    from zoneinfo import ZoneInfo
+
+    seed(db, PASSWORD)
+
+    for doctor in db.query(Doctor).all():
+        assert len(doctor.availability) == 10
+        tz = ZoneInfo(doctor.clinic.timezone)
+        for appointment in doctor.appointments:
+            start = appointment.starts_at.astimezone(tz)
+            end = appointment.ends_at.astimezone(tz)
+            assert any(
+                b.weekday == start.weekday() and b.start_time <= start.time() and end.time() <= b.end_time
+                for b in doctor.availability
+            ), f"La cita {appointment.id} queda fuera del horario demo"

@@ -25,6 +25,7 @@ from app.services.appointment_service import (
     ensure_no_overlap,
     ensure_not_in_past,
     ensure_transition_allowed,
+    ensure_within_schedule,
     status_change,
 )
 from app.services.doctor_service import ensure_assignable_doctor
@@ -166,7 +167,7 @@ def create_appointment(
 ):
     """Agenda una cita «Programada» (ODON-134). La clínica sale del token."""
     _ensure_schedulable_patient(db, data.patient_id, clinic_id)
-    ensure_assignable_doctor(db, data.doctor_id, clinic_id)
+    doctor = ensure_assignable_doctor(db, data.doctor_id, clinic_id)
     ensure_not_in_past(data.starts_at)
     ensure_no_overlap(
         db,
@@ -175,9 +176,17 @@ def create_appointment(
         starts_at=data.starts_at,
         duration_minutes=data.duration_minutes,
     )
+    # Al final: los errores que bloquean se muestran antes que el aviso.
+    ensure_within_schedule(
+        db,
+        doctor=doctor,
+        starts_at=data.starts_at,
+        duration_minutes=data.duration_minutes,
+        allow_outside=data.allow_outside_schedule,
+    )
 
     appointment = Appointment(
-        **data.dict(),
+        **data.dict(exclude={"allow_outside_schedule"}),
         clinic_id=clinic_id,
         status=AppointmentStatus.SCHEDULED.value,
         created_by_user_id=current_user.id,
@@ -213,6 +222,7 @@ def update_appointment(
         )
 
     data = changes.dict(exclude_unset=True)
+    allow_outside = data.pop("allow_outside_schedule", False)
     for required in ("doctor_id", "starts_at", "duration_minutes"):
         if required in data and data[required] is None:
             raise HTTPException(
@@ -224,8 +234,9 @@ def update_appointment(
     if not changed:
         return appointment
 
+    doctor = appointment.doctor
     if "doctor_id" in changed:
-        ensure_assignable_doctor(db, data["doctor_id"], clinic_id)
+        doctor = ensure_assignable_doctor(db, data["doctor_id"], clinic_id)
     if "starts_at" in changed:
         ensure_not_in_past(data["starts_at"])
     if {"doctor_id", "starts_at", "duration_minutes"} & set(changed):
@@ -241,6 +252,13 @@ def update_appointment(
             starts_at=data.get("starts_at", appointment.starts_at),
             duration_minutes=data.get("duration_minutes", appointment.duration_minutes),
             exclude_id=appointment.id,
+        )
+        ensure_within_schedule(
+            db,
+            doctor=doctor,
+            starts_at=data.get("starts_at", appointment.starts_at),
+            duration_minutes=data.get("duration_minutes", appointment.duration_minutes),
+            allow_outside=allow_outside,
         )
 
     for field in changed:

@@ -40,6 +40,8 @@ class AppointmentCreate(BaseModel):
     starts_at: datetime
     duration_minutes: DurationMinutes = DEFAULT_DURATION_MINUTES
     reason: Optional[Reason] = None
+    # Confirmación explícita para agendar fuera del horario del doctor (ODON-142).
+    allow_outside_schedule: bool = False
 
     _starts_at = validator("starts_at", allow_reuse=True)(_validate_starts_at)
     _reason = validator("reason", pre=True, allow_reuse=True)(_empty_to_none)
@@ -53,6 +55,7 @@ class AppointmentUpdate(BaseModel):
     starts_at: Optional[datetime] = None
     duration_minutes: Optional[DurationMinutes] = None
     reason: Optional[Reason] = None
+    allow_outside_schedule: bool = False
 
     _starts_at = validator("starts_at", allow_reuse=True)(_validate_starts_at)
     _reason = validator("reason", pre=True, allow_reuse=True)(_empty_to_none)

@@ -35,7 +35,15 @@ from sqlalchemy.engine import make_url  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
 from app.auth.security import hash_password  # noqa: E402
-from app.models import Appointment, AppointmentStatusChange, Clinic, Doctor, Patient, User  # noqa: E402
+from app.models import (  # noqa: E402
+    Appointment,
+    AppointmentStatusChange,
+    Clinic,
+    Doctor,
+    DoctorAvailabilityBlock,
+    Patient,
+    User,
+)
 
 LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 EMAIL_DOMAIN = "odontonet-demo.com"
@@ -48,6 +56,8 @@ APPOINTMENT_DAYS = range(-3, 11)
 DOCTOR_HOURS = [(9, 11, 15), (10, 14, 16)]
 APPOINTMENT_REASONS = ["Limpieza", "Control", "Evaluación periodontal", "Raspado y alisado", "Consulta"]
 CLINIC_TZ = timezone(timedelta(hours=-6))  # America/Guatemala, sin horario de verano
+# Horario demo (ODON-142): lunes a viernes, mañana y tarde. Cubre la agenda demo.
+DEMO_SCHEDULE = [(time(8, 0), time(13, 0)), (time(14, 0), time(18, 0))]
 
 CLINICS = [
     {
@@ -156,7 +166,14 @@ def _patient_data(clinic_slug: str, index: int) -> dict:
 
 def seed(db: Session, password: str) -> dict:
     """Crea los datos que falten y devuelve cuántos registros nuevos agregó."""
-    created = {"clinics": 0, "users": 0, "doctors": 0, "patients": 0, "appointments": 0}
+    created = {
+        "clinics": 0,
+        "users": 0,
+        "doctors": 0,
+        "patients": 0,
+        "appointments": 0,
+        "schedules": 0,
+    }
     password_hash = None
 
     for spec in CLINICS:
@@ -207,6 +224,16 @@ def seed(db: Session, password: str) -> dict:
                     db.flush()
                     created["doctors"] += 1
                 doctors.append(doctor)
+                # Horario demo solo para doctores que aún no tienen uno.
+                if not doctor.availability:
+                    doctor.availability = [
+                        DoctorAvailabilityBlock(
+                            clinic_id=clinic.id, weekday=weekday, start_time=start, end_time=end
+                        )
+                        for weekday in range(5)
+                        for start, end in DEMO_SCHEDULE
+                    ]
+                    created["schedules"] += 1
 
         for index in range(1, PATIENTS_PER_CLINIC + 1):
             data = _patient_data(spec["slug"], index)

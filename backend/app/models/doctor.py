@@ -37,6 +37,14 @@ class Doctor(Base):
         passive_deletes="all",
     )
     clinic = relationship("Clinic", back_populates="doctors", foreign_keys=[clinic_id])
+    # Horario semanal (ODON-142); se reemplaza completo al editarlo.
+    availability = relationship(
+        "DoctorAvailabilityBlock",
+        back_populates="doctor",
+        foreign_keys="DoctorAvailabilityBlock.doctor_id",
+        order_by="(DoctorAvailabilityBlock.weekday, DoctorAvailabilityBlock.start_time)",
+        cascade="all, delete-orphan",
+    )
     # Las citas se conservan: un doctor con citas no se borra.
     appointments = relationship(
         "Appointment",

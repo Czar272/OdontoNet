@@ -1,4 +1,5 @@
 from typing import Optional
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, EmailStr, constr, validator
 
@@ -15,6 +16,18 @@ class ClinicUpdate(BaseModel):
     address: Optional[constr(strip_whitespace=True, max_length=255)] = None
     phone: Optional[constr(strip_whitespace=True, max_length=30)] = None
     email: Optional[EmailStr] = None
+    # Zona IANA de la clínica (ODON-142), p. ej. "America/Guatemala".
+    timezone: Optional[constr(strip_whitespace=True, min_length=1, max_length=64)] = None
+
+    @validator("timezone")
+    def valid_timezone(cls, value):
+        if value is None:
+            return value
+        try:
+            ZoneInfo(value)
+        except (ZoneInfoNotFoundError, ValueError):
+            raise ValueError("Zona horaria no válida.")
+        return value
 
     @validator("address", "phone", "email", pre=True)
     def empty_string_to_none(cls, value):
@@ -30,6 +43,7 @@ class ClinicResponse(BaseModel):
     address: str | None
     phone: str | None
     email: str | None
+    timezone: str
 
     class Config:
         orm_mode = True

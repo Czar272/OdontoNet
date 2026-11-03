@@ -43,6 +43,7 @@ def test_every_role_sees_own_clinic(client, clinics, role):
         "address": "Zona 1",
         "phone": "2222-0000",
         "email": "norte@clinica.com",
+        "timezone": "America/Guatemala",
     }
 
 
@@ -112,3 +113,30 @@ def test_name_cannot_be_null(client, clinics):
 
     assert response.status_code == 422
     assert response.json()["detail"] == "El nombre de la clínica es obligatorio."
+
+
+# --- Zona horaria (ODON-142) ---------------------------------------------------------
+
+def test_admin_changes_timezone(client, clinics):
+    response = client.patch("/clinic", json={"timezone": "America/Mexico_City"}, headers=clinics["headers"]["admin"])
+
+    assert response.status_code == 200
+    assert response.json()["timezone"] == "America/Mexico_City"
+
+
+@pytest.mark.parametrize(
+    ("value", "message"),
+    [("Marte/Olympus", "Zona horaria no válida."), ("", "Campo obligatorio.")],
+)
+def test_invalid_timezone_is_422(client, clinics, value, message):
+    response = client.patch("/clinic", json={"timezone": value}, headers=clinics["headers"]["admin"])
+
+    assert response.status_code == 422
+    assert response.json()["errors"][0]["message"] == message
+
+
+def test_timezone_cannot_be_removed(client, clinics):
+    response = client.patch("/clinic", json={"timezone": None}, headers=clinics["headers"]["admin"])
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "La zona horaria de la clínica es obligatoria."

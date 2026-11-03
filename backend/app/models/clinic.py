@@ -14,6 +14,8 @@ class Clinic(Base):
     address = Column(String)
     phone = Column(String)
     email = Column(String)
+    # Zona IANA: los horarios de los doctores son hora local de la clínica (ODON-142).
+    timezone = Column(String(64), nullable=False, server_default="America/Guatemala")
 
     # passive_deletes="all": una clínica con datos no se puede borrar; las FK
     # NOT NULL lo impiden y el ORM no intenta dejar registros sin clínica.
