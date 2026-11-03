@@ -44,6 +44,26 @@ class UserLogin(BaseModel):
     remember_me: bool = False
 
 
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    token: constr(strip_whitespace=True, min_length=1, max_length=200)
+    new_password: UserPassword
+
+
+class PasswordChange(BaseModel):
+    current_password: constr(min_length=1, max_length=128)
+    new_password: UserPassword
+    # Conserva la duración de la sesión actual en el token nuevo.
+    remember_me: bool = False
+
+
+class MessageResponse(BaseModel):
+    message: str
+
+
 class UserResponse(BaseModel):
     id: int
     name: str

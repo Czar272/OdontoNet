@@ -37,6 +37,12 @@ def get_current_user(
     if not user or user.is_active is False:
         raise _unauthorized("Usuario no encontrado o inactivo.")
 
+    # Un cambio de contraseña cierra las sesiones abiertas antes (ODON-54).
+    if user.password_changed_at is not None:
+        issued_at = payload.get("iat")
+        if not isinstance(issued_at, (int, float)) or issued_at < user.password_changed_at.timestamp():
+            raise _unauthorized("Tu contraseña cambió. Inicia sesión de nuevo.")
+
     return user
 
 

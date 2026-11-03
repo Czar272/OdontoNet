@@ -54,7 +54,7 @@ def test_token_does_not_contain_password(client, db):
     create_clinic_with_doctor(db, "Clinica Token", "token@clinica.com")
     payload = decode_token(login(client, "token@clinica.com").json()["access_token"])
     assert PASSWORD not in str(payload)
-    assert set(payload) <= {"sub", "role", "exp"}
+    assert set(payload) <= {"sub", "role", "exp", "iat"}
 
 
 # --- /auth/me -----------------------------------------------------------------

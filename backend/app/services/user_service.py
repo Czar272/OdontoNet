@@ -8,6 +8,7 @@ from app.auth.permissions import CLINICAL_PROFILE_ROLES
 from app.auth.security import hash_password
 from app.models.doctor import Doctor
 from app.models.user import User
+from app.services import password_service
 from app.schemas.user_schema import UserCreate, UserUpdate
 
 
@@ -52,6 +53,10 @@ def update_user(db: Session, user: User, data: UserUpdate, acting_admin: User) -
     # Un campo enviado como null se trata como no enviado: ninguno admite vacío.
     changes = {key: value for key, value in data.dict(exclude_unset=True).items() if value is not None}
 
+    if "password" in changes and user.id == acting_admin.id:
+        # Cerraría la propia sesión; el cambio propio pide la contraseña actual.
+        raise _conflict("Para cambiar tu propia contraseña usa «Cambiar contraseña».")
+
     if "email" in changes and changes["email"] != user.email:
         if _email_taken(db, changes["email"], exclude_user_id=user.id):
             raise _conflict("Ya existe un usuario con ese correo.")
@@ -71,7 +76,8 @@ def update_user(db: Session, user: User, data: UserUpdate, acting_admin: User) -
         user.name = changes["name"]
 
     if "password" in changes:
-        user.hashed_password = hash_password(changes["password"])
+        # Cierra las sesiones del usuario y anula sus enlaces de recuperación.
+        password_service.set_password_by_admin(db, user, changes["password"])
 
     db.commit()
     db.refresh(user)

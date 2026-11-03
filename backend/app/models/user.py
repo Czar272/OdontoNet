@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.database.connection import Base
@@ -18,6 +18,9 @@ class User(Base):
     role = Column(String, default="doctor")
     is_active = Column(Boolean, default=True)
     clinic_id = Column(Integer, ForeignKey("clinics.id"), nullable=False)
+    # Último cambio o restablecimiento de contraseña (ODON-54). Los tokens de
+    # sesión emitidos antes dejan de valer. Nulo: nunca la ha cambiado.
+    password_changed_at = Column(DateTime(timezone=True), nullable=True)
 
     clinic = relationship("Clinic", back_populates="users")
     # Uno a uno: un usuario tiene como máximo un perfil de doctor (uq_doctors_user_id).

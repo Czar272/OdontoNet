@@ -39,8 +39,12 @@ def create_access_token(data: dict, remember_me: bool = False):
 
     to_encode = data.copy()
 
-    expire = datetime.now(timezone.utc) + token_lifetime(remember_me)
+    now = datetime.now(timezone.utc)
+    expire = now + token_lifetime(remember_me)
 
-    to_encode.update({"exp": expire})
+    # iat con fracción de segundo (NumericDate lo admite) permite invalidar las
+    # sesiones previas a un cambio de contraseña, aunque ocurran en el mismo
+    # segundo (User.password_changed_at, ODON-54).
+    to_encode.update({"exp": expire, "iat": now.timestamp()})
 
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
