@@ -2,7 +2,10 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 
 import LoadingSpinner from "../components/basic/LoadingSpinner";
+import ChangePasswordPage from "../pages/Account/ChangePasswordPage";
+import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage";
 import LoginPage from "../pages/Auth/LoginPage";
+import ResetPasswordPage from "../pages/Auth/ResetPasswordPage";
 import DashboardPage from "../pages/Dashboard/DashboardPage";
 import ClinicPage from "../pages/Clinic/ClinicPage";
 import DoctorsPage from "../pages/Doctors/DoctorsPage";
@@ -24,6 +27,8 @@ export default function AppRouter() {
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Protected routes */}
         <Route
@@ -34,6 +39,8 @@ export default function AppRouter() {
           }
         >
           <Route path="/dashboard" element={<DashboardPage />} />
+
+          <Route path="/account/password" element={<ChangePasswordPage />} />
 
           <Route
             path="/agenda"

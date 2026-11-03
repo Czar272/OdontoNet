@@ -48,4 +48,13 @@ describe("LoginPage", () => {
 
     await waitFor(() => expect(login).toHaveBeenCalledWith("a@odontonet-demo.com", "Clave-123", true));
   });
+
+  it("enlaza a la recuperación de contraseña", () => {
+    renderLogin();
+
+    expect(screen.getByRole("link", { name: "¿Olvidaste tu contraseña?" })).toHaveAttribute(
+      "href",
+      "/forgot-password",
+    );
+  });
 });

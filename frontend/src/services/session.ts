@@ -26,7 +26,25 @@ export function getToken(): string | null {
 
 export function setToken(token: string, remember = false): void {
   clearToken();
-  safe(() => (remember ? localStorage : sessionStorage).setItem(TOKEN_KEY, token), undefined);
+  safe(
+    () => (remember ? localStorage : sessionStorage).setItem(TOKEN_KEY, token),
+    undefined,
+  );
+}
+
+/** true si la sesión actual usa "Recuérdame" (token en localStorage). */
+export function isRememberedSession(): boolean {
+  return safe(
+    () =>
+      sessionStorage.getItem(TOKEN_KEY) === null &&
+      localStorage.getItem(TOKEN_KEY) !== null,
+    false,
+  );
+}
+
+/** Sustituye el token conservando dónde se guarda (p. ej. tras cambiar la contraseña). */
+export function replaceToken(token: string): void {
+  setToken(token, isRememberedSession());
 }
 
 export function clearToken(): void {
@@ -41,7 +59,9 @@ type UnauthorizedHandler = () => void;
 let unauthorizedHandler: UnauthorizedHandler | null = null;
 
 /** El AuthProvider registra aquí cómo cerrar la sesión ante un 401. */
-export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
+export function setUnauthorizedHandler(
+  handler: UnauthorizedHandler | null,
+): void {
   unauthorizedHandler = handler;
 }
 

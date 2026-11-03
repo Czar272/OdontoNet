@@ -86,6 +86,9 @@ describe("UserForm", () => {
 
     expect(screen.getByLabelText(/rol/i)).toBeDisabled();
     expect(screen.getByText("No puedes cambiar tu propio rol.")).toBeInTheDocument();
+    // La contraseña propia se cambia en «Cambiar contraseña» (ODON-54).
+    expect(screen.queryByLabelText(/nueva contraseña/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/usa «Cambiar contraseña»/)).toBeInTheDocument();
   });
 
   it("el rol de otro usuario sí se puede cambiar", () => {

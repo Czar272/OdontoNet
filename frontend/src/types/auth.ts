@@ -26,3 +26,7 @@ export interface TokenResponse {
   /** Segundos de validez del token. */
   expires_in: number;
 }
+
+export interface MessageResponse {
+  message: string;
+}

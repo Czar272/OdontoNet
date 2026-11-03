@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 
 import Button from "../../components/basic/Button";
 import FullPageLoader from "../../components/basic/FullPageLoader";
 import Input from "../../components/basic/Input";
 import { useAuth } from "../../context/AuthContext";
+import AuthShell from "./AuthShell";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -16,7 +17,8 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const from = (location.state as { from?: string } | null)?.from ?? "/dashboard";
+  const from =
+    (location.state as { from?: string } | null)?.from ?? "/dashboard";
 
   if (status === "loading") {
     return <FullPageLoader />;
@@ -42,13 +44,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-10 rounded-2xl shadow-lg w-full max-w-sm flex flex-col gap-4"
-      >
-        <h1 className="text-3xl font-bold mb-2 text-center">OdontoNet</h1>
-
+    <AuthShell title="OdontoNet">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input
           label="Correo electrónico"
           type="email"
@@ -81,6 +78,13 @@ export default function LoginPage() {
           {isSubmitting ? "Ingresando..." : "Iniciar sesión"}
         </Button>
       </form>
-    </div>
+
+      <Link
+        to="/forgot-password"
+        className="text-sm text-center text-gray-600 hover:text-gray-900 underline"
+      >
+        ¿Olvidaste tu contraseña?
+      </Link>
+    </AuthShell>
   );
 }

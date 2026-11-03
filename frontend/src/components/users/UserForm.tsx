@@ -31,11 +31,15 @@ const UserForm: React.FC<UserFormProps> = ({ user, onSuccess }) => {
   const isEdit = Boolean(user);
   const isSelf = isEdit && user?.id === currentUser?.id;
 
-  const [formData, setFormData] = useState<CreateUserDTO>(() => initialUserData(user));
+  const [formData, setFormData] = useState<CreateUserDTO>(() =>
+    initialUserData(user),
+  );
 
   const mutation = useMutation({
     mutationFn: (data: CreateUserDTO) =>
-      user ? updateUser(user.id, buildUserChanges(user, data)) : createUser(data),
+      user
+        ? updateUser(user.id, buildUserChanges(user, data))
+        : createUser(data),
 
     onSuccess: () => {
       toast.success(isEdit ? "Usuario actualizado" : "Usuario creado");
@@ -50,7 +54,9 @@ const UserForm: React.FC<UserFormProps> = ({ user, onSuccess }) => {
       toast.error(
         getApiErrorMessage(
           error,
-          isEdit ? "No se pudo actualizar el usuario" : "No se pudo crear el usuario",
+          isEdit
+            ? "No se pudo actualizar el usuario"
+            : "No se pudo crear el usuario",
         ),
       );
     },
@@ -111,29 +117,38 @@ const UserForm: React.FC<UserFormProps> = ({ user, onSuccess }) => {
           </Select>
 
           {isSelf && (
-            <p className="text-xs text-gray-500">No puedes cambiar tu propio rol.</p>
+            <p className="text-xs text-gray-500">
+              No puedes cambiar tu propio rol.
+            </p>
           )}
         </div>
 
-        <div className="flex flex-col gap-1">
-          <Input
-            name="password"
-            type="password"
-            label={isEdit ? "Nueva contraseña" : "Contraseña *"}
-            value={formData.password}
-            onChange={handleChange}
-            minLength={MIN_PASSWORD_LENGTH}
-            maxLength={128}
-            autoComplete="new-password"
-            required={!isEdit}
-          />
-
+        {isSelf ? (
           <p className="text-xs text-gray-500">
-            {isEdit
-              ? "Déjala vacía para conservar la actual."
-              : `Mínimo ${MIN_PASSWORD_LENGTH} caracteres.`}
+            Para cambiar tu propia contraseña usa «Cambiar contraseña» en el
+            menú.
           </p>
-        </div>
+        ) : (
+          <div className="flex flex-col gap-1">
+            <Input
+              name="password"
+              type="password"
+              label={isEdit ? "Nueva contraseña" : "Contraseña *"}
+              value={formData.password}
+              onChange={handleChange}
+              minLength={MIN_PASSWORD_LENGTH}
+              maxLength={128}
+              autoComplete="new-password"
+              required={!isEdit}
+            />
+
+            <p className="text-xs text-gray-500">
+              {isEdit
+                ? "Déjala vacía para conservar la actual."
+                : `Mínimo ${MIN_PASSWORD_LENGTH} caracteres.`}
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 flex justify-end">

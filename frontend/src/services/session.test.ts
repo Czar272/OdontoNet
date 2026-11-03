@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { clearToken, getToken, setToken } from "./session";
+import {
+  clearToken,
+  getToken,
+  isRememberedSession,
+  replaceToken,
+  setToken,
+} from "./session";
 
 afterEach(() => {
   sessionStorage.clear();
@@ -39,5 +45,25 @@ describe("session", () => {
     clearToken();
 
     expect(getToken()).toBeNull();
+  });
+
+  it("replaceToken conserva una sesión con Recuérdame en localStorage", () => {
+    setToken("largo", true);
+
+    expect(isRememberedSession()).toBe(true);
+    replaceToken("nuevo-largo");
+
+    expect(localStorage.getItem("token")).toBe("nuevo-largo");
+    expect(sessionStorage.getItem("token")).toBeNull();
+  });
+
+  it("replaceToken conserva una sesión corta en sessionStorage", () => {
+    setToken("corto");
+
+    expect(isRememberedSession()).toBe(false);
+    replaceToken("nuevo-corto");
+
+    expect(sessionStorage.getItem("token")).toBe("nuevo-corto");
+    expect(localStorage.getItem("token")).toBeNull();
   });
 });

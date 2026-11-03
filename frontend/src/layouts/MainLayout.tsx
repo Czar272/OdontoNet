@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { LogOut } from "lucide-react";
+import { KeyRound, LogOut } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 
 import { getNavigation } from "../config/navigation";
@@ -17,7 +17,10 @@ export default function MainLayout() {
         <h1 className="text-2xl font-bold">OdontoNet</h1>
 
         {user && (
-          <p className="text-sm text-gray-400 mt-1 mb-8" data-testid="clinic-name">
+          <p
+            className="text-sm text-gray-400 mt-1 mb-8"
+            data-testid="clinic-name"
+          >
             {user.clinic.name}
           </p>
         )}
@@ -48,6 +51,21 @@ export default function MainLayout() {
               <p className="text-xs text-gray-400">{ROLE_LABELS[user.role]}</p>
             </div>
           )}
+
+          <NavLink
+            to="/account/password"
+            className={({ isActive }) =>
+              clsx(
+                "flex items-center gap-2 px-3 py-2 rounded-lg transition",
+                isActive
+                  ? "bg-gray-800 text-white"
+                  : "text-gray-300 hover:text-white hover:bg-gray-800",
+              )
+            }
+          >
+            <KeyRound size={18} />
+            Cambiar contraseña
+          </NavLink>
 
           <button
             type="button"
