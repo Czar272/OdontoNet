@@ -47,8 +47,10 @@
 | `POST /appointments/{id}/status` (confirmar, cancelar, atendida, no asistió, reactivar), `GET /appointments/{id}/history` | ✅ | ✅ | ✅ |
 | `GET /doctors/` (filtro `?active=true/false`), `GET /doctors/{id}` | ✅ | ✅ | ✅ |
 | `POST /doctors/` (crear perfil de doctor), `PATCH /doctors/{id}` (editar perfil) | ✅ | ⛔ | ⛔ |
+| `GET /doctors/availability`, `GET /doctors/{id}/availability` (horarios) | ✅ | ✅ | ✅ |
+| `PUT /doctors/{id}/availability` (reemplaza el horario semanal) | ✅ | ✅ solo el propio | ✅ |
 
-Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_users.py`, `backend/tests/test_user_deactivation.py`, `backend/tests/test_patient_archive.py` y `backend/tests/test_appointment_api.py`.
+Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_users.py`, `backend/tests/test_user_deactivation.py`, `backend/tests/test_patient_archive.py`, `backend/tests/test_appointment_api.py` y `backend/tests/test_doctor_availability.py`.
 
 ### Reglas de gestión de usuarios (ODON-86)
 
@@ -103,13 +105,21 @@ Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_users.py`, `bac
 - Las horas se muestran en la hora local del navegador (decisión del 2026-11-02).
 - En el frontend, `appointments:view` (menú «Agenda» y ruta `/agenda`) y `appointments:manage` (agendar, arrastrar y reprogramar) son para los tres roles.
 
+### Horario de los doctores (ODON-142)
+
+- Cada doctor tiene un horario semanal de bloques por día (por ejemplo, 08:00–12:00 y 14:00–18:00). Las horas son de la zona horaria de la clínica (`clinics.timezone`, por defecto `America/Guatemala`, editable por administración en «Clínica»).
+- Administración y recepción editan el horario de cualquier doctor; un doctor solo el suyo (`403 Solo puedes editar tu propio horario.`). Todos lo consultan. El cambio queda en la auditoría (`doctor.availability_updated`).
+- Los bloques de un día no se cruzan, son exactos al minuto y la hora de fin es posterior a la de inicio (`422`).
+- Agendar o reprogramar fuera del horario responde `409` con `outside_schedule: true` y un mensaje que describe el horario del día («Dra. Ana Morales no atiende en ese horario. Su horario del martes es 08:00–12:00 y 14:00–18:00.»). Si el usuario confirma, el frontend reenvía con `allow_outside_schedule: true` y la cita se guarda (decisión del 2026-11-02: avisar y permitir). El permiso no se guarda en la cita.
+- Un doctor sin horario registrado se agenda a cualquier hora (decisión del 2026-11-02). Reactivar una cancelada no revisa el horario.
+- En la Agenda, las horas fuera del horario del doctor filtrado (o de todos, sin filtro) aparecen sombreadas, y se avisa qué doctores no tienen horario. Las ausencias puntuales (vacaciones, permisos) quedan para ODON-258 (CIT-ENH02).
+
 ## Módulos futuros (decidido el 2026-10-31)
 
 Se implementarán con esta matriz cuando se desarrolle cada módulo.
 
 | Recurso | admin | doctor | receptionist |
 | --- | :---: | :---: | :---: |
-| Disponibilidad de doctores | ✅ | ✅ la propia | ✅ |
 | Expediente clínico (antecedentes, notas, tratamientos) | ✅ | ✅ | ⛔ |
 | Imágenes clínicas | ✅ | ✅ | ⛔ |
 | Periodontograma | ✅ | ✅ | ⛔ |

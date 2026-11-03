@@ -182,6 +182,7 @@ python -m scripts.seed_dev
 
 - Crea **Clínica Demo Norte** y **Clínica Demo Sur**, cada una con administración, recepción, dos doctores y 15 pacientes ficticios. Sirve para probar roles y aislamiento entre clínicas.
 - Agrega una **agenda demo** por clínica (60 citas en días hábiles, de 3 días antes a 10 días después de la fecha de ejecución): pasadas atendidas o «No asistió», futuras programadas, confirmadas o canceladas. Solo se crea si la clínica todavía no tiene citas, para no cruzarse con una agenda existente. Para regenerarla, borra las citas de la base de desarrollo y vuelve a correr el seed.
+- Registra un **horario demo** (lunes a viernes, 08:00–13:00 y 14:00–18:00) a los doctores que todavía no tienen horario; no toca horarios existentes.
 - Es **idempotente**: si se ejecuta de nuevo, no duplica nada. Tampoco borra ni modifica datos existentes.
 - Solo corre contra una base **local** (`localhost`/`127.0.0.1`) y con `APP_ENV` igual a `development` (valor por defecto).
 - No contiene contraseñas: todos los usuarios demo usan la de `SEED_PASSWORD`. Los correos se imprimen al terminar (por ejemplo, `admin.norte@odontonet-demo.com`).
