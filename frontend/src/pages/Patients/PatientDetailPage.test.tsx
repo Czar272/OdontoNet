@@ -45,6 +45,13 @@ vi.mock("../../services/patientService", () => ({
 
 vi.mock("../../services/doctorService", () => ({ getDoctors: vi.fn(async () => [ana]) }));
 
+vi.mock("../../services/medicalHistoryService", () => ({
+  getMedicalHistory: vi.fn(async () => null),
+  getMedicalHistoryVersions: vi.fn(async () => []),
+  getMedicalHistoryVersion: vi.fn(),
+  saveMedicalHistory: vi.fn(),
+}));
+
 vi.mock("react-hot-toast", () => {
   const toast = Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() });
   return { default: toast };
@@ -160,5 +167,19 @@ describe("PatientDetailPage", () => {
     await waitFor(() => expect(reactivatePatient).toHaveBeenCalledWith(6));
     expect(await screen.findByRole("button", { name: /editar datos/i })).toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("muestra la historia médica a recepción sin opción de editarla", async () => {
+    renderAt("/patients/5", "receptionist");
+
+    expect(await screen.findByText("Historia médica y odontológica")).toBeInTheDocument();
+    expect(await screen.findByText(/aún no tiene historia médica/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /registrar historia/i })).not.toBeInTheDocument();
+  });
+
+  it("el doctor puede registrar la historia", async () => {
+    renderAt("/patients/5", "doctor");
+
+    expect(await screen.findByRole("button", { name: /registrar historia/i })).toBeInTheDocument();
   });
 });

@@ -20,6 +20,9 @@ export const PERMISSIONS = {
   "availability:manage": ["admin", "receptionist"],
   "users:manage": ["admin"],
   "clinic:view": ["admin", "doctor", "receptionist"],
+  // Historia médica (ODON-150): recepción la consulta, no la edita.
+  "medical_history:view": ["admin", "doctor", "receptionist"],
+  "medical_history:edit": ["admin", "doctor"],
   "clinic:manage": ["admin"],
 } as const satisfies Record<string, readonly Role[]>;
 

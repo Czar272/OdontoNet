@@ -1,7 +1,15 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { Archive, ArchiveRestore, ArrowLeft, ClipboardList, Lock, Pencil, SearchX } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowLeft,
+  ClipboardList,
+  Lock,
+  Pencil,
+  SearchX,
+} from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -11,6 +19,7 @@ import ConfirmDialog from "../../components/basic/ConfirmDialog";
 import Input from "../../components/basic/Input";
 import LoadingSpinner from "../../components/basic/LoadingSpinner";
 import Select from "../../components/basic/Select";
+import MedicalHistoryCard from "../../components/patients/MedicalHistoryCard";
 import { usePermission } from "../../hooks/usePermission";
 import { getApiErrorMessage } from "../../services/apiError";
 import { getDoctors } from "../../services/doctorService";
@@ -55,12 +64,18 @@ interface PatientFormProps {
 }
 
 /** Datos generales con edición en dos pasos, igual que en Clínica. */
-function PatientDataForm({ patient, canEdit: hasEditPermission, isArchived }: PatientFormProps) {
+function PatientDataForm({
+  patient,
+  canEdit: hasEditPermission,
+  isArchived,
+}: PatientFormProps) {
   // Un paciente archivado se reactiva antes de editarse (el backend responde 409).
   const canEdit = hasEditPermission && !isArchived;
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState<PatientFormData>(() => initialPatientData(patient));
+  const [formData, setFormData] = useState<PatientFormData>(() =>
+    initialPatientData(patient),
+  );
 
   // Activos para asignar; el doctor actual se conserva aunque esté inactivo.
   const { data: activeDoctors } = useQuery({
@@ -69,12 +84,16 @@ function PatientDataForm({ patient, canEdit: hasEditPermission, isArchived }: Pa
     enabled: canEdit,
   });
   const doctorOptions = [...(activeDoctors ?? [])];
-  if (patient.doctor && !doctorOptions.some((d) => d.id === patient.doctor?.id)) {
+  if (
+    patient.doctor &&
+    !doctorOptions.some((d) => d.id === patient.doctor?.id)
+  ) {
     doctorOptions.push(patient.doctor);
   }
 
   const mutation = useMutation({
-    mutationFn: () => updatePatient(patient.id, buildPatientChanges(patient, formData)),
+    mutationFn: () =>
+      updatePatient(patient.id, buildPatientChanges(patient, formData)),
 
     onSuccess: (updated) => {
       toast.success("Paciente actualizado");
@@ -84,11 +103,15 @@ function PatientDataForm({ patient, canEdit: hasEditPermission, isArchived }: Pa
     },
 
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, "No se pudo actualizar el paciente"));
+      toast.error(
+        getApiErrorMessage(error, "No se pudo actualizar el paciente"),
+      );
     },
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -125,7 +148,8 @@ function PatientDataForm({ patient, canEdit: hasEditPermission, isArchived }: Pa
 
         {!isEditing && !canEdit && (
           <span className="flex items-center gap-2 text-sm text-gray-500">
-            <Lock size={16} /> {isArchived ? "Archivado: solo lectura" : "Solo lectura"}
+            <Lock size={16} />{" "}
+            {isArchived ? "Archivado: solo lectura" : "Solo lectura"}
           </span>
         )}
       </div>
@@ -134,23 +158,73 @@ function PatientDataForm({ patient, canEdit: hasEditPermission, isArchived }: Pa
         disabled={!isEditing || mutation.isPending}
         className="grid grid-cols-1 sm:grid-cols-2 gap-4"
       >
-        <Input name="first_name" label="Nombres *" value={formData.first_name} onChange={handleChange} maxLength={100} required />
-        <Input name="last_name" label="Apellidos *" value={formData.last_name} onChange={handleChange} maxLength={100} required />
+        <Input
+          name="first_name"
+          label="Nombres *"
+          value={formData.first_name}
+          onChange={handleChange}
+          maxLength={100}
+          required
+        />
+        <Input
+          name="last_name"
+          label="Apellidos *"
+          value={formData.last_name}
+          onChange={handleChange}
+          maxLength={100}
+          required
+        />
 
         <div className="flex flex-col gap-1">
-          <Input name="birth_date" type="date" label="Fecha de nacimiento" max={today} value={formData.birth_date} onChange={handleChange} />
+          <Input
+            name="birth_date"
+            type="date"
+            label="Fecha de nacimiento"
+            max={today}
+            value={formData.birth_date}
+            onChange={handleChange}
+          />
           {age !== null && !isEditing && (
             <p className="text-xs text-gray-500">{age} años</p>
           )}
         </div>
 
-        <Input name="phone" type="tel" label="Teléfono" value={formData.phone} onChange={handleChange} maxLength={30} />
-        <Input name="email" type="email" label="Correo electrónico" value={formData.email} onChange={handleChange} />
-        <Input name="address" label="Dirección" value={formData.address} onChange={handleChange} maxLength={255} />
+        <Input
+          name="phone"
+          type="tel"
+          label="Teléfono"
+          value={formData.phone}
+          onChange={handleChange}
+          maxLength={30}
+        />
+        <Input
+          name="email"
+          type="email"
+          label="Correo electrónico"
+          value={formData.email}
+          onChange={handleChange}
+        />
+        <Input
+          name="address"
+          label="Dirección"
+          value={formData.address}
+          onChange={handleChange}
+          maxLength={255}
+        />
 
-        <Select name="doctor_id" label="Doctor asignado" value={formData.doctor_id} onChange={handleChange}>
+        <Select
+          name="doctor_id"
+          label="Doctor asignado"
+          value={formData.doctor_id}
+          onChange={handleChange}
+        >
           <option value="">Sin asignar</option>
-          {(isEditing ? doctorOptions : patient.doctor ? [patient.doctor] : []).map((doctor) => (
+          {(isEditing
+            ? doctorOptions
+            : patient.doctor
+              ? [patient.doctor]
+              : []
+          ).map((doctor) => (
             <option key={doctor.id} value={doctor.id}>
               {doctor.user.name}
               {doctor.user.is_active ? "" : " (inactivo)"}
@@ -161,7 +235,11 @@ function PatientDataForm({ patient, canEdit: hasEditPermission, isArchived }: Pa
 
       {isEditing && (
         <div className="mt-6 flex justify-end gap-3">
-          <Button variant="secondary" onClick={handleCancel} disabled={mutation.isPending}>
+          <Button
+            variant="secondary"
+            onClick={handleCancel}
+            disabled={mutation.isPending}
+          >
             Cancelar
           </Button>
           <Button type="submit" disabled={mutation.isPending}>
@@ -182,17 +260,22 @@ function ArchiveControls({ patient }: { patient: Patient }) {
   const isArchived = Boolean(patient.archived_at);
 
   const mutation = useMutation({
-    mutationFn: () => (isArchived ? reactivatePatient(patient.id) : archivePatient(patient.id)),
+    mutationFn: () =>
+      isArchived ? reactivatePatient(patient.id) : archivePatient(patient.id),
 
     onSuccess: (updated) => {
-      toast.success(updated.archived_at ? "Paciente archivado" : "Paciente reactivado");
+      toast.success(
+        updated.archived_at ? "Paciente archivado" : "Paciente reactivado",
+      );
       setIsConfirming(false);
       queryClient.setQueryData(["patients", patient.id], updated);
       queryClient.invalidateQueries({ queryKey: ["patients", "list"] });
     },
 
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, "No se pudo cambiar el estado del paciente"));
+      toast.error(
+        getApiErrorMessage(error, "No se pudo cambiar el estado del paciente"),
+      );
     },
   });
 
@@ -221,9 +304,9 @@ function ArchiveControls({ patient }: { patient: Patient }) {
             </p>
           ) : (
             <p>
-              <strong>{name}</strong> dejará de aparecer en el listado de pacientes
-              activos. No se borra ningún dato: su ficha e historial se conservan y
-              puedes reactivarlo cuando lo necesites.
+              <strong>{name}</strong> dejará de aparecer en el listado de
+              pacientes activos. No se borra ningún dato: su ficha e historial
+              se conservan y puedes reactivarlo cuando lo necesites.
             </p>
           )
         }
@@ -244,14 +327,23 @@ export default function PatientDetailPage() {
   const validId = Number.isInteger(id) && id > 0;
   const canEdit = usePermission("patients:edit");
   const canArchive = usePermission("patients:archive");
+  const canViewHistory = usePermission("medical_history:view");
+  const canEditHistory = usePermission("medical_history:edit");
 
-  const { data: patient, isLoading, error } = useQuery({
+  const {
+    data: patient,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["patients", id],
     queryFn: () => getPatient(id),
     enabled: validId,
   });
 
-  if (!validId || (axios.isAxiosError(error) && error.response?.status === 404)) {
+  if (
+    !validId ||
+    (axios.isAxiosError(error) && error.response?.status === 404)
+  ) {
     return <NotFound />;
   }
 
@@ -278,7 +370,9 @@ export default function PatientDetailPage() {
             {patient.first_name} {patient.last_name}
           </h1>
           <p className="text-gray-500 mt-2">
-            {patient.doctor ? `Doctor asignado: ${patient.doctor.user.name}` : "Sin doctor asignado"}
+            {patient.doctor
+              ? `Doctor asignado: ${patient.doctor.user.name}`
+              : "Sin doctor asignado"}
           </p>
         </div>
 
@@ -292,8 +386,9 @@ export default function PatientDetailPage() {
         >
           <Archive size={20} aria-hidden="true" />
           <p>
-            Paciente archivado el {dateFormat.format(new Date(patient.archived_at))}.
-            Sus datos e historial se conservan; reactívalo para editarlo.
+            Paciente archivado el{" "}
+            {dateFormat.format(new Date(patient.archived_at))}. Sus datos e
+            historial se conservan; reactívalo para editarlo.
           </p>
         </div>
       )}
@@ -313,11 +408,21 @@ export default function PatientDetailPage() {
             <ClipboardList size={20} /> Historial clínico
           </h2>
           <p className="text-gray-500 text-sm">
-            El expediente (antecedentes, consultas y tratamientos) se mostrará aquí
-            cuando se habilite el módulo de expediente clínico.
+            Las consultas y los tratamientos se mostrarán aquí cuando se
+            habiliten en el expediente clínico.
           </p>
         </Card>
       </div>
+
+      {canViewHistory && (
+        <div className="mt-6">
+          <MedicalHistoryCard
+            patientId={patient.id}
+            canEdit={canEditHistory}
+            isArchived={Boolean(patient.archived_at)}
+          />
+        </div>
+      )}
     </div>
   );
 }
