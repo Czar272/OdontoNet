@@ -2,7 +2,7 @@
 
 > Documento de continuidad técnica. Jira es la fuente de verdad de los estados de los tickets y Git es la fuente de verdad del código.
 
-**Última actualización:** 2026-11-02 — ODON-142 (horario de doctores) y ODON-257 (CIT-ENH01) cerradas; ODON-6 queda abierta solo por ODON-258.
+**Última actualización:** 2026-11-02 — ODON-6 (Agenda y citas) cerrada; ODON-258 (ausencias) pospuesta al backlog.
 
 ## Alcance
 
@@ -45,16 +45,16 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 - **ODON-1 Arquitectura e infraestructura — Done:** ODON-14, 18, 22, 26, 30, 34.
 - **ODON-3 Clínicas y autorización — Done:** ODON-58, 62, 66, 70 y 74.
 - **ODON-5 Pacientes — Done:** ODON-98, 102, 106, 110, 114, 118, 122 y 126.
-- **ODON-6 Agenda y citas — In Progress:** ODON-130, 134, 138, 142, 146 y 257 (CIT-ENH01) Done; ODON-258 (CIT-ENH02, ausencias) en To Do.
+- **ODON-6 Agenda y citas — Done:** ODON-130, 134, 138, 142, 146 y 257 (CIT-ENH01). ODON-258 (CIT-ENH02, ausencias de doctores) se pospuso: queda en el backlog sin épica, con la etiqueta `cit`.
 - **ODON-2 Autenticación — In Progress:** ODON-38, 42, 46, 50 y 52 Done; ODON-255 («Recuérdame») Done; pendiente ODON-54 (recuperación de contraseña).
 - **ODON-4 Personal y doctores — Done:** ODON-78, 82, 86, 90 y 94.
 - **ODON-11 Calidad:** ODON-254 (categorías de pruebas backend) Done; ODON-256 (pruebas rápidas y CI) Done.
 
 ## Próximo paso
 
-1. ODON-6: decidir si ODON-258 (ausencias) entra ahora o se mueve a otra épica; luego cerrar la épica con suite completa, lint, build y `verify-infra`.
+1. ODON-54 (recuperación de contraseña), última historia de ODON-2.
 2. El alta de clínicas por `superadmin` se planifica aparte según el modelo de roles aprobado.
-3. ODON-54 (recuperación de contraseña).
+3. ODON-258 (ausencias de doctores) queda para después del MVP.
 
 ## Convenciones de colaboración
 
