@@ -7,3 +7,4 @@ from .availability import DoctorAvailabilityBlock
 from .password_reset import PasswordResetToken
 from .medical_history import PatientMedicalHistory
 from .clinical_visit import ClinicalVisit, ClinicalVisitRevision
+from .treatment import Treatment, TreatmentStatusChange
