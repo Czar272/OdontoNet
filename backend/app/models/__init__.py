@@ -5,3 +5,4 @@ from .patient import Patient
 from .appointment import Appointment, AppointmentStatusChange
 from .availability import DoctorAvailabilityBlock
 from .password_reset import PasswordResetToken
+from .medical_history import PatientMedicalHistory
