@@ -45,6 +45,14 @@ vi.mock("../../services/patientService", () => ({
 
 vi.mock("../../services/doctorService", () => ({ getDoctors: vi.fn(async () => [ana]) }));
 
+vi.mock("../../services/clinicalVisitService", () => ({
+  getVisits: vi.fn(async () => []),
+  createVisit: vi.fn(),
+  updateVisit: vi.fn(),
+  voidVisit: vi.fn(),
+  getVisitRevisions: vi.fn(async () => []),
+}));
+
 vi.mock("../../services/medicalHistoryService", () => ({
   getMedicalHistory: vi.fn(async () => null),
   getMedicalHistoryVersions: vi.fn(async () => []),
@@ -181,5 +189,19 @@ describe("PatientDetailPage", () => {
     renderAt("/patients/5", "doctor");
 
     expect(await screen.findByRole("button", { name: /registrar historia/i })).toBeInTheDocument();
+  });
+
+  it("las consultas clínicas no se muestran a recepción", async () => {
+    renderAt("/patients/5", "receptionist");
+
+    await screen.findByText("Historia médica y odontológica");
+    expect(screen.queryByText("Consultas clínicas")).not.toBeInTheDocument();
+  });
+
+  it("el doctor ve las consultas y puede registrar una", async () => {
+    renderAt("/patients/5", "doctor");
+
+    expect(await screen.findByText("Consultas clínicas")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /nueva consulta/i })).toBeInTheDocument();
   });
 });

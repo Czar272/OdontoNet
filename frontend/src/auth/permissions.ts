@@ -23,6 +23,10 @@ export const PERMISSIONS = {
   // Historia médica (ODON-150): recepción la consulta, no la edita.
   "medical_history:view": ["admin", "doctor", "receptionist"],
   "medical_history:edit": ["admin", "doctor"],
+  // Consultas clínicas (ODON-154): recepción no accede. Editar o anular
+  // además exige ser quien la registró o administración (visitFormData).
+  "visits:view": ["admin", "doctor"],
+  "visits:create": ["admin", "doctor"],
   "clinic:manage": ["admin"],
 } as const satisfies Record<string, readonly Role[]>;
 

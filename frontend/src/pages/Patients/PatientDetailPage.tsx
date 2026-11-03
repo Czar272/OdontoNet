@@ -19,6 +19,7 @@ import ConfirmDialog from "../../components/basic/ConfirmDialog";
 import Input from "../../components/basic/Input";
 import LoadingSpinner from "../../components/basic/LoadingSpinner";
 import Select from "../../components/basic/Select";
+import ClinicalVisitsCard from "../../components/patients/ClinicalVisitsCard";
 import MedicalHistoryCard from "../../components/patients/MedicalHistoryCard";
 import { usePermission } from "../../hooks/usePermission";
 import { getApiErrorMessage } from "../../services/apiError";
@@ -329,6 +330,8 @@ export default function PatientDetailPage() {
   const canArchive = usePermission("patients:archive");
   const canViewHistory = usePermission("medical_history:view");
   const canEditHistory = usePermission("medical_history:edit");
+  const canViewVisits = usePermission("visits:view");
+  const canCreateVisits = usePermission("visits:create");
 
   const {
     data: patient,
@@ -408,8 +411,8 @@ export default function PatientDetailPage() {
             <ClipboardList size={20} /> Historial clínico
           </h2>
           <p className="text-gray-500 text-sm">
-            Las consultas y los tratamientos se mostrarán aquí cuando se
-            habiliten en el expediente clínico.
+            Los planes de tratamiento se mostrarán aquí cuando se habiliten en
+            el expediente clínico.
           </p>
         </Card>
       </div>
@@ -419,6 +422,16 @@ export default function PatientDetailPage() {
           <MedicalHistoryCard
             patientId={patient.id}
             canEdit={canEditHistory}
+            isArchived={Boolean(patient.archived_at)}
+          />
+        </div>
+      )}
+
+      {canViewVisits && (
+        <div className="mt-6">
+          <ClinicalVisitsCard
+            patientId={patient.id}
+            canCreate={canCreateVisits}
             isArchived={Boolean(patient.archived_at)}
           />
         </div>
