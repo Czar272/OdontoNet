@@ -69,6 +69,7 @@ api_tests.txt
 uploads/
 private/
 backups/
+storage/
 *.bak
 *.dump
 

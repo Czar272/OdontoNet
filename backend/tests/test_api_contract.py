@@ -24,7 +24,12 @@ def test_every_success_response_is_typed(client):
     for path, operations in spec["paths"].items():
         for method, operation in operations.items():
             success = next((r for code, r in operation["responses"].items() if code.startswith("2")), {})
-            if not success.get("content", {}).get("application/json", {}).get("schema"):
+            content = success.get("content", {})
+            # Archivos (imágenes clínicas): contenido binario declarado en lugar de JSON.
+            binary = content and all(
+                media.get("schema") == {"type": "string", "format": "binary"} for media in content.values()
+            )
+            if not content.get("application/json", {}).get("schema") and not binary:
                 untyped.append(f"{method.upper()} {path}")
     assert untyped == []
 

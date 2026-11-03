@@ -22,6 +22,7 @@ api_tests.txt
 # Datos privados
 uploads/
 backups/
+storage/
 
 # Testing seed for users
 seed.py

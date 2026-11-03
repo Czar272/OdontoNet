@@ -7,7 +7,10 @@ apuntar a la base de desarrollo.
 Por defecto la URL se deriva de DATABASE_URL en backend/.env cambiando el
 nombre de la base a "<nombre>_test". TEST_DATABASE_URL permite sobrescribirla.
 """
+import atexit
 import os
+import shutil
+import tempfile
 from pathlib import Path
 
 # Antes de importar la app: bcrypt barato solo en pruebas (ver app/auth/security.py).
@@ -56,6 +59,9 @@ except Exception as exc:  # noqa: BLE001
 # Debe definirse antes de importar la app: load_dotenv no sobrescribe variables existentes.
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ.setdefault("SECRET_KEY", "test-only-secret-key")
+# Las pruebas nunca escriben en la carpeta real de imágenes (ODON-166).
+os.environ["IMAGE_STORAGE_DIR"] = tempfile.mkdtemp(prefix="odontonet-test-images-")
+atexit.register(shutil.rmtree, os.environ["IMAGE_STORAGE_DIR"], ignore_errors=True)
 
 from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402
@@ -66,10 +72,11 @@ from app.auth.security import hash_password  # noqa: E402
 from app.database.connection import Base, SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import Clinic, Doctor, User  # noqa: E402
+from app.services.image_storage import LocalImageStorage, get_image_storage  # noqa: E402
 
 PASSWORD = "Test-Password-123"
 
-TEST_CATEGORIES = {"auth", "patients", "doctors", "users", "api", "seed", "isolation", "rbac", "appointments", "records"}
+TEST_CATEGORIES = {"auth", "patients", "doctors", "users", "api", "seed", "isolation", "rbac", "appointments", "records", "images"}
 
 
 def pytest_collection_modifyitems(config, items):
@@ -142,6 +149,26 @@ def db():
 @pytest.fixture
 def client():
     return TestClient(app)
+
+
+@pytest.fixture
+def scratch_dir():
+    """Carpeta temporal propia de la prueba.
+
+    No se usa tmp_path: en Windows el directorio base de pytest
+    (%TEMP%/pytest-of-<usuario>) puede dar PermissionError."""
+    path = Path(tempfile.mkdtemp(prefix="odontonet-test-"))
+    yield path
+    shutil.rmtree(path, ignore_errors=True)
+
+
+@pytest.fixture
+def image_storage(scratch_dir):
+    """Almacenamiento de imágenes aislado por prueba."""
+    storage = LocalImageStorage(scratch_dir / "images")
+    app.dependency_overrides[get_image_storage] = lambda: storage
+    yield storage
+    app.dependency_overrides.pop(get_image_storage, None)
 
 
 def create_clinic_with_doctor(db, clinic_name: str, email: str, role: str = "doctor", active: bool = True):
