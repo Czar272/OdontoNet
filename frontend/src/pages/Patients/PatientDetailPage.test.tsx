@@ -45,6 +45,14 @@ vi.mock("../../services/patientService", () => ({
 
 vi.mock("../../services/doctorService", () => ({ getDoctors: vi.fn(async () => [ana]) }));
 
+vi.mock("../../services/treatmentService", () => ({
+  getTreatments: vi.fn(async () => []),
+  createTreatment: vi.fn(),
+  updateTreatment: vi.fn(),
+  changeTreatmentStatus: vi.fn(),
+  getTreatmentHistory: vi.fn(async () => []),
+}));
+
 vi.mock("../../services/clinicalVisitService", () => ({
   getVisits: vi.fn(async () => []),
   createVisit: vi.fn(),
@@ -98,7 +106,6 @@ describe("PatientDetailPage", () => {
     expect(await screen.findByRole("heading", { name: "Eva Luna" })).toBeInTheDocument();
     expect(screen.getByLabelText(/nombres/i)).toBeDisabled();
     expect(screen.getByLabelText(/doctor asignado/i)).toHaveDisplayValue("Dr. Retirado (inactivo)");
-    expect(screen.getByText("Historial clínico")).toBeInTheDocument();
   });
 
   it("recepción edita en dos pasos y reasigna doctor", async () => {
@@ -203,5 +210,19 @@ describe("PatientDetailPage", () => {
 
     expect(await screen.findByText("Consultas clínicas")).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: /nueva consulta/i })).toBeInTheDocument();
+  });
+
+  it("el plan de tratamiento no se muestra a recepción", async () => {
+    renderAt("/patients/5", "receptionist");
+
+    await screen.findByText("Historia médica y odontológica");
+    expect(screen.queryByText("Plan de tratamiento")).not.toBeInTheDocument();
+  });
+
+  it("el doctor ve el plan de tratamiento", async () => {
+    renderAt("/patients/5", "doctor");
+
+    expect(await screen.findByText("Plan de tratamiento")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /nuevo tratamiento/i })).toBeInTheDocument();
   });
 });

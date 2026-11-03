@@ -5,7 +5,6 @@ import {
   Archive,
   ArchiveRestore,
   ArrowLeft,
-  ClipboardList,
   Lock,
   Pencil,
   SearchX,
@@ -20,6 +19,7 @@ import Input from "../../components/basic/Input";
 import LoadingSpinner from "../../components/basic/LoadingSpinner";
 import Select from "../../components/basic/Select";
 import ClinicalVisitsCard from "../../components/patients/ClinicalVisitsCard";
+import TreatmentsCard from "../../components/patients/TreatmentsCard";
 import MedicalHistoryCard from "../../components/patients/MedicalHistoryCard";
 import { usePermission } from "../../hooks/usePermission";
 import { getApiErrorMessage } from "../../services/apiError";
@@ -332,6 +332,8 @@ export default function PatientDetailPage() {
   const canEditHistory = usePermission("medical_history:edit");
   const canViewVisits = usePermission("visits:view");
   const canCreateVisits = usePermission("visits:create");
+  const canViewTreatments = usePermission("treatments:view");
+  const canManageTreatments = usePermission("treatments:manage");
 
   const {
     data: patient,
@@ -396,26 +398,14 @@ export default function PatientDetailPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <Card className="xl:col-span-2">
-          <PatientDataForm
-            key={JSON.stringify(patient)}
-            patient={patient}
-            canEdit={canEdit}
-            isArchived={Boolean(patient.archived_at)}
-          />
-        </Card>
-
-        <Card>
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <ClipboardList size={20} /> Historial clínico
-          </h2>
-          <p className="text-gray-500 text-sm">
-            Los planes de tratamiento se mostrarán aquí cuando se habiliten en
-            el expediente clínico.
-          </p>
-        </Card>
-      </div>
+      <Card>
+        <PatientDataForm
+          key={JSON.stringify(patient)}
+          patient={patient}
+          canEdit={canEdit}
+          isArchived={Boolean(patient.archived_at)}
+        />
+      </Card>
 
       {canViewHistory && (
         <div className="mt-6">
@@ -432,6 +422,16 @@ export default function PatientDetailPage() {
           <ClinicalVisitsCard
             patientId={patient.id}
             canCreate={canCreateVisits}
+            isArchived={Boolean(patient.archived_at)}
+          />
+        </div>
+      )}
+
+      {canViewTreatments && (
+        <div className="mt-6">
+          <TreatmentsCard
+            patientId={patient.id}
+            canManage={canManageTreatments}
             isArchived={Boolean(patient.archived_at)}
           />
         </div>

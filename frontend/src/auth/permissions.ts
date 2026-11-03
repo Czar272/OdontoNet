@@ -27,6 +27,9 @@ export const PERMISSIONS = {
   // además exige ser quien la registró o administración (visitFormData).
   "visits:view": ["admin", "doctor"],
   "visits:create": ["admin", "doctor"],
+  // Plan de tratamiento (ODON-158): cualquier doctor o admin lo gestiona.
+  "treatments:view": ["admin", "doctor"],
+  "treatments:manage": ["admin", "doctor"],
   "clinic:manage": ["admin"],
 } as const satisfies Record<string, readonly Role[]>;
 
