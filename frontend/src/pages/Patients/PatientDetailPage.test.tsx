@@ -45,6 +45,10 @@ vi.mock("../../services/patientService", () => ({
 
 vi.mock("../../services/doctorService", () => ({ getDoctors: vi.fn(async () => [ana]) }));
 
+vi.mock("../../services/timelineService", () => ({
+  getTimeline: vi.fn(async () => ({ items: [], next_cursor: null })),
+}));
+
 vi.mock("../../services/treatmentService", () => ({
   getTreatments: vi.fn(async () => []),
   createTreatment: vi.fn(),
@@ -184,45 +188,92 @@ describe("PatientDetailPage", () => {
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
+  const tabNames = async () =>
+    (await screen.findAllByRole("tab")).map((tab) => tab.textContent);
+
+  it("recepción solo ve las pestañas de datos e historia médica", async () => {
+    renderAt("/patients/5", "receptionist");
+
+    expect(await tabNames()).toEqual(["Datos generales", "Historia médica"]);
+    expect(screen.getByRole("tab", { name: "Datos generales" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("el doctor ve todas las pestañas del expediente", async () => {
+    renderAt("/patients/5", "doctor");
+
+    expect(await tabNames()).toEqual([
+      "Datos generales",
+      "Historia médica",
+      "Consultas",
+      "Tratamientos",
+      "Historial",
+    ]);
+  });
+
   it("muestra la historia médica a recepción sin opción de editarla", async () => {
     renderAt("/patients/5", "receptionist");
 
+    fireEvent.click(await screen.findByRole("tab", { name: "Historia médica" }));
     expect(await screen.findByText("Historia médica y odontológica")).toBeInTheDocument();
     expect(await screen.findByText(/aún no tiene historia médica/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /registrar historia/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/nombres/i)).not.toBeInTheDocument();
   });
 
   it("el doctor puede registrar la historia", async () => {
-    renderAt("/patients/5", "doctor");
+    renderAt("/patients/5?tab=historia", "doctor");
 
     expect(await screen.findByRole("button", { name: /registrar historia/i })).toBeInTheDocument();
   });
 
-  it("las consultas clínicas no se muestran a recepción", async () => {
-    renderAt("/patients/5", "receptionist");
+  it("recepción no abre pestañas clínicas aunque las pida en la URL", async () => {
+    renderAt("/patients/5?tab=consultas", "receptionist");
 
-    await screen.findByText("Historia médica y odontológica");
+    expect(await screen.findByRole("tab", { name: "Datos generales" })).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByText("Consultas clínicas")).not.toBeInTheDocument();
+    expect(screen.queryByText("Plan de tratamiento")).not.toBeInTheDocument();
+    expect(screen.queryByText("Historial cronológico")).not.toBeInTheDocument();
   });
 
   it("el doctor ve las consultas y puede registrar una", async () => {
     renderAt("/patients/5", "doctor");
 
+    fireEvent.click(await screen.findByRole("tab", { name: "Consultas" }));
     expect(await screen.findByText("Consultas clínicas")).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: /nueva consulta/i })).toBeInTheDocument();
   });
 
-  it("el plan de tratamiento no se muestra a recepción", async () => {
-    renderAt("/patients/5", "receptionist");
-
-    await screen.findByText("Historia médica y odontológica");
-    expect(screen.queryByText("Plan de tratamiento")).not.toBeInTheDocument();
-  });
-
-  it("el doctor ve el plan de tratamiento", async () => {
-    renderAt("/patients/5", "doctor");
+  it("el doctor ve el plan de tratamiento desde la URL", async () => {
+    renderAt("/patients/5?tab=tratamientos", "doctor");
 
     expect(await screen.findByText("Plan de tratamiento")).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: /nuevo tratamiento/i })).toBeInTheDocument();
+  });
+
+  it("el doctor ve el historial cronológico", async () => {
+    renderAt("/patients/5?tab=historial", "doctor");
+
+    expect(await screen.findByRole("heading", { name: /Historial cronológico/ })).toBeInTheDocument();
+  });
+
+  it("las flechas del teclado cambian de pestaña", async () => {
+    renderAt("/patients/5", "doctor");
+
+    const datos = await screen.findByRole("tab", { name: "Datos generales" });
+    fireEvent.keyDown(datos, { key: "ArrowRight" });
+    expect(screen.getByRole("tab", { name: "Historia médica" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Historia médica" })).toHaveFocus();
+
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Historia médica" }), { key: "End" });
+    expect(screen.getByRole("tab", { name: "Historial" })).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Historial" }), { key: "ArrowRight" });
+    expect(datos).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("una pestaña desconocida en la URL abre los datos generales", async () => {
+    renderAt("/patients/5?tab=inexistente", "doctor");
+
+    expect(await screen.findByLabelText(/nombres/i)).toBeInTheDocument();
   });
 });

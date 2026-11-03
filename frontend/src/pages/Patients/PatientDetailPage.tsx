@@ -9,7 +9,7 @@ import {
   Pencil,
   SearchX,
 } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import Button from "../../components/basic/Button";
@@ -18,7 +18,9 @@ import ConfirmDialog from "../../components/basic/ConfirmDialog";
 import Input from "../../components/basic/Input";
 import LoadingSpinner from "../../components/basic/LoadingSpinner";
 import Select from "../../components/basic/Select";
+import Tabs, { type TabItem } from "../../components/basic/Tabs";
 import ClinicalVisitsCard from "../../components/patients/ClinicalVisitsCard";
+import TimelineCard from "../../components/patients/TimelineCard";
 import TreatmentsCard from "../../components/patients/TreatmentsCard";
 import MedicalHistoryCard from "../../components/patients/MedicalHistoryCard";
 import { usePermission } from "../../hooks/usePermission";
@@ -321,7 +323,7 @@ function ArchiveControls({ patient }: { patient: Patient }) {
   );
 }
 
-/** Ficha del paciente (ODON-114): datos generales y acceso al historial clínico. */
+/** Ficha del paciente (ODON-114), organizada en pestañas (ODON-261). */
 export default function PatientDetailPage() {
   const { patientId } = useParams();
   const id = Number(patientId);
@@ -334,6 +336,27 @@ export default function PatientDetailPage() {
   const canCreateVisits = usePermission("visits:create");
   const canViewTreatments = usePermission("treatments:view");
   const canManageTreatments = usePermission("treatments:manage");
+  const canViewTimeline = usePermission("timeline:view");
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Solo las pestañas que el rol puede ver; el backend aplica los permisos.
+  const tabs: TabItem[] = [
+    { id: "datos", label: "Datos generales" },
+    ...(canViewHistory ? [{ id: "historia", label: "Historia médica" }] : []),
+    ...(canViewVisits ? [{ id: "consultas", label: "Consultas" }] : []),
+    ...(canViewTreatments
+      ? [{ id: "tratamientos", label: "Tratamientos" }]
+      : []),
+    ...(canViewTimeline ? [{ id: "historial", label: "Historial" }] : []),
+  ];
+  const requested = searchParams.get("tab");
+  const activeTab = tabs.some((tab) => tab.id === requested)
+    ? (requested as string)
+    : "datos";
+
+  const selectTab = (tab: string) => {
+    setSearchParams(tab === "datos" ? {} : { tab }, { replace: true });
+  };
 
   const {
     data: patient,
@@ -359,6 +382,8 @@ export default function PatientDetailPage() {
   if (!patient) {
     return <p className="text-gray-500">No se pudo cargar el paciente.</p>;
   }
+
+  const isArchived = Boolean(patient.archived_at);
 
   return (
     <div>
@@ -398,44 +423,49 @@ export default function PatientDetailPage() {
         </div>
       )}
 
-      <Card>
-        <PatientDataForm
-          key={JSON.stringify(patient)}
-          patient={patient}
-          canEdit={canEdit}
-          isArchived={Boolean(patient.archived_at)}
-        />
-      </Card>
+      <Tabs
+        tabs={tabs}
+        active={activeTab}
+        onChange={selectTab}
+        label="Secciones del expediente"
+      >
+        {activeTab === "datos" && (
+          <Card>
+            <PatientDataForm
+              key={JSON.stringify(patient)}
+              patient={patient}
+              canEdit={canEdit}
+              isArchived={isArchived}
+            />
+          </Card>
+        )}
 
-      {canViewHistory && (
-        <div className="mt-6">
+        {activeTab === "historia" && (
           <MedicalHistoryCard
             patientId={patient.id}
             canEdit={canEditHistory}
-            isArchived={Boolean(patient.archived_at)}
+            isArchived={isArchived}
           />
-        </div>
-      )}
+        )}
 
-      {canViewVisits && (
-        <div className="mt-6">
+        {activeTab === "consultas" && (
           <ClinicalVisitsCard
             patientId={patient.id}
             canCreate={canCreateVisits}
-            isArchived={Boolean(patient.archived_at)}
+            isArchived={isArchived}
           />
-        </div>
-      )}
+        )}
 
-      {canViewTreatments && (
-        <div className="mt-6">
+        {activeTab === "tratamientos" && (
           <TreatmentsCard
             patientId={patient.id}
             canManage={canManageTreatments}
-            isArchived={Boolean(patient.archived_at)}
+            isArchived={isArchived}
           />
-        </div>
-      )}
+        )}
+
+        {activeTab === "historial" && <TimelineCard patientId={patient.id} />}
+      </Tabs>
     </div>
   );
 }
