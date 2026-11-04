@@ -8,4 +8,5 @@ from .password_reset import PasswordResetToken
 from .medical_history import PatientMedicalHistory
 from .clinical_visit import ClinicalVisit, ClinicalVisitRevision
 from .treatment import Treatment, TreatmentStatusChange
+from .photo_consent import PatientPhotoConsent
 from .patient_image import PatientImage

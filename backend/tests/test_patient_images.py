@@ -1,7 +1,8 @@
 """Almacenamiento privado de imágenes clínicas (ODON-166).
 
 Las imágenes de prueba son bytes generados en memoria: ninguna fotografía real
-entra al repositorio. La validación del contenido llega en ODON-170.
+entra al repositorio. La subida y validación del contenido están en
+test_image_upload.py (ODON-170).
 """
 import hashlib
 import logging
@@ -15,7 +16,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.auth.security import hash_password
 from app.main import app
-from app.models import Patient, PatientImage, User
+from app.models import Patient, PatientImage, PatientPhotoConsent, User
 from app.services import patient_image_service as service
 from app.services.image_storage import (
     KEY_PATTERN,
@@ -44,6 +45,15 @@ def setup(db, client, image_storage):
     sibling = Patient(first_name="Otro", last_name="Paciente", clinic_id=clinic.id)
     other = Patient(first_name="Ajeno", last_name="X", clinic_id=other_clinic.id)
     db.add_all([patient, sibling, other])
+    db.flush()
+    consents = {
+        p.id: PatientPhotoConsent(
+            clinic_id=p.clinic_id, patient_id=p.id, version=1, granted=True,
+            signed_on=YESTERDAY.date(), recorded_by_user_id=(doctor_user if p is not other else other_user).id,
+        )
+        for p in (patient, sibling, other)
+    }
+    db.add_all(consents.values())
     db.commit()
 
     headers = {
@@ -70,19 +80,22 @@ def setup(db, client, image_storage):
         "headers": headers,
         "visit": visit(patient.id),
         "sibling_visit": visit(sibling.id),
+        "consents": {pid: c.id for pid, c in consents.items()},
     }
 
 
 def store(setup, patient=None, data=JPEG, content_type="image/jpeg", **extra):
+    patient = patient or setup["patient"]
     return service.store_image(
         setup["db"],
         setup["storage"],
-        patient or setup["patient"],
+        patient,
         data,
         content_type,
         width=640,
         height=480,
         author=extra.pop("author", setup["doctor_user"]),
+        consent_id=extra.pop("consent_id", setup["consents"][patient.id]),
         **extra,
     )
 
@@ -222,6 +235,12 @@ def test_store_image_rejects_archived_patient(setup):
     with pytest.raises(HTTPException) as exc:
         store(setup)
     assert exc.value.status_code == 409
+
+
+def test_consent_of_another_patient_is_rejected_by_the_database(setup):
+    with pytest.raises(IntegrityError):
+        store(setup, consent_id=setup["consents"][setup["sibling"].id])
+    assert setup["storage"].keys() == []
 
 
 def test_database_failure_discards_the_file(setup):

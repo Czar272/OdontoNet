@@ -31,8 +31,9 @@ class PatientImage(Base):
     """Fotografía clínica de un paciente (ODON-166).
 
     El archivo vive en el almacenamiento privado (storage_key); aquí quedan la
-    clínica, el paciente, la consulta y la pieza opcionales, el autor y la
-    huella SHA-256 para verificar respaldos. No se borra."""
+    clínica, el paciente, la consulta y la pieza opcionales, el autor, el
+    consentimiento vigente al subirla y la huella SHA-256 para verificar
+    respaldos. No se borra."""
 
     __tablename__ = "patient_images"
     __table_args__ = (
@@ -47,6 +48,12 @@ class PatientImage(Base):
             ["clinical_visit_id", "clinic_id"],
             ["clinical_visits.id", "clinical_visits.clinic_id"],
             name="fk_patient_images_visit_clinic",
+        ),
+        # El consentimiento aplicado debe ser del mismo paciente y clínica.
+        ForeignKeyConstraint(
+            ["consent_id", "patient_id", "clinic_id"],
+            ["patient_photo_consents.id", "patient_photo_consents.patient_id", "patient_photo_consents.clinic_id"],
+            name="fk_patient_images_consent",
         ),
         ForeignKeyConstraint(
             ["uploaded_by_user_id", "clinic_id"],
@@ -72,9 +79,12 @@ class PatientImage(Base):
     width = Column(Integer, nullable=False)
     height = Column(Integer, nullable=False)
     sha256 = Column(String(64), nullable=False)
+    # Versión del consentimiento vigente al subir (ODON-170).
+    consent_id = Column(Integer, ForeignKey("patient_photo_consents.id"), nullable=False)
 
     uploaded_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     uploaded_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     clinical_visit = relationship("ClinicalVisit", foreign_keys=[clinical_visit_id])
     uploaded_by = relationship("User", foreign_keys=[uploaded_by_user_id])
+    consent = relationship("PatientPhotoConsent", foreign_keys=[consent_id])
