@@ -96,7 +96,7 @@ Los endpoints `/auth/me`, `/patients/`, `/doctors/` y `/users/` **requieren** JW
 
 ### Imágenes clínicas y respaldos
 
-Las fotografías se guardan en `IMAGE_STORAGE_DIR` (por defecto `backend/storage/images`, ignorada por Git). Esa carpeta es privada: nunca se sirve como estática ni se copia al repositorio, y los nombres de archivo son aleatorios. Que una foto no tenga nombre no la hace anónima. En desarrollo solo se usan imágenes sintéticas.
+Las fotografías se guardan en `IMAGE_STORAGE_DIR` (por defecto `backend/storage/images`, ignorada por Git). Esa carpeta es privada: nunca se sirve como estática ni se copia al repositorio, y los nombres de archivo son aleatorios. Que una foto no tenga nombre no la hace anónima. En desarrollo solo se usan imágenes sintéticas (las pruebas las generan en memoria con Pillow). Para subir una foto el paciente necesita un consentimiento vigente, registrado en la pestaña «Imágenes» de su ficha; al guardarla se recodifica sin metadatos.
 
 Respaldo (hasta que la épica CAL lo automatice): la base y la carpeta de imágenes se respaldan **juntas**, en ese orden y sin subidas entre ambas, y se restauran juntas. Después de restaurar, o periódicamente:
 
@@ -136,7 +136,7 @@ Cada prueba pertenece al menos a una categoría (marcador de pytest), según el 
 | `rbac` | Permisos por rol (transversal) |
 | `appointments` | Modelo, integridad y endpoints de citas |
 | `records` | Expediente clínico: historia médica, consultas, plan de tratamiento e historial cronológico |
-| `images` | Imágenes clínicas: almacenamiento privado, descarga, verificación de respaldos |
+| `images` | Imágenes clínicas: almacenamiento privado, subida y saneamiento, consentimiento, descarga, verificación de respaldos |
 
 ```powershell
 python -m pytest -m auth                      # solo autenticación
@@ -157,7 +157,7 @@ Durante el desarrollo y al verificar un ticket basta con las categorías del ár
 | Usuarios (`/users`) | `python -m pytest -m "users or rbac"` | `npx vitest run src/pages/Users src/components/users` |
 | Pacientes | `python -m pytest -m "patients or isolation"` | `npx vitest run src/pages/Patients src/components/patients` |
 | Historia médica / expediente | `python -m pytest -m "records or rbac"` | `npx vitest run src/components/patients src/pages/Patients src/auth` |
-| Imágenes clínicas (`image_storage`, `patient_image_*`, `verify_images`) | `python -m pytest -m "images or rbac"` | — |
+| Imágenes clínicas y consentimiento (`image_*`, `patient_image_*`, `photo_consent_*`, `verify_images`) | `python -m pytest -m "images or rbac"` | `npx vitest run src/components/patients src/pages/Patients src/auth` |
 | Doctores y horarios | `python -m pytest -m "doctors or appointments"` | `npx vitest run src/pages/Doctors src/components/doctors src/pages/Agenda` |
 | Agenda y citas | `python -m pytest -m "appointments or doctors"` | `npx vitest run src/pages/Agenda src/components/appointments` |
 | Clínica | `python -m pytest -m isolation` | `npx vitest run src/pages/Clinic` |
