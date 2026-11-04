@@ -45,3 +45,9 @@ export function readAsDataUrl(blob: Blob): Promise<string> {
     reader.readAsDataURL(blob);
   });
 }
+
+export const patientImagesKey = (patientId: number) =>
+  ["patients", patientId, "images"] as const;
+
+// Miniaturas que se piden de una vez en la galería; el resto, con «Ver más».
+export const GALLERY_PAGE_SIZE = 24;

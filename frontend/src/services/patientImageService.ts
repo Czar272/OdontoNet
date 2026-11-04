@@ -66,3 +66,25 @@ export async function getPatientImageFile(
 
   return response.data;
 }
+
+/** Imágenes del paciente (solo metadatos), la más reciente primero. */
+export async function getPatientImages(
+  patientId: number,
+): Promise<PatientImage[]> {
+  const response = await api.get<PatientImage[]>(imagesUrl(patientId));
+
+  return response.data;
+}
+
+/** Miniatura JPEG (lado mayor 320 px), pedida con el token. */
+export async function getPatientImageThumbnail(
+  patientId: number,
+  imageId: number,
+): Promise<Blob> {
+  const response = await api.get<Blob>(
+    `${imagesUrl(patientId)}/${imageId}/thumbnail`,
+    { responseType: "blob" },
+  );
+
+  return response.data;
+}

@@ -1,7 +1,7 @@
 import type { PersonRef } from "./clinicalVisit";
 
 export type TimelineEventType =
-  "visit" | "treatment" | "medical_history" | "appointment";
+  "visit" | "treatment" | "medical_history" | "appointment" | "image";
 
 /** Un evento del historial cronológico del paciente (ODON-162). */
 export interface TimelineEvent {

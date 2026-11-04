@@ -67,7 +67,7 @@ describe("TimelineCard", () => {
     fireEvent.click(screen.getByLabelText("Citas"));
 
     await waitFor(() =>
-      expect(getTimeline).toHaveBeenLastCalledWith(5, expect.objectContaining({ types: ["visit", "treatment", "medical_history"] })),
+      expect(getTimeline).toHaveBeenLastCalledWith(5, expect.objectContaining({ types: ["visit", "treatment", "medical_history", "image"] })),
     );
   });
 
@@ -75,13 +75,25 @@ describe("TimelineCard", () => {
     renderWithAuth(<TimelineCard patientId={5} />, "doctor");
     await screen.findByText("Consulta: Evaluación");
 
-    for (const label of ["Consultas", "Tratamientos", "Historia médica", "Citas"]) {
+    for (const label of ["Consultas", "Tratamientos", "Historia médica", "Citas", "Imágenes"]) {
       fireEvent.click(screen.getByLabelText(label));
     }
 
     expect(await screen.findByText("Elige al menos un tipo de evento.")).toBeInTheDocument();
     const typesSent = vi.mocked(getTimeline).mock.calls.map(([, params]) => params?.types ?? []);
     expect(typesSent.every((types) => types.length > 0)).toBe(true);
+  });
+
+  it("muestra las fotografías clínicas subidas (ODON-174)", async () => {
+    vi.mocked(getTimeline).mockResolvedValueOnce({
+      items: [event("image.uploaded:7", "image", "Fotografía clínica (pieza 36)", { action: "uploaded", detail: "Consulta: Control" })],
+      next_cursor: null,
+    });
+    renderWithAuth(<TimelineCard patientId={5} />, "doctor");
+
+    const item = (await screen.findByText("Fotografía clínica (pieza 36)")).closest("li") as HTMLElement;
+    expect(within(item).getByText("Consulta: Control")).toBeInTheDocument();
+    expect(screen.getByLabelText("Imágenes")).toBeChecked();
   });
 
   it("paciente sin eventos", async () => {

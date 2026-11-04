@@ -5,6 +5,7 @@ export const TIMELINE_TYPES: { type: TimelineEventType; label: string }[] = [
   { type: "treatment", label: "Tratamientos" },
   { type: "medical_history", label: "Historia médica" },
   { type: "appointment", label: "Citas" },
+  { type: "image", label: "Imágenes" },
 ];
 
 /** Clave de React Query; cualquier cambio clínico del paciente la invalida. */

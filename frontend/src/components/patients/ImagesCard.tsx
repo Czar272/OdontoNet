@@ -9,18 +9,19 @@ import Select from "../basic/Select";
 import { getApiErrorMessage } from "../../services/apiError";
 import { getVisits } from "../../services/clinicalVisitService";
 import {
-  getPatientImageFile,
   getPhotoConsent,
   uploadPatientImage,
 } from "../../services/patientImageService";
-import type { PatientImage } from "../../types/patientImage";
+import ImageGallery from "./ImageGallery";
 import PhotoConsentSection from "./PhotoConsentSection";
 import ToothChart from "./ToothChart";
+import { timelineKey } from "./timelineEvents";
 import {
   ACCEPTED_IMAGE_EXTENSIONS,
   ACCEPTED_IMAGE_TYPES,
   MAX_IMAGE_MB,
   formatBytes,
+  patientImagesKey,
   photoConsentKey,
   readAsDataUrl,
   validateImageFile,
@@ -31,41 +32,6 @@ const dateTime = new Intl.DateTimeFormat("es-GT", {
   timeStyle: "short",
 });
 
-/** Miniatura de la imagen guardada, pedida con el token (sin URL pública). */
-function StoredImagePreview({ image }: { image: PatientImage }) {
-  const { data: url } = useQuery({
-    queryKey: ["patients", image.patient_id, "images", image.id, "file"],
-    queryFn: async () =>
-      readAsDataUrl(await getPatientImageFile(image.patient_id, image.id)),
-    staleTime: Infinity,
-  });
-
-  return (
-    <div className="flex items-center gap-4 rounded-xl border p-3">
-      {url ? (
-        <img
-          src={url}
-          alt="Imagen recién subida"
-          className="h-20 w-20 rounded-lg object-cover"
-        />
-      ) : (
-        <div className="h-20 w-20 rounded-lg bg-gray-100" aria-hidden="true" />
-      )}
-      <div className="text-sm text-gray-600">
-        <p className="font-medium text-gray-900">Imagen subida</p>
-        <p>
-          {image.width} × {image.height} px · {formatBytes(image.size_bytes)}
-          {image.tooth ? ` · pieza ${image.tooth}` : ""}
-        </p>
-        <p>
-          {image.uploaded_by.name} ·{" "}
-          {dateTime.format(new Date(image.uploaded_at))}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function UploadForm({ patientId }: { patientId: number }) {
   const queryClient = useQueryClient();
   const fileInputId = useId();
@@ -75,7 +41,6 @@ function UploadForm({ patientId }: { patientId: number }) {
   const [visitId, setVisitId] = useState("");
   const [tooth, setTooth] = useState<number | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
-  const [uploaded, setUploaded] = useState<PatientImage[]>([]);
   const [preview, setPreview] = useState<string | null>(null);
 
   const { data: allVisits = [] } = useQuery({
@@ -104,13 +69,11 @@ function UploadForm({ patientId }: { patientId: number }) {
         },
         setProgress,
       ),
-    onSuccess: (image) => {
+    onSuccess: () => {
       toast.success("Imagen subida");
-      setUploaded((prev) => [image, ...prev]);
       reset();
-      queryClient.invalidateQueries({
-        queryKey: ["patients", patientId, "images"],
-      });
+      queryClient.invalidateQueries({ queryKey: patientImagesKey(patientId) });
+      queryClient.invalidateQueries({ queryKey: timelineKey(patientId) });
     },
     onError: (error) => {
       setProgress(null);
@@ -244,14 +207,6 @@ function UploadForm({ patientId }: { patientId: number }) {
           </span>
         </Button>
       </div>
-
-      {uploaded.length > 0 && (
-        <div className="flex flex-col gap-2" aria-label="Imágenes subidas">
-          {uploaded.map((image) => (
-            <StoredImagePreview key={image.id} image={image} />
-          ))}
-        </div>
-      )}
     </form>
   );
 }
@@ -262,7 +217,7 @@ interface ImagesCardProps {
   isArchived: boolean;
 }
 
-/** Imágenes clínicas del paciente: consentimiento y subida (ODON-170). */
+/** Imágenes clínicas del paciente: consentimiento, subida (ODON-170) y galería (ODON-174). */
 export default function ImagesCard({
   patientId,
   canUpload,
@@ -310,6 +265,8 @@ export default function ImagesCard({
             <UploadForm patientId={patientId} />
           )}
         </section>
+
+        <ImageGallery patientId={patientId} />
       </div>
     </Card>
   );

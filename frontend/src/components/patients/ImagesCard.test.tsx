@@ -26,6 +26,7 @@ const uploaded: PatientImage = {
 };
 
 let status: PhotoConsentStatus = { current: null, history: [] };
+let gallery: PatientImage[] = [];
 
 vi.mock("../../services/patientImageService", () => ({
   getPhotoConsent: vi.fn(async () => status),
@@ -33,8 +34,11 @@ vi.mock("../../services/patientImageService", () => ({
   uploadPatientImage: vi.fn(async (_p: number, _data: object, onProgress?: (n: number) => void) => {
     onProgress?.(40);
     onProgress?.(100);
+    gallery = [uploaded];
     return uploaded;
   }),
+  getPatientImages: vi.fn(async () => gallery),
+  getPatientImageThumbnail: vi.fn(async () => new Blob(["x"], { type: "image/jpeg" })),
   getPatientImageFile: vi.fn(async () => new Blob(["x"], { type: "image/jpeg" })),
 }));
 
@@ -52,6 +56,7 @@ const service = await import("../../services/patientImageService");
 beforeEach(() => {
   vi.clearAllMocks();
   status = { current: null, history: [] };
+  gallery = [];
 });
 
 const granted = () => {
@@ -145,7 +150,7 @@ describe("ImagesCard", () => {
     expect(service.uploadPatientImage).not.toHaveBeenCalled();
   });
 
-  it("sube con consulta y pieza, muestra el progreso y el resultado", async () => {
+  it("sube con consulta y pieza y la foto aparece en la galería", async () => {
     granted();
     render();
 
@@ -168,16 +173,20 @@ describe("ImagesCard", () => {
         5, { file: photo, clinical_visit_id: 9, tooth: 36 }, expect.any(Function),
       ),
     );
-    const result = await screen.findByLabelText("Imágenes subidas");
-    expect(within(result).getByText(/640 × 480 px · 2 KB · pieza 36/)).toBeInTheDocument();
-    expect(await within(result).findByAltText("Imagen recién subida")).toHaveAttribute("src", expect.stringMatching(/^data:image\/jpeg/));
+    const grid = await screen.findByRole("list", { name: "Fotografías del paciente" });
+    expect(within(grid).getAllByRole("listitem")).toHaveLength(1);
+    expect(within(grid).getByText(/pieza 36/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Galería (1)" })).toBeInTheDocument();
     // El formulario queda listo para otra foto.
     expect(screen.getByRole("button", { name: /subir imagen/i })).toBeDisabled();
   });
 
-  it("el paciente archivado queda en solo lectura", async () => {
+  it("el paciente archivado queda en solo lectura pero conserva la galería", async () => {
     granted();
+    gallery = [uploaded];
     render({ isArchived: true });
+
+    expect(await screen.findByRole("list", { name: "Fotografías del paciente" })).toBeInTheDocument();
 
     expect(await screen.findByText(/paciente archivado: no se pueden subir/i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Revocar" })).not.toBeInTheDocument();
