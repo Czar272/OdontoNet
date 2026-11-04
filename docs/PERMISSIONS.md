@@ -61,9 +61,10 @@
 | `GET /patients/{id}/timeline` (historial cronológico; filtros `types`, `cursor`, `limit`) | ✅ | ✅ | ⛔ |
 | `GET /patients/{id}/images/{image_id}/file` (archivo de una imagen clínica; otra clínica `404`) | ✅ | ✅ | ⛔ |
 | `POST /patients/{id}/images` (subir fotografía; exige consentimiento vigente) | ✅ | ✅ | ⛔ |
+| `GET /patients/{id}/images`, `GET /patients/{id}/images/{image_id}` y `.../thumbnail` (galería: metadatos y miniatura; otra clínica `404`) | ✅ | ✅ | ⛔ |
 | `GET`, `POST /patients/{id}/photo-consent` (consentimiento para fotografías: vigente, historial y versión nueva) | ✅ | ✅ | ⛔ |
 
-Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_password_reset.py`, `backend/tests/test_users.py`, `backend/tests/test_user_deactivation.py`, `backend/tests/test_patient_archive.py`, `backend/tests/test_appointment_api.py`, `backend/tests/test_doctor_availability.py`, `backend/tests/test_medical_history.py`, `backend/tests/test_clinical_visits.py`, `backend/tests/test_treatments.py`, `backend/tests/test_timeline.py`, `backend/tests/test_patient_images.py` y `backend/tests/test_image_upload.py`.
+Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_password_reset.py`, `backend/tests/test_users.py`, `backend/tests/test_user_deactivation.py`, `backend/tests/test_patient_archive.py`, `backend/tests/test_appointment_api.py`, `backend/tests/test_doctor_availability.py`, `backend/tests/test_medical_history.py`, `backend/tests/test_clinical_visits.py`, `backend/tests/test_treatments.py`, `backend/tests/test_timeline.py`, `backend/tests/test_patient_images.py`, `backend/tests/test_image_upload.py` y `backend/tests/test_image_gallery.py`.
 
 ### Reglas de gestión de usuarios (ODON-86)
 
