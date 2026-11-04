@@ -1,4 +1,5 @@
 """Consultas clínicas con revisiones y anulación (ODON-154)."""
+
 import logging
 from datetime import date, datetime, timedelta, timezone
 
@@ -16,13 +17,42 @@ YESTERDAY = NOW - timedelta(days=1)
 
 @pytest.fixture
 def setup(db, client):
-    clinic, author_user, author_doctor = create_clinic_with_doctor(db, "Clinica Consultas", "autor@consultas-clinica.com")
-    other_clinic, _, other_doctor = create_clinic_with_doctor(db, "Clinica Ajena", "doc@ajena-consultas.com")
+    clinic, author_user, author_doctor = create_clinic_with_doctor(
+        db, "Clinica Consultas", "autor@consultas-clinica.com"
+    )
+    other_clinic, _, other_doctor = create_clinic_with_doctor(
+        db, "Clinica Ajena", "doc@ajena-consultas.com"
+    )
 
-    colleague_user = User(name="Dra. Colega", email="colega@consultas-clinica.com", hashed_password=hash_password(PASSWORD), role="doctor", clinic_id=clinic.id)
-    admin = User(name="Admin Consultas", email="admin@consultas-clinica.com", hashed_password=hash_password(PASSWORD), role="admin", clinic_id=clinic.id)
-    reception = User(name="Recepción", email="recepcion@consultas-clinica.com", hashed_password=hash_password(PASSWORD), role="receptionist", clinic_id=clinic.id)
-    retired_user = User(name="Dr. Retirado", email="retirado@consultas-clinica.com", hashed_password=hash_password(PASSWORD), role="doctor", clinic_id=clinic.id, is_active=False)
+    colleague_user = User(
+        name="Dra. Colega",
+        email="colega@consultas-clinica.com",
+        hashed_password=hash_password(PASSWORD),
+        role="doctor",
+        clinic_id=clinic.id,
+    )
+    admin = User(
+        name="Admin Consultas",
+        email="admin@consultas-clinica.com",
+        hashed_password=hash_password(PASSWORD),
+        role="admin",
+        clinic_id=clinic.id,
+    )
+    reception = User(
+        name="Recepción",
+        email="recepcion@consultas-clinica.com",
+        hashed_password=hash_password(PASSWORD),
+        role="receptionist",
+        clinic_id=clinic.id,
+    )
+    retired_user = User(
+        name="Dr. Retirado",
+        email="retirado@consultas-clinica.com",
+        hashed_password=hash_password(PASSWORD),
+        role="doctor",
+        clinic_id=clinic.id,
+        is_active=False,
+    )
     # Recepción y admin primero: así los ids de usuario y de perfil de doctor no coinciden.
     db.add(admin)
     db.add(reception)
@@ -74,7 +104,11 @@ def content(setup, **changes):
 
 
 def create(client, setup, role="author", **changes):
-    return client.post(url(setup["patient"]), json=content(setup, **changes), headers=setup["headers"][role])
+    return client.post(
+        url(setup["patient"]),
+        json=content(setup, **changes),
+        headers=setup["headers"][role],
+    )
 
 
 def update(client, setup, visit_id, base_revision=1, role="author", **changes):
@@ -85,8 +119,18 @@ def update(client, setup, visit_id, base_revision=1, role="author", **changes):
     )
 
 
-def void(client, setup, visit_id, role="author", reason="Registrada en el paciente equivocado"):
-    return client.post(url(setup["patient"], f"/{visit_id}/void"), json={"reason": reason}, headers=setup["headers"][role])
+def void(
+    client,
+    setup,
+    visit_id,
+    role="author",
+    reason="Registrada en el paciente equivocado",
+):
+    return client.post(
+        url(setup["patient"], f"/{visit_id}/void"),
+        json={"reason": reason},
+        headers=setup["headers"][role],
+    )
 
 
 # --- Alta y lectura -------------------------------------------------------------
@@ -110,7 +154,10 @@ def test_doctor_records_visit_linked_to_patient_and_doctor(client, setup):
 def test_creation_stores_first_revision(client, setup, db):
     visit_id = create(client, setup).json()["id"]
 
-    revisions = client.get(url(setup["patient"], f"/{visit_id}/revisions"), headers=setup["headers"]["author"]).json()
+    revisions = client.get(
+        url(setup["patient"], f"/{visit_id}/revisions"),
+        headers=setup["headers"]["author"],
+    ).json()
 
     assert [r["revision"] for r in revisions] == [1]
     assert revisions[0]["reason"] == "Sangrado al cepillarse"
@@ -118,20 +165,33 @@ def test_creation_stores_first_revision(client, setup, db):
 
 
 def test_list_is_newest_first_and_includes_voided(client, setup):
-    older = create(client, setup, visit_at=(YESTERDAY - timedelta(days=30)).isoformat(), next_visit_date=None).json()["id"]
+    older = create(
+        client,
+        setup,
+        visit_at=(YESTERDAY - timedelta(days=30)).isoformat(),
+        next_visit_date=None,
+    ).json()["id"]
     newer = create(client, setup).json()["id"]
     void(client, setup, older)
 
-    visits = client.get(url(setup["patient"]), headers=setup["headers"]["colleague"]).json()
+    visits = client.get(
+        url(setup["patient"]), headers=setup["headers"]["colleague"]
+    ).json()
 
     assert [v["id"] for v in visits] == [newer, older]
     assert visits[1]["void_reason"] == "Registrada en el paciente equivocado"
 
 
 def test_only_date_doctor_and_reason_are_required(client, setup):
-    body = {"visit_at": YESTERDAY.isoformat(), "doctor_id": setup["doctor"], "reason": "Control"}
+    body = {
+        "visit_at": YESTERDAY.isoformat(),
+        "doctor_id": setup["doctor"],
+        "reason": "Control",
+    }
 
-    response = client.post(url(setup["patient"]), json=body, headers=setup["headers"]["author"])
+    response = client.post(
+        url(setup["patient"]), json=body, headers=setup["headers"]["author"]
+    )
 
     assert response.status_code == 201
     assert response.json()["findings"] is None
@@ -166,21 +226,34 @@ def test_invalid_content_is_422(client, setup, changes, field):
 
 
 def test_future_visit_is_rejected(client, setup):
-    response = create(client, setup, visit_at=(NOW + timedelta(hours=2)).isoformat(), next_visit_date=None)
+    response = create(
+        client,
+        setup,
+        visit_at=(NOW + timedelta(hours=2)).isoformat(),
+        next_visit_date=None,
+    )
 
     assert response.status_code == 422
-    assert response.json() == {"detail": "La fecha de atención no puede estar en el futuro."}
+    assert response.json() == {
+        "detail": "La fecha de atención no puede estar en el futuro."
+    }
 
 
 def test_next_visit_must_be_after_the_visit_in_clinic_time(client, setup):
     # 23:00 en Guatemala = 05:00 UTC del día siguiente: la fecha que cuenta es la local.
     visit_at = datetime(2026, 10, 20, 5, 0, tzinfo=timezone.utc)
 
-    same_day = create(client, setup, visit_at=visit_at.isoformat(), next_visit_date="2026-10-19")
-    next_day = create(client, setup, visit_at=visit_at.isoformat(), next_visit_date="2026-10-20")
+    same_day = create(
+        client, setup, visit_at=visit_at.isoformat(), next_visit_date="2026-10-19"
+    )
+    next_day = create(
+        client, setup, visit_at=visit_at.isoformat(), next_visit_date="2026-10-20"
+    )
 
     assert same_day.status_code == 422
-    assert same_day.json() == {"detail": "La próxima cita sugerida debe ser posterior a la consulta."}
+    assert same_day.json() == {
+        "detail": "La próxima cita sugerida debe ser posterior a la consulta."
+    }
     assert next_day.status_code == 201
 
 
@@ -192,7 +265,9 @@ def test_doctor_must_be_active_and_from_the_clinic(client, setup):
     assert inactive.status_code == 422
     assert inactive.json() == {"detail": "El doctor seleccionado está inactivo."}
     assert foreign.status_code == 422
-    assert foreign.json() == {"detail": "El doctor seleccionado no pertenece a la clínica."}
+    assert foreign.json() == {
+        "detail": "El doctor seleccionado no pertenece a la clínica."
+    }
 
 
 def test_a_visit_can_be_recorded_for_a_colleague(client, setup, db):
@@ -210,11 +285,20 @@ def test_a_visit_can_be_recorded_for_a_colleague(client, setup, db):
 def test_doctor_returned_by_the_api_can_be_sent_back_on_edit(client, setup):
     created = create(client, setup, doctor_id=setup["colleague"]).json()
 
-    response = update(client, setup, created["id"], doctor_id=created["doctor"]["id"], findings="Sin cambios de doctor")
+    response = update(
+        client,
+        setup,
+        created["id"],
+        doctor_id=created["doctor"]["id"],
+        findings="Sin cambios de doctor",
+    )
 
     assert response.status_code == 200, response.text
     assert response.json()["doctor"]["id"] == setup["colleague"]
-    revisions = client.get(url(setup["patient"], f"/{created['id']}/revisions"), headers=setup["headers"]["author"]).json()
+    revisions = client.get(
+        url(setup["patient"], f"/{created['id']}/revisions"),
+        headers=setup["headers"]["author"],
+    ).json()
     assert {r["doctor"]["id"] for r in revisions} == {setup["colleague"]}
 
 
@@ -234,7 +318,10 @@ def test_edit_creates_a_revision_and_keeps_the_previous_one(client, setup):
     assert response.status_code == 200, response.text
     assert response.json()["revision"] == 2
     assert response.json()["diagnosis"] == "Periodontitis estadio I"
-    revisions = client.get(url(setup["patient"], f"/{visit_id}/revisions"), headers=setup["headers"]["author"]).json()
+    revisions = client.get(
+        url(setup["patient"], f"/{visit_id}/revisions"),
+        headers=setup["headers"]["author"],
+    ).json()
     assert [r["revision"] for r in revisions] == [2, 1]
     assert revisions[1]["diagnosis"] == "Gingivitis inducida por placa"
 
@@ -242,7 +329,9 @@ def test_edit_creates_a_revision_and_keeps_the_previous_one(client, setup):
 def test_admin_edits_and_is_recorded_as_editor(client, setup):
     visit_id = create(client, setup).json()["id"]
 
-    body = update(client, setup, visit_id, role="admin", instructions="Enjuague con clorhexidina").json()
+    body = update(
+        client, setup, visit_id, role="admin", instructions="Enjuague con clorhexidina"
+    ).json()
 
     assert body["updated_by"]["name"] == "Admin Consultas"
     assert body["created_by"]["id"] == setup["author_user"]
@@ -273,7 +362,13 @@ def test_keeping_a_now_inactive_doctor_on_edit_is_allowed(client, setup, db):
     db.query(User).filter(User.id == colleague_user_id).update({"is_active": False})
     db.commit()
 
-    response = update(client, setup, visit_id, doctor_id=setup["colleague"], instructions="Sin cambios de doctor")
+    response = update(
+        client,
+        setup,
+        visit_id,
+        doctor_id=setup["colleague"],
+        instructions="Sin cambios de doctor",
+    )
 
     assert response.status_code == 200
 
@@ -313,10 +408,17 @@ def test_voided_visit_cannot_be_edited_or_voided_again(client, setup):
 def test_other_doctor_reads_but_cannot_edit_or_void(client, setup):
     visit_id = create(client, setup).json()["id"]
 
-    assert client.get(url(setup["patient"], f"/{visit_id}"), headers=setup["headers"]["colleague"]).status_code == 200
+    assert (
+        client.get(
+            url(setup["patient"], f"/{visit_id}"), headers=setup["headers"]["colleague"]
+        ).status_code
+        == 200
+    )
     edit = update(client, setup, visit_id, role="colleague", findings="x")
     assert edit.status_code == 403
-    assert edit.json() == {"detail": "Solo quien registró la consulta o administración pueden modificarla."}
+    assert edit.json() == {
+        "detail": "Solo quien registró la consulta o administración pueden modificarla."
+    }
     assert void(client, setup, visit_id, role="colleague").status_code == 403
 
 
@@ -328,12 +430,19 @@ def test_admin_can_void(client, setup):
 
 
 @pytest.mark.rbac
-@pytest.mark.parametrize("method, suffix", [("get", ""), ("post", ""), ("get", "/1"), ("get", "/1/revisions")])
+@pytest.mark.parametrize(
+    "method, suffix",
+    [("get", ""), ("post", ""), ("get", "/1"), ("get", "/1/revisions")],
+)
 def test_receptionist_has_no_access(client, setup, method, suffix):
     create(client, setup)
 
     kwargs = {"json": content(setup)} if method == "post" else {}
-    response = getattr(client, method)(url(setup["patient"], suffix), headers=setup["headers"]["receptionist"], **kwargs)
+    response = getattr(client, method)(
+        url(setup["patient"], suffix),
+        headers=setup["headers"]["receptionist"],
+        **kwargs,
+    )
 
     assert response.status_code == 403
 
@@ -343,7 +452,9 @@ def test_receptionist_has_no_access(client, setup, method, suffix):
 def test_other_clinic_gets_404(client, setup, suffix):
     create(client, setup)
 
-    response = client.get(url(setup["patient"], suffix), headers=setup["headers"]["other"])
+    response = client.get(
+        url(setup["patient"], suffix), headers=setup["headers"]["other"]
+    )
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Paciente no encontrado."}
@@ -352,11 +463,17 @@ def test_other_clinic_gets_404(client, setup, suffix):
 @pytest.mark.isolation
 def test_visit_of_another_patient_is_404(client, setup, db):
     visit_id = create(client, setup).json()["id"]
-    sibling = Patient(first_name="Otro", last_name="Paciente", clinic_id=db.get(Patient, setup["patient"]).clinic_id)
+    sibling = Patient(
+        first_name="Otro",
+        last_name="Paciente",
+        clinic_id=db.get(Patient, setup["patient"]).clinic_id,
+    )
     db.add(sibling)
     db.commit()
 
-    response = client.get(url(sibling.id, f"/{visit_id}"), headers=setup["headers"]["author"])
+    response = client.get(
+        url(sibling.id, f"/{visit_id}"), headers=setup["headers"]["author"]
+    )
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Consulta no encontrada."}
@@ -365,13 +482,20 @@ def test_visit_of_another_patient_is_404(client, setup, db):
 @pytest.mark.patients
 def test_archived_patient_is_read_only(client, setup, db):
     visit_id = create(client, setup).json()["id"]
-    db.query(Patient).filter(Patient.id == setup["patient"]).update({"archived_at": NOW})
+    db.query(Patient).filter(Patient.id == setup["patient"]).update(
+        {"archived_at": NOW}
+    )
     db.commit()
 
     assert create(client, setup).status_code == 409
     assert update(client, setup, visit_id, findings="x").status_code == 409
     assert void(client, setup, visit_id).status_code == 409
-    assert client.get(url(setup["patient"]), headers=setup["headers"]["author"]).status_code == 200
+    assert (
+        client.get(
+            url(setup["patient"]), headers=setup["headers"]["author"]
+        ).status_code
+        == 200
+    )
 
 
 def test_audit_log_has_ids_but_no_clinical_content(client, setup, caplog):
