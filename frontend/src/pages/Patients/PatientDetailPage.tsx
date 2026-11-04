@@ -20,6 +20,7 @@ import LoadingSpinner from "../../components/basic/LoadingSpinner";
 import Select from "../../components/basic/Select";
 import Tabs, { type TabItem } from "../../components/basic/Tabs";
 import ClinicalVisitsCard from "../../components/patients/ClinicalVisitsCard";
+import ImagesCard from "../../components/patients/ImagesCard";
 import TimelineCard from "../../components/patients/TimelineCard";
 import TreatmentsCard from "../../components/patients/TreatmentsCard";
 import MedicalHistoryCard from "../../components/patients/MedicalHistoryCard";
@@ -337,6 +338,8 @@ export default function PatientDetailPage() {
   const canViewTreatments = usePermission("treatments:view");
   const canManageTreatments = usePermission("treatments:manage");
   const canViewTimeline = usePermission("timeline:view");
+  const canViewImages = usePermission("images:view");
+  const canUploadImages = usePermission("images:upload");
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Solo las pestañas que el rol puede ver; el backend aplica los permisos.
@@ -347,6 +350,7 @@ export default function PatientDetailPage() {
     ...(canViewTreatments
       ? [{ id: "tratamientos", label: "Tratamientos" }]
       : []),
+    ...(canViewImages ? [{ id: "imagenes", label: "Imágenes" }] : []),
     ...(canViewTimeline ? [{ id: "historial", label: "Historial" }] : []),
   ];
   const requested = searchParams.get("tab");
@@ -460,6 +464,14 @@ export default function PatientDetailPage() {
           <TreatmentsCard
             patientId={patient.id}
             canManage={canManageTreatments}
+            isArchived={isArchived}
+          />
+        )}
+
+        {activeTab === "imagenes" && (
+          <ImagesCard
+            patientId={patient.id}
+            canUpload={canUploadImages}
             isArchived={isArchived}
           />
         )}

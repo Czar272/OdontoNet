@@ -1,0 +1,68 @@
+import type {
+  ImageUploadData,
+  PatientImage,
+  PhotoConsent,
+  PhotoConsentDTO,
+  PhotoConsentStatus,
+} from "../types/patientImage";
+import api from "./api";
+
+const consentUrl = (patientId: number) =>
+  `/patients/${patientId}/photo-consent`;
+const imagesUrl = (patientId: number) => `/patients/${patientId}/images`;
+
+export async function getPhotoConsent(
+  patientId: number,
+): Promise<PhotoConsentStatus> {
+  const response = await api.get<PhotoConsentStatus>(consentUrl(patientId));
+
+  return response.data;
+}
+
+export async function recordPhotoConsent(
+  patientId: number,
+  data: PhotoConsentDTO,
+): Promise<PhotoConsent> {
+  const response = await api.post<PhotoConsent>(consentUrl(patientId), data);
+
+  return response.data;
+}
+
+/** Sube una fotografía; onProgress recibe de 0 a 100. */
+export async function uploadPatientImage(
+  patientId: number,
+  data: ImageUploadData,
+  onProgress?: (percent: number) => void,
+): Promise<PatientImage> {
+  const form = new FormData();
+  form.append("file", data.file);
+  if (data.clinical_visit_id !== null) {
+    form.append("clinical_visit_id", String(data.clinical_visit_id));
+  }
+  if (data.tooth !== null) {
+    form.append("tooth", String(data.tooth));
+  }
+
+  const response = await api.post<PatientImage>(imagesUrl(patientId), form, {
+    onUploadProgress: (event) => {
+      if (onProgress && event.total) {
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    },
+  });
+
+  return response.data;
+}
+
+/** Archivo de la imagen como Blob: se pide con el token, nunca por URL pública. */
+export async function getPatientImageFile(
+  patientId: number,
+  imageId: number,
+): Promise<Blob> {
+  const response = await api.get<Blob>(
+    `${imagesUrl(patientId)}/${imageId}/file`,
+    { responseType: "blob" },
+  );
+
+  return response.data;
+}

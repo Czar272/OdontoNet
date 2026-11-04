@@ -72,6 +72,10 @@ vi.mock("../../services/medicalHistoryService", () => ({
   saveMedicalHistory: vi.fn(),
 }));
 
+vi.mock("../../services/patientImageService", () => ({
+  getPhotoConsent: vi.fn(async () => ({ current: null, history: [] })),
+}));
+
 vi.mock("react-hot-toast", () => {
   const toast = Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() });
   return { default: toast };
@@ -206,6 +210,7 @@ describe("PatientDetailPage", () => {
       "Historia médica",
       "Consultas",
       "Tratamientos",
+      "Imágenes",
       "Historial",
     ]);
   });
@@ -254,6 +259,21 @@ describe("PatientDetailPage", () => {
     renderAt("/patients/5?tab=historial", "doctor");
 
     expect(await screen.findByRole("heading", { name: /Historial cronológico/ })).toBeInTheDocument();
+  });
+
+  it("el doctor abre la pestaña de imágenes clínicas", async () => {
+    renderAt("/patients/5?tab=imagenes", "doctor");
+
+    expect(await screen.findByRole("heading", { name: "Imágenes clínicas" })).toBeInTheDocument();
+    expect(await screen.findByText(/sin consentimiento registrado/i)).toBeInTheDocument();
+  });
+
+  it("recepción no ve las imágenes aunque las pida en la URL", async () => {
+    renderAt("/patients/5?tab=imagenes", "receptionist");
+
+    expect(await screen.findByRole("tab", { name: "Datos generales" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByRole("tab", { name: "Imágenes" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Imágenes clínicas")).not.toBeInTheDocument();
   });
 
   it("las flechas del teclado cambian de pestaña", async () => {

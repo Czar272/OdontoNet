@@ -8,6 +8,8 @@ interface ToothChartProps {
   value: number | null;
   onChange: (tooth: number | null) => void;
   disabled?: boolean;
+  /** Texto de ayuda bajo el odontograma. */
+  hint?: string;
 }
 
 /**
@@ -19,6 +21,7 @@ export default function ToothChart({
   value,
   onChange,
   disabled = false,
+  hint = "Toca una pieza para elegirla; tócala de nuevo para quitarla. También puedes escribir el número.",
 }: ToothChartProps) {
   const [dentition, setDentition] = useState<Dentition>(() =>
     dentitionOf(value),
@@ -115,10 +118,7 @@ export default function ToothChart({
           Inferior
         </p>
       </div>
-      <p className="text-xs text-gray-500">
-        Toca una pieza para elegirla; tócala de nuevo para quitarla. También
-        puedes escribir el número.
-      </p>
+      <p className="text-xs text-gray-500">{hint}</p>
     </div>
   );
 }

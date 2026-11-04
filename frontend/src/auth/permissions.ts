@@ -32,6 +32,9 @@ export const PERMISSIONS = {
   "treatments:manage": ["admin", "doctor"],
   // Historial cronológico (ODON-162): incluye consultas, así que sin recepción.
   "timeline:view": ["admin", "doctor"],
+  // Imágenes clínicas y su consentimiento (ODON-8): recepción no accede.
+  "images:view": ["admin", "doctor"],
+  "images:upload": ["admin", "doctor"],
   "clinic:manage": ["admin"],
 } as const satisfies Record<string, readonly Role[]>;
 

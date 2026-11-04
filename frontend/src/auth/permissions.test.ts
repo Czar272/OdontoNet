@@ -23,6 +23,8 @@ const EXPECTED: Record<Permission, Record<Role, boolean>> = {
   "treatments:view": { admin: true, doctor: true, receptionist: false },
   "treatments:manage": { admin: true, doctor: true, receptionist: false },
   "timeline:view": { admin: true, doctor: true, receptionist: false },
+  "images:view": { admin: true, doctor: true, receptionist: false },
+  "images:upload": { admin: true, doctor: true, receptionist: false },
   "clinic:manage": { admin: true, doctor: false, receptionist: false },
 };
 
