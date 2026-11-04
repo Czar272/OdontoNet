@@ -6,7 +6,8 @@ que la base y la carpeta de imágenes están completas y coinciden:
 - faltantes: registros sin archivo;
 - alteradas: archivos cuyo SHA-256 no coincide con el registrado;
 - huérfanos: archivos sin registro (p. ej. un respaldo de la carpeta más
-  nuevo que el de la base);
+  nuevo que el de la base); las miniaturas registradas no lo son y, si
+  faltan, no es un problema: se regeneran desde el original al pedirlas;
 - ajenos: archivos con un nombre que el almacenamiento nunca genera
   (temporales de una escritura interrumpida, copias manuales).
 
@@ -54,11 +55,13 @@ def verify(db: Session, storage: LocalImageStorage) -> Report:
     report = Report()
     registered = set()
 
-    for image_id, key, sha256 in db.query(
-        PatientImage.id, PatientImage.storage_key, PatientImage.sha256
+    for image_id, key, sha256, thumbnail_key in db.query(
+        PatientImage.id, PatientImage.storage_key, PatientImage.sha256, PatientImage.thumbnail_key
     ).order_by(PatientImage.id).yield_per(200):
         report.checked += 1
         registered.add(key)
+        if thumbnail_key:
+            registered.add(thumbnail_key)
         try:
             data = storage.read(key)
         except StoredImageNotFound:

@@ -109,3 +109,28 @@ def sanitize_image(data: bytes, filename: str) -> ProcessedImage:
         width=image.width,
         height=image.height,
     )
+
+
+# Lado mayor de la miniatura de la galería (ODON-174).
+THUMBNAIL_SIZE = 320
+
+
+def make_thumbnail(data: bytes) -> bytes:
+    """Miniatura JPEG de una imagen ya saneada, sin metadatos.
+
+    Las transparencias se aplanan sobre blanco."""
+    with Image.open(io.BytesIO(data)) as source:
+        source.load()
+        image = source.copy()
+    image.thumbnail((THUMBNAIL_SIZE, THUMBNAIL_SIZE))
+    if image.mode in ("RGBA", "LA", "P"):
+        image = image.convert("RGBA")
+        background = Image.new("RGB", image.size, (255, 255, 255))
+        background.paste(image, mask=image.getchannel("A"))
+        image = background
+    elif image.mode not in ("RGB", "L"):
+        image = image.convert("RGB")
+    image.info = {}
+    output = io.BytesIO()
+    image.save(output, format="JPEG", quality=80, optimize=True)
+    return output.getvalue()

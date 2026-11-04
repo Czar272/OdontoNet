@@ -10,6 +10,7 @@ import logging
 from typing import Optional
 
 from fastapi import HTTPException, status
+from sqlalchemy import update
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.clinical_visit import ClinicalVisit
@@ -17,7 +18,7 @@ from app.models.patient import Patient
 from app.models.patient_image import IMAGE_TYPES, PatientImage, image_max_bytes
 from app.models.treatment import is_valid_tooth
 from app.models.user import User
-from app.services.image_processing import sanitize_image
+from app.services.image_processing import make_thumbnail, sanitize_image
 from app.services.image_storage import ImageStorage, StoredImageNotFound
 from app.services.photo_consent_service import require_active_consent
 
@@ -36,9 +37,25 @@ def get_clinic_patient(db: Session, patient_id: int, clinic_id: int) -> Patient:
     return patient
 
 
+def _images(db: Session):
+    return db.query(PatientImage).options(
+        joinedload(PatientImage.clinical_visit), joinedload(PatientImage.uploaded_by)
+    )
+
+
+def list_images(db: Session, patient_id: int) -> list[PatientImage]:
+    """Imágenes del paciente, la más reciente primero."""
+    return (
+        _images(db)
+        .filter(PatientImage.patient_id == patient_id)
+        .order_by(PatientImage.uploaded_at.desc(), PatientImage.id.desc())
+        .all()
+    )
+
+
 def get_image(db: Session, patient_id: int, image_id: int) -> PatientImage:
     image = (
-        db.query(PatientImage)
+        _images(db)
         .filter(PatientImage.id == image_id, PatientImage.patient_id == patient_id)
         .first()
     )
@@ -111,8 +128,9 @@ def store_image(
     consent_id: int,
     clinical_visit_id: Optional[int] = None,
     tooth: Optional[int] = None,
+    thumbnail: Optional[bytes] = None,
 ) -> PatientImage:
-    """Valida, guarda el archivo y registra la imagen.
+    """Valida, guarda el archivo (y su miniatura) y registra la imagen.
 
     El tipo y las dimensiones los determina quien llama a partir del contenido
     real del archivo (upload_image), no de lo que declare el cliente."""
@@ -125,12 +143,22 @@ def store_image(
     check_size(data)
 
     key = storage.save(patient.clinic_id, data, IMAGE_TYPES[content_type])
+    keys = [key]
+    thumbnail_key = None
+    try:
+        if thumbnail is not None:
+            thumbnail_key = storage.save(patient.clinic_id, thumbnail, "jpg")
+            keys.append(thumbnail_key)
+    except Exception:
+        storage.discard(key)
+        raise
     image = PatientImage(
         clinic_id=patient.clinic_id,
         patient_id=patient.id,
         clinical_visit_id=clinical_visit_id,
         tooth=tooth,
         storage_key=key,
+        thumbnail_key=thumbnail_key,
         content_type=content_type,
         size_bytes=len(data),
         width=width,
@@ -144,7 +172,8 @@ def store_image(
         db.commit()
     except Exception:
         db.rollback()
-        storage.discard(key)
+        for saved in keys:
+            storage.discard(saved)
         raise
     db.refresh(image)
 
@@ -184,13 +213,9 @@ def upload_image(
         consent_id=consent.id,
         clinical_visit_id=clinical_visit_id,
         tooth=tooth,
+        thumbnail=make_thumbnail(processed.data),
     )
-    return (
-        db.query(PatientImage)
-        .options(joinedload(PatientImage.clinical_visit), joinedload(PatientImage.uploaded_by))
-        .filter(PatientImage.id == image.id)
-        .one()
-    )
+    return _images(db).filter(PatientImage.id == image.id).one()
 
 
 def read_image_file(storage: ImageStorage, image: PatientImage) -> bytes:
@@ -203,3 +228,36 @@ def read_image_file(storage: ImageStorage, image: PatientImage) -> bytes:
             status_code=status.HTTP_404_NOT_FOUND,
             detail="El archivo de la imagen no está disponible. Avisa a administración.",
         )
+
+
+def read_thumbnail(db: Session, storage: ImageStorage, image: PatientImage) -> bytes:
+    """Miniatura de la galería (ODON-174).
+
+    Si la imagen no tiene miniatura (subida antes de ODON-174) o su archivo
+    falta, se genera desde el original y se guarda. Ante dos peticiones
+    simultáneas gana la primera y la otra descarta la suya."""
+    if image.thumbnail_key:
+        try:
+            return storage.read(image.thumbnail_key)
+        except StoredImageNotFound:
+            logger.warning("Miniatura faltante image_id=%s; se regenera", image.id)
+
+    thumbnail = make_thumbnail(read_image_file(storage, image))
+    new_key = storage.save(image.clinic_id, thumbnail, "jpg")
+    previous = image.thumbnail_key
+    result = db.execute(
+        update(PatientImage)
+        .where(PatientImage.id == image.id)
+        .where(
+            PatientImage.thumbnail_key.is_(None)
+            if previous is None
+            else PatientImage.thumbnail_key == previous
+        )
+        .values(thumbnail_key=new_key)
+    )
+    if result.rowcount == 0:
+        db.rollback()
+        storage.discard(new_key)
+    else:
+        db.commit()
+    return thumbnail

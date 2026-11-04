@@ -39,6 +39,7 @@ class PatientImage(Base):
     __table_args__ = (
         UniqueConstraint("id", "clinic_id", name="uq_patient_images_id_clinic"),
         UniqueConstraint("storage_key", name="uq_patient_images_storage_key"),
+        UniqueConstraint("thumbnail_key", name="uq_patient_images_thumbnail_key"),
         ForeignKeyConstraint(
             ["patient_id", "clinic_id"],
             ["patients.id", "patients.clinic_id"],
@@ -74,6 +75,8 @@ class PatientImage(Base):
     tooth = Column(SmallInteger)
 
     storage_key = Column(String(80), nullable=False)
+    # Miniatura JPEG (ODON-174); se regenera desde el original si falta.
+    thumbnail_key = Column(String(80))
     content_type = Column(String(20), nullable=False)
     size_bytes = Column(Integer, nullable=False)
     width = Column(Integer, nullable=False)

@@ -4,7 +4,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel
 
-EventType = Literal["visit", "treatment", "medical_history", "appointment"]
+EventType = Literal["visit", "treatment", "medical_history", "appointment", "image"]
 
 
 class PersonRef(BaseModel):
@@ -18,13 +18,14 @@ class TimelineEvent(BaseModel):
     type: EventType
     # visit: attended | edited | voided · treatment: proposed | accepted | in_progress |
     # completed | cancelled · medical_history: version · appointment: completed | no_show
+    # · image: uploaded
     action: str
     occurred_at: datetime
     title: str
     detail: Optional[str]
     # Doctor que atendió (consultas y citas) o usuario que hizo el cambio.
     actor: Optional[PersonRef]
-    # id de la consulta, tratamiento o cita; número de versión en la historia médica.
+    # id de la consulta, tratamiento, cita o imagen; número de versión en la historia médica.
     ref_id: int
     # La consulta de este evento está anulada.
     voided: bool

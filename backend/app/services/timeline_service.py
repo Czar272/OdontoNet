@@ -2,11 +2,11 @@
 
 Une en una sola línea de tiempo, de lo más reciente a lo más antiguo:
 consultas (atención, ediciones y anulación), cambios de estado de
-tratamientos, versiones de la historia médica y citas atendidas o no
-asistidas. Pagina por cursor (keyset): cada página es una consulta indexada,
+tratamientos, versiones de la historia médica, citas atendidas o no
+asistidas y fotografías clínicas subidas (ODON-174). Pagina por cursor (keyset): cada página es una consulta indexada,
 sin OFFSET, aunque el paciente tenga años de historial.
 
-Para sumar una fuente (imágenes en IMG03, periodontogramas en PGR04): agregar
+Para sumar una fuente (periodontogramas en PGR04): agregar
 un SELECT a _EVENTS_SQL con (occurred_at, kind, source_id), su tipo a
 EVENT_TYPES y su armado en _build.
 """
@@ -23,13 +23,14 @@ from app.models.appointment import Appointment
 from app.models.clinical_visit import ClinicalVisit, ClinicalVisitRevision
 from app.models.doctor import Doctor
 from app.models.medical_history import PatientMedicalHistory
+from app.models.patient_image import PatientImage
 from app.models.treatment import Treatment, TreatmentStatusChange
 
 PAGE_SIZE = 20
 MAX_PAGE_SIZE = 100
 
 # Tipo visible (filtro) → prefijo de kind.
-EVENT_TYPES = ("visit", "treatment", "medical_history", "appointment")
+EVENT_TYPES = ("visit", "treatment", "medical_history", "appointment", "image")
 
 _EVENTS_SQL = """
 SELECT occurred_at, kind, source_id FROM (
@@ -53,6 +54,9 @@ SELECT occurred_at, kind, source_id FROM (
     SELECT a.starts_at, 'appointment.' || a.status, a.id
       FROM appointments a
      WHERE a.patient_id = :patient_id AND a.status IN ('completed', 'no_show')
+    UNION ALL
+    SELECT i.uploaded_at, 'image.uploaded', i.id
+      FROM patient_images i WHERE i.patient_id = :patient_id
 ) AS events
 WHERE split_part(kind, '.', 1) IN :types
   AND (CAST(:cursor_at AS timestamptz) IS NULL
@@ -133,6 +137,13 @@ def _load(db: Session, rows) -> dict:
             .options(joinedload(Appointment.doctor).joinedload(Doctor.user))
             .filter(Appointment.id.in_(ids["appointment"]))
         }
+    if "image" in ids:
+        loaded["image"] = {
+            i.id: i
+            for i in db.query(PatientImage)
+            .options(joinedload(PatientImage.uploaded_by), joinedload(PatientImage.clinical_visit))
+            .filter(PatientImage.id.in_(ids["image"]))
+        }
     return loaded
 
 
@@ -198,6 +209,13 @@ def _build(row, loaded: dict) -> dict:
             title=("Cita atendida" if attended else "No asistió a la cita")
             + (f": {appointment.reason}" if appointment.reason else ""),
             actor={"id": appointment.doctor.id, "name": appointment.doctor.user.name},
+        )
+    elif kind == "image.uploaded":
+        image = loaded["image"][source_id]
+        event.update(
+            title="Fotografía clínica" + (f" (pieza {image.tooth})" if image.tooth else ""),
+            detail=f"Consulta: {image.clinical_visit.reason}" if image.clinical_visit else None,
+            actor=_person(image.uploaded_by),
         )
     return event
 

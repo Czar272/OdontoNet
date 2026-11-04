@@ -245,8 +245,9 @@ def test_consent_of_another_patient_is_rejected_by_the_database(setup):
 
 def test_database_failure_discards_the_file(setup):
     # Autor de otra clínica: la FK compuesta lo rechaza en la base.
+    # También se descarta la miniatura (ODON-174).
     with pytest.raises(IntegrityError):
-        store(setup, author=setup["other_user"])
+        store(setup, author=setup["other_user"], thumbnail=b"miniatura")
 
     assert setup["storage"].keys() == []
     assert setup["db"].query(PatientImage).count() == 0
