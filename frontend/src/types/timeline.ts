@@ -9,7 +9,8 @@ export interface TimelineEvent {
   type: TimelineEventType;
   /**
    * visit: attended | edited | voided · treatment: estado al que pasó ·
-   * medical_history: version · appointment: completed | no_show
+   * medical_history: version · appointment: completed | no_show ·
+   * image: uploaded | edited | voided
    */
   action: string;
   occurred_at: string;

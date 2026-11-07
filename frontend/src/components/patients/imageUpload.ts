@@ -57,6 +57,18 @@ export function readAsDataUrl(blob: Blob): Promise<string> {
 export const patientImagesKey = (patientId: number) =>
   ["patients", patientId, "images"] as const;
 
+/**
+ * Clave de los archivos (miniatura u original). Va fuera de patientImagesKey
+ * a propósito: invalidar la lista tras una corrección o una anulación no debe
+ * volver a pedir el original, porque cada GET .../file queda en el registro
+ * de accesos (ODON-178). Los archivos son inmutables.
+ */
+export const patientImageDataKey = (
+  patientId: number,
+  imageId: number,
+  variant: "thumbnail" | "file",
+) => ["patients", patientId, "image-data", imageId, variant] as const;
+
 // Miniaturas que se piden de una vez en la galería; el resto, con «Ver más».
 export const GALLERY_PAGE_SIZE = 24;
 

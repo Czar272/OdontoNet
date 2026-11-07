@@ -29,6 +29,7 @@ import {
   canModifyImage,
   formatBytes,
   imageMetadataForm,
+  patientImageDataKey,
   patientImagesKey,
   readAsDataUrl,
   toImageMetadata,
@@ -68,7 +69,7 @@ function useImageData(
   variant: "thumbnail" | "file",
 ): string | undefined {
   const { data } = useQuery({
-    queryKey: [...patientImagesKey(image.patient_id), image.id, variant],
+    queryKey: patientImageDataKey(image.patient_id, image.id, variant),
     queryFn: async () =>
       readAsDataUrl(
         await (variant === "thumbnail"

@@ -150,6 +150,9 @@ describe("ImageGallery", () => {
         clinical_visit_id: null, tooth: null,
       }),
     );
+    // Se vuelve a pedir la lista, pero no el original: cada GET .../file es un acceso registrado.
+    await waitFor(() => expect(service.getPatientImages).toHaveBeenCalledTimes(2));
+    expect(service.getPatientImageFile).toHaveBeenCalledTimes(1);
   });
 
   it("anula con motivo", async () => {
@@ -165,6 +168,8 @@ describe("ImageGallery", () => {
     fireEvent.click(submit);
 
     await waitFor(() => expect(service.voidPatientImage).toHaveBeenCalledWith(5, 2, "Foto de otro paciente"));
+    await waitFor(() => expect(service.getPatientImages).toHaveBeenCalledTimes(2));
+    expect(service.getPatientImageFile).toHaveBeenCalledTimes(1);
   });
 
   it("un doctor no modifica fotos de otro; administración sí", async () => {
