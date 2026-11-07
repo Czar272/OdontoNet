@@ -2,7 +2,7 @@
 
 > Documento de continuidad técnica. Jira es la fuente de verdad de los estados de los tickets y Git es la fuente de verdad del código.
 
-**Última actualización:** 2026-11-07 — ODON-8 (imágenes): ODON-166, 170 y 174 Done; ODON-178 (metadatos, versiones y auditoría de acceso) en Testing; con su confirmación se cierra la épica.
+**Última actualización:** 2026-11-07 — ODON-8 (imágenes clínicas) cerrada: ODON-166, 170, 174 y 178 Done. Siguiente épica: ODON-9 (periodontograma manual).
 
 ## Alcance
 
@@ -50,14 +50,14 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 - **ODON-6 Agenda y citas — Done:** ODON-130, 134, 138, 142, 146 y 257 (CIT-ENH01). ODON-258 (CIT-ENH02, ausencias de doctores) se pospuso: queda en el backlog sin épica, con la etiqueta `cit`.
 - **ODON-2 Autenticación — Done:** ODON-38, 42, 46, 50, 52, 54 y 255.
 - **ODON-7 Expediente clínico — Done (2026-11-03):** ODON-150, 154, 158, 162, 260 (EXP-ENH01, odontograma para elegir la pieza) y 261 (EXP-ENH02, ficha en pestañas). Imágenes y periodontogramas se sumarán al historial en ODON-174 y ODON-194.
-- **ODON-8 Imágenes clínicas — In Progress:** definida el 2026-11-03 (comentarios en la épica y en ODON-178). ODON-166 (almacenamiento privado), ODON-170 (subida y consentimiento) y ODON-174 (galería, miniaturas e historial) Done. ODON-178 (IMG04: origen, vista y fecha de toma; archivo inmutable con revisiones de metadatos; anulación con motivo; registro de accesos al original) en Testing. La retención se difiere a CAL03 (ODON-218/221).
+- **ODON-8 Imágenes clínicas — Done (2026-11-07):** definida el 2026-11-03 (comentarios en la épica y en ODON-178). ODON-166 (almacenamiento privado), ODON-170 (subida y consentimiento), ODON-174 (galería, miniaturas e historial) y ODON-178 (origen, vista y fecha de toma; archivo inmutable con revisiones de metadatos; anulación con motivo; registro de accesos al original). La retención se difiere a CAL03 (ODON-218/221).
 - **ODON-4 Personal y doctores — Done:** ODON-78, 82, 86, 90 y 94.
 - **ODON-11 Calidad:** ODON-254 (categorías de pruebas backend) Done; ODON-256 (pruebas rápidas y CI) Done; ODON-259 (CAL-ENH03, pytest más rápido y guía por área) Done.
 
 ## Próximo paso
 
-1. Confirmar ODON-178 y cerrar ODON-8 con suite completa, lint, build y `verify-infra`.
-2. Siguiente épica: ODON-9 (periodontograma manual). Decisiones de ODON-8: disco privado detrás de `ImageStorage`, JPEG/PNG/WebP ≤ 10 MB recodificadas sin metadatos, consentimiento versionado, archivo inmutable, solo Doctor y Admin; el uso para investigación y el plazo de retención los fijan el protocolo del comité de ética y la revisión de CAL03.
+1. Planificar y desarrollar ODON-9 (periodontograma manual: PGR01–05), objetivo específico 2 del protocolo.
+2. Decisiones de ODON-8: disco privado detrás de `ImageStorage`, JPEG/PNG/WebP ≤ 10 MB recodificadas sin metadatos, consentimiento versionado, archivo inmutable, solo Doctor y Admin; el uso para investigación y el plazo de retención los fijan el protocolo del comité de ética y la revisión de CAL03.
 3. El alta de clínicas por `superadmin` se planifica aparte según el modelo de roles aprobado.
 4. ODON-258 (ausencias de doctores) queda para después del MVP.
 
