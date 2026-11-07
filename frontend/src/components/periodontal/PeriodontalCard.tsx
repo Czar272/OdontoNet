@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import clsx from "clsx";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, GitCompare, Plus } from "lucide-react";
 
 import Button from "../basic/Button";
 import Card from "../basic/Card";
@@ -15,6 +15,7 @@ import {
   getPeriodontalExam,
   getPeriodontalExams,
 } from "../../services/periodontalService";
+import PeriodontalCompare from "./PeriodontalCompare";
 import PeriodontalEditor from "./PeriodontalEditor";
 import { clearBackup, periodontalExamKey, periodontalExamsKey, statusLabel } from "./periodontalExam";
 import { toContent, today } from "./periodontalChart";
@@ -35,6 +36,7 @@ export default function PeriodontalCard({ patientId, canCreate, isArchived }: Pe
   const [dirty, setDirty] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [choosing, setChoosing] = useState(false);
+  const [comparing, setComparing] = useState(false);
   const [copyFrom, setCopyFrom] = useState<number | null>(null);
   const [copyOptions, setCopyOptions] = useState<CopyOptions>(DEFAULT_COPY);
 
@@ -78,6 +80,24 @@ export default function PeriodontalCard({ patientId, canCreate, isArchived }: Pe
     onError: (error) => toast.error(getApiErrorMessage(error, "No se pudo crear el periodontograma")),
   });
 
+  // Se comparan registros previos: finalizados y no anulados (un borrador aún puede cambiar).
+  const comparable = exams.filter((item) => item.status === "final" && !item.voided_at);
+
+  if (comparing && comparable.length >= 2) {
+    return (
+      <Card>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <button type="button" onClick={() => setComparing(false)}
+            className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900">
+            <ArrowLeft size={16} /> Periodontogramas
+          </button>
+          <h2 className="text-lg font-semibold">Comparar periodontogramas</h2>
+        </div>
+        <PeriodontalCompare patientId={patientId} exams={comparable} />
+      </Card>
+    );
+  }
+
   if (openId !== null) {
     return (
       <Card>
@@ -116,6 +136,12 @@ export default function PeriodontalCard({ patientId, canCreate, isArchived }: Pe
           <h2 className="text-xl font-semibold">Periodontograma</h2>
           <p className="text-sm text-slate-500">Registro manual por pieza y sitio. Los resúmenes no constituyen diagnóstico.</p>
         </div>
+        <div className="flex flex-wrap gap-3">
+        {comparable.length >= 2 && (
+          <Button variant="secondary" onClick={() => setComparing(true)} className="inline-flex items-center gap-2">
+            <GitCompare size={18} /> Comparar
+          </Button>
+        )}
         {canCreate && !isArchived && (
           <Button
             onClick={() => {
@@ -129,6 +155,7 @@ export default function PeriodontalCard({ patientId, canCreate, isArchived }: Pe
             <Plus size={18} /> {create.isPending ? "Creando..." : "Nuevo periodontograma"}
           </Button>
         )}
+        </div>
       </div>
 
       {isLoading ? <LoadingSpinner /> : exams.length === 0 ? (

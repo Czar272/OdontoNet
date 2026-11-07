@@ -6,6 +6,7 @@ export const TIMELINE_TYPES: { type: TimelineEventType; label: string }[] = [
   { type: "medical_history", label: "Historia médica" },
   { type: "appointment", label: "Citas" },
   { type: "image", label: "Imágenes" },
+  { type: "periodontal", label: "Periodontograma" },
 ];
 
 /** Clave de React Query; cualquier cambio clínico del paciente la invalida. */

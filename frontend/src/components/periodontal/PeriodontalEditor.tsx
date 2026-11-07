@@ -20,6 +20,7 @@ import {
 } from "../../services/periodontalService";
 import type { PeriodontalExam, SiteCode, SiteData, ToothData } from "../../types/periodontal";
 import PerioChart from "./PerioChart";
+import { timelineKey } from "../patients/timelineEvents";
 import {
   AUTOSAVE_MS,
   canEditExam,
@@ -202,6 +203,7 @@ export default function PeriodontalEditor({ exam, isArchived, onDirtyChange }: P
     },
     onSuccess: (finalized) => {
       afterSave(finalized);
+      queryClient.invalidateQueries({ queryKey: timelineKey(exam.patient_id) });
       setDirty(false);
       clearBackup(exam.id);
       setConfirmFinalize(false);
@@ -226,6 +228,7 @@ export default function PeriodontalEditor({ exam, isArchived, onDirtyChange }: P
     mutationFn: () => voidPeriodontalExam(exam.patient_id, exam.id, voidReason.trim()),
     onSuccess: (voided) => {
       afterSave(voided);
+      queryClient.invalidateQueries({ queryKey: timelineKey(exam.patient_id) });
       setDirty(false);
       clearBackup(exam.id);
       setVoiding(false);

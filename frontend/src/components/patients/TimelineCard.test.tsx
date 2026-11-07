@@ -67,7 +67,7 @@ describe("TimelineCard", () => {
     fireEvent.click(screen.getByLabelText("Citas"));
 
     await waitFor(() =>
-      expect(getTimeline).toHaveBeenLastCalledWith(5, expect.objectContaining({ types: ["visit", "treatment", "medical_history", "image"] })),
+      expect(getTimeline).toHaveBeenLastCalledWith(5, expect.objectContaining({ types: ["visit", "treatment", "medical_history", "image", "periodontal"] })),
     );
   });
 
@@ -75,7 +75,7 @@ describe("TimelineCard", () => {
     renderWithAuth(<TimelineCard patientId={5} />, "doctor");
     await screen.findByText("Consulta: Evaluación");
 
-    for (const label of ["Consultas", "Tratamientos", "Historia médica", "Citas", "Imágenes"]) {
+    for (const label of ["Consultas", "Tratamientos", "Historia médica", "Citas", "Imágenes", "Periodontograma"]) {
       fireEvent.click(screen.getByLabelText(label));
     }
 

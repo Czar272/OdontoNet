@@ -5,6 +5,7 @@ import {
   ClipboardList,
   HeartPulse,
   Image as ImageIcon,
+  Activity,
   ListOrdered,
   Stethoscope,
 } from "lucide-react";
@@ -28,6 +29,7 @@ const ICONS: Record<TimelineEventType, typeof Stethoscope> = {
   medical_history: HeartPulse,
   appointment: CalendarCheck,
   image: ImageIcon,
+  periodontal: Activity,
 };
 
 const ICON_STYLES: Record<TimelineEventType, string> = {
@@ -36,6 +38,7 @@ const ICON_STYLES: Record<TimelineEventType, string> = {
   medical_history: "bg-rose-100 text-rose-700",
   appointment: "bg-green-100 text-green-700",
   image: "bg-violet-100 text-violet-700",
+  periodontal: "bg-teal-100 text-teal-700",
 };
 
 function EventItem({ event }: { event: TimelineEvent }) {

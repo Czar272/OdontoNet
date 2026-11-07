@@ -1,7 +1,7 @@
 import type { PersonRef } from "./clinicalVisit";
 
 export type TimelineEventType =
-  "visit" | "treatment" | "medical_history" | "appointment" | "image";
+  "visit" | "treatment" | "medical_history" | "appointment" | "image" | "periodontal";
 
 /** Un evento del historial cronológico del paciente (ODON-162). */
 export interface TimelineEvent {
@@ -10,7 +10,7 @@ export interface TimelineEvent {
   /**
    * visit: attended | edited | voided · treatment: estado al que pasó ·
    * medical_history: version · appointment: completed | no_show ·
-   * image: uploaded | edited | voided
+   * image: uploaded | edited | voided · periodontal: finalized | voided
    */
   action: string;
   occurred_at: string;

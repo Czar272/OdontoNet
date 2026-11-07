@@ -47,7 +47,11 @@ export default function ToothFace({ arch, face, teeth, highlighted }: ToothFaceP
   return (
     <svg
       role="img"
-      aria-label={`Dibujo de la cara ${faceName} de la arcada ${arch === "upper" ? "superior" : "inferior"}`}
+      aria-label={`Dibujo de la cara ${faceName} de la arcada ${arch === "upper" ? "superior" : "inferior"}${
+        highlighted && teeth.some((tooth) => highlighted.has(tooth.tooth))
+          ? `; piezas resaltadas: ${teeth.filter((tooth) => highlighted.has(tooth.tooth)).map((tooth) => tooth.tooth).join(", ")}`
+          : ""
+      }`}
       viewBox={`0 0 ${width} ${FACE_HEIGHT}`}
       width={width}
       height={FACE_HEIGHT}
