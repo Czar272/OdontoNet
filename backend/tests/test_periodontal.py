@@ -464,3 +464,72 @@ def test_reception_has_no_access(exam, setup, client):
 @pytest.mark.rbac
 def test_without_session_is_401(setup, client):
     assert client.get(url(setup)).status_code == 401
+
+
+# --- Historial cronológico (ODON-194) ------------------------------------------
+
+
+def timeline_events(client, setup, **params):
+    response = client.get(f"/patients/{setup['patient']}/timeline", params=params, headers=setup["headers"]["author"])
+    assert response.status_code == 200, response.text
+    return response.json()["items"]
+
+
+def test_drafts_do_not_appear_in_the_timeline(exam, setup, client):
+    assert timeline_events(client, setup, types=["periodontal"]) == []
+
+
+def test_finalized_and_voided_exams_appear_in_the_timeline(exam, setup, client):
+    path = url(setup, f"/{exam['id']}")
+    assert client.post(f"{path}/finalize", json={"base_revision": 1}, headers=setup["headers"]["author"]).status_code == 200
+    events = timeline_events(client, setup, types=["periodontal"])
+    assert [event["action"] for event in events] == ["finalized"]
+    assert events[0]["title"] == f"Periodontograma del {YESTERDAY.strftime('%d/%m/%Y')}"
+    assert events[0]["detail"] == "Sondaje medio 3,2 mm · sangrado 40 %"
+    assert events[0]["ref_id"] == exam["id"]
+    assert events[0]["voided"] is False
+
+    assert client.post(f"{path}/void", json={"reason": "Paciente equivocado"},
+                       headers=setup["headers"]["author"]).status_code == 200
+    events = timeline_events(client, setup, types=["periodontal"])
+    assert [event["action"] for event in events] == ["voided", "finalized"]
+    assert events[0]["detail"] == "Motivo: Paciente equivocado"
+    assert events[1]["voided"] is True
+    # Sin filtro también aparecen junto al resto del expediente.
+    assert any(event["type"] == "periodontal" for event in timeline_events(client, setup))
+
+
+def test_a_voided_draft_does_not_appear_in_the_timeline(exam, setup, client):
+    assert client.post(url(setup, f"/{exam['id']}/void"), json={"reason": "Duplicado"},
+                       headers=setup["headers"]["author"]).status_code == 200
+    assert timeline_events(client, setup, types=["periodontal"]) == []
+
+
+def test_finalized_exam_without_measures_has_no_detail(setup, client, db):
+    body = create(client, setup, teeth=[{"tooth": 11, "sites": {"b": {"probing_depth": 2}}}]).json()
+    assert client.post(url(setup, f"/{body['id']}/finalize"), json={"base_revision": 1},
+                       headers=setup["headers"]["author"]).status_code == 200
+    # Se vacía a mano el único sondaje para probar el caso sin promedio.
+    db.execute(text("UPDATE periodontal_sites SET probing_depth = NULL WHERE exam_id = :id"), {"id": body["id"]})
+    db.commit()
+    events = timeline_events(client, setup, types=["periodontal"])
+    assert events[0]["detail"] is None
+
+
+def test_timeline_pages_cross_periodontal_and_other_events(exam, setup, client):
+    path = url(setup, f"/{exam['id']}")
+    client.post(f"{path}/finalize", json={"base_revision": 1}, headers=setup["headers"]["author"])
+    client.post(f"{path}/void", json={"reason": "x"}, headers=setup["headers"]["author"])
+    seen, cursor = [], None
+    while True:
+        params = {"limit": 1, **({"cursor": cursor} if cursor else {})}
+        page = client.get(f"/patients/{setup['patient']}/timeline", params=params,
+                          headers=setup["headers"]["author"]).json()
+        seen += [event["id"] for event in page["items"]]
+        cursor = page["next_cursor"]
+        if not cursor:
+            break
+    assert len(seen) == len(set(seen))
+    assert {f"periodontal.finalized:{exam['id']}", f"periodontal.voided:{exam['id']}"} <= set(seen)
+    assert any(event_id.startswith("visit.") for event_id in seen)
+

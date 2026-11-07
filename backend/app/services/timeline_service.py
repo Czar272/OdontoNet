@@ -3,12 +3,12 @@
 Une en una sola línea de tiempo, de lo más reciente a lo más antiguo:
 consultas (atención, ediciones y anulación), cambios de estado de
 tratamientos, versiones de la historia médica, citas atendidas o no
-asistidas y fotografías clínicas (subida en ODON-174; corrección y
-anulación en ODON-178). Pagina por cursor (keyset): cada página es una consulta indexada,
+asistidas, fotografías clínicas (subida en ODON-174; corrección y
+anulación en ODON-178) y periodontogramas finalizados o anulados (ODON-194;
+los borradores no aparecen). Pagina por cursor (keyset): cada página es una consulta indexada,
 sin OFFSET, aunque el paciente tenga años de historial.
 
-Para sumar una fuente (periodontogramas en PGR04): agregar
-un SELECT a _EVENTS_SQL con (occurred_at, kind, source_id), su tipo a
+Para sumar una fuente: agregar un SELECT a _EVENTS_SQL con (occurred_at, kind, source_id), su tipo a
 EVENT_TYPES y su armado en _build.
 """
 import base64
@@ -18,20 +18,22 @@ from typing import Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy import bindparam, text
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.models.appointment import Appointment
 from app.models.clinical_visit import ClinicalVisit, ClinicalVisitRevision
 from app.models.doctor import Doctor
 from app.models.medical_history import PatientMedicalHistory
 from app.models.patient_image import PatientImage, PatientImageRevision
+from app.models.periodontal import PeriodontalExam
 from app.models.treatment import Treatment, TreatmentStatusChange
+from app.services.periodontal_service import summarize
 
 PAGE_SIZE = 20
 MAX_PAGE_SIZE = 100
 
 # Tipo visible (filtro) → prefijo de kind.
-EVENT_TYPES = ("visit", "treatment", "medical_history", "appointment", "image")
+EVENT_TYPES = ("visit", "treatment", "medical_history", "appointment", "image", "periodontal")
 
 _EVENTS_SQL = """
 SELECT occurred_at, kind, source_id FROM (
@@ -65,6 +67,13 @@ SELECT occurred_at, kind, source_id FROM (
     UNION ALL
     SELECT i.voided_at, 'image.voided', i.id
       FROM patient_images i WHERE i.patient_id = :patient_id AND i.voided_at IS NOT NULL
+    UNION ALL
+    SELECT e.finalized_at, 'periodontal.finalized', e.id
+      FROM periodontal_exams e WHERE e.patient_id = :patient_id AND e.finalized_at IS NOT NULL
+    UNION ALL
+    SELECT e.voided_at, 'periodontal.voided', e.id
+      FROM periodontal_exams e
+     WHERE e.patient_id = :patient_id AND e.voided_at IS NOT NULL AND e.finalized_at IS NOT NULL
 ) AS events
 WHERE split_part(kind, '.', 1) IN :types
   AND (CAST(:cursor_at AS timestamptz) IS NULL
@@ -165,7 +174,34 @@ def _load(db: Session, rows) -> dict:
             .options(joinedload(PatientImageRevision.edited_by))
             .filter(PatientImageRevision.id.in_(ids["image_revision"]))
         }
+    if "periodontal" in ids:
+        loaded["periodontal"] = {
+            e.id: e
+            for e in db.query(PeriodontalExam)
+            .options(
+                joinedload(PeriodontalExam.finalized_by),
+                joinedload(PeriodontalExam.voided_by),
+                selectinload(PeriodontalExam.teeth),
+                selectinload(PeriodontalExam.sites),
+            )
+            .filter(PeriodontalExam.id.in_(ids["periodontal"]))
+        }
     return loaded
+
+
+def _periodontal_detail(exam: PeriodontalExam) -> Optional[str]:
+    summary = summarize(exam)
+    if summary["mean_probing_depth"] is None:
+        return None
+    parts = [f"Sondaje medio {_es(summary['mean_probing_depth'])} mm"]
+    if summary["bleeding_pct"] is not None:
+        parts.append(f"sangrado {_es(summary['bleeding_pct'])} %")
+    return " · ".join(parts)
+
+
+def _es(value: float) -> str:
+    """Número con coma decimal y sin ceros sobrantes, como en la interfaz."""
+    return f"{value:g}".replace(".", ",")
 
 
 def _build(row, loaded: dict) -> dict:
@@ -253,6 +289,21 @@ def _build(row, loaded: dict) -> dict:
             title="Fotografía anulada" + (f" (pieza {image.tooth})" if image.tooth else ""),
             detail=f"Motivo: {image.void_reason}",
             actor=_person(image.voided_by),
+        )
+    elif kind == "periodontal.finalized":
+        exam = loaded["periodontal"][source_id]
+        event.update(
+            title=f"Periodontograma del {exam.exam_date.strftime('%d/%m/%Y')}",
+            detail=_periodontal_detail(exam),
+            actor=_person(exam.finalized_by),
+            voided=exam.voided_at is not None,
+        )
+    elif kind == "periodontal.voided":
+        exam = loaded["periodontal"][source_id]
+        event.update(
+            title=f"Periodontograma anulado (examen del {exam.exam_date.strftime('%d/%m/%Y')})",
+            detail=f"Motivo: {exam.void_reason}",
+            actor=_person(exam.voided_by),
         )
     return event
 

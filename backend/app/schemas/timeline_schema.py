@@ -4,7 +4,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel
 
-EventType = Literal["visit", "treatment", "medical_history", "appointment", "image"]
+EventType = Literal["visit", "treatment", "medical_history", "appointment", "image", "periodontal"]
 
 
 class PersonRef(BaseModel):
