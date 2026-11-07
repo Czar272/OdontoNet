@@ -15,6 +15,7 @@ import {
   finalizePeriodontalExam,
   getPeriodontalExam,
   getPeriodontalExamRevisions,
+  getPeriodontalReport,
   updatePeriodontalExam,
   voidPeriodontalExam,
 } from "../../services/periodontalService";
@@ -24,12 +25,14 @@ import { timelineKey } from "../patients/timelineEvents";
 import {
   AUTOSAVE_MS,
   canEditExam,
+  canExportExam,
   canVoidExam,
   chartErrors,
   clearBackup,
   periodontalExamKey,
   periodontalExamsKey,
   readBackup,
+  saveBlob,
   writeBackup,
   type DraftBackup,
 } from "./periodontalExam";
@@ -270,6 +273,12 @@ export default function PeriodontalEditor({ exam, isArchived, onDirtyChange }: P
     });
   }, [exam.id, user, editable, dirty, recovery, baseRevision, examDate, visitId, notes, chart]);
 
+  const exportPdf = useMutation({
+    mutationFn: () => getPeriodontalReport(exam.patient_id, exam.id),
+    onSuccess: ({ blob, filename }) => saveBlob(blob, filename),
+    onError: (error) => toast.error(getApiErrorMessage(error, "No se pudo generar el PDF")),
+  });
+
   const { data: revisions = [], isLoading: loadingRevisions, isError: revisionsError } = useQuery({
     queryKey: [...periodontalExamKey(exam.patient_id, exam.id), "revisions", exam.revision],
     queryFn: () => getPeriodontalExamRevisions(exam.patient_id, exam.id),
@@ -419,6 +428,11 @@ export default function PeriodontalEditor({ exam, isArchived, onDirtyChange }: P
         <Button variant="secondary" onClick={() => setShowRevisions((open) => !open)} aria-expanded={showRevisions}>
           {showRevisions ? "Ocultar guardados" : "Ver guardados"}
         </Button>
+        {canExportExam(exam) && (
+          <Button variant="secondary" onClick={() => exportPdf.mutate()} disabled={exportPdf.isPending}>
+            {exportPdf.isPending ? "Generando PDF..." : "Descargar PDF"}
+          </Button>
+        )}
         {canVoidExam(exam, user, isArchived) && (
           <Button variant="danger" onClick={() => setVoiding(true)} disabled={saving}>Anular</Button>
         )}

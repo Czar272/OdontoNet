@@ -72,6 +72,7 @@ vi.mock("../../services/periodontalService", () => ({
   voidPeriodontalExam: vi.fn(async (_p: number, _id: number, reason: string) => ({
     ...current, voided_at: "2026-11-07T10:00:00Z", voided_by: { id: 1, name: "Dra. Ana" }, void_reason: reason,
   })),
+  getPeriodontalReport: vi.fn(async () => ({ blob: new Blob(["%PDF"], { type: "application/pdf" }), filename: "periodontograma-2026-11-06-7.pdf" })),
   getPeriodontalExamRevisions: vi.fn(async () => [
     { revision: 3, edited_by: { id: 1, name: "Dra. Ana" }, edited_at: "2026-11-06T16:00:00Z" },
     { revision: 1, edited_by: { id: 1, name: "Dra. Ana" }, edited_at: "2026-11-06T15:00:00Z" },
@@ -314,3 +315,38 @@ describe("carreras y privacidad (revisión de ODON-190)", () => {
     expect(within(form).queryByText("Copiar")).not.toBeInTheDocument();
   });
 });
+
+describe("exportación (ODON-198)", () => {
+  it("un examen finalizado se descarga como PDF con el nombre que da el servidor", async () => {
+    current = makeExam({ status: "final", finalized_at: "2026-11-06T16:00:00Z", finalized_by: { id: 1, name: "Dra. Ana" } });
+    list = [current];
+    const createObjectURL = vi.fn(() => "blob:pdf");
+    const revokeObjectURL = vi.fn();
+    Object.assign(URL, { createObjectURL, revokeObjectURL });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    await openExam();
+    fireEvent.click(screen.getByRole("button", { name: "Descargar PDF" }));
+    await waitFor(() => expect(service.getPeriodontalReport).toHaveBeenCalledWith(5, 7));
+    await waitFor(() => expect(click).toHaveBeenCalled());
+    expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe("periodontograma-2026-11-06-7.pdf");
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:pdf");
+    click.mockRestore();
+  });
+
+  it("un borrador no se exporta", async () => {
+    await openExam();
+    expect(screen.queryByRole("button", { name: "Descargar PDF" })).not.toBeInTheDocument();
+  });
+
+  it("un examen finalizado y anulado no se exporta", async () => {
+    current = makeExam({
+      status: "final", finalized_at: "2026-11-06T16:00:00Z", finalized_by: { id: 1, name: "Dra. Ana" },
+      voided_at: "2026-11-07T10:00:00Z", voided_by: { id: 1, name: "Dra. Ana" }, void_reason: "Error",
+    });
+    list = [current];
+    await openExam();
+    expect(screen.queryByRole("button", { name: "Descargar PDF" })).not.toBeInTheDocument();
+  });
+});
+

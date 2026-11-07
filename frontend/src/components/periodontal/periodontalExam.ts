@@ -30,6 +30,21 @@ export function statusLabel(exam: PeriodontalExamListItem): { text: string; clas
   return { text: "Borrador", className: "bg-amber-100 text-amber-800" };
 }
 
+/** Se exporta un examen finalizado y vigente (ODON-198). */
+export const canExportExam = (exam: PeriodontalExam) => exam.status === "final" && !exam.voided_at;
+
+/** Descarga un archivo recibido como blob sin dejar URLs abiertas. */
+export function saveBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 /** Anula su autor o administración, tanto un borrador como uno finalizado. */
 export function canVoidExam(exam: PeriodontalExam, user: CurrentUser | null, isArchived: boolean): boolean {
   if (!user || isArchived || exam.voided_at) return false;

@@ -75,3 +75,30 @@ export async function getPeriodontalExamRevisions(
   const response = await api.get<ExamRevision[]>(`${base(patientId)}/${examId}/revisions`);
   return response.data;
 }
+
+/** PDF de un examen finalizado (ODON-198); el nombre de archivo lo da el backend. */
+export async function getPeriodontalReport(
+  patientId: number,
+  examId: number,
+): Promise<{ blob: Blob; filename: string }> {
+  let response;
+  try {
+    response = await api.get<Blob>(`${base(patientId)}/${examId}/report.pdf`, { responseType: "blob" });
+  } catch (error) {
+    // Con responseType "blob" el error también llega como Blob: se lee como JSON
+    // para mostrar el mensaje del backend (p. ej. «El periodontograma está anulado.»).
+    const data = (error as { response?: { data?: unknown } }).response?.data;
+    if (data instanceof Blob) {
+      try {
+        (error as { response: { data: unknown } }).response.data = JSON.parse(await data.text());
+      } catch {
+        // No era JSON: queda el mensaje genérico.
+      }
+    }
+    throw error;
+  }
+  const disposition = String(response.headers["content-disposition"] ?? "");
+  const match = /filename="([^"]+)"/.exec(disposition);
+  return { blob: response.data, filename: match?.[1] ?? `periodontograma-${examId}.pdf` };
+}
+
