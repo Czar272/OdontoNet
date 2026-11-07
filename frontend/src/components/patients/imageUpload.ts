@@ -1,3 +1,11 @@
+import type { CurrentUser } from "../../types/auth";
+import type {
+  ImageMetadata,
+  ImageOrigin,
+  ImageView,
+  PatientImage,
+} from "../../types/patientImage";
+
 /**
  * Reglas de la subida de imágenes (ODON-170). Son solo una ayuda para el
  * usuario: el backend valida el contenido real del archivo.
@@ -51,3 +59,73 @@ export const patientImagesKey = (patientId: number) =>
 
 // Miniaturas que se piden de una vez en la galería; el resto, con «Ver más».
 export const GALLERY_PAGE_SIZE = 24;
+
+// Espejo de IMAGE_ORIGINS e IMAGE_VIEWS del backend (ODON-178).
+export const IMAGE_ORIGIN_LABELS: Record<ImageOrigin, string> = {
+  intraoral_camera: "Cámara intraoral",
+  phone: "Celular",
+  camera: "Cámara fotográfica",
+  external: "Documento u otra clínica",
+};
+
+export const IMAGE_VIEW_LABELS: Record<ImageView, string> = {
+  frontal: "Frontal",
+  right_lateral: "Lateral derecha",
+  left_lateral: "Lateral izquierda",
+  upper_occlusal: "Oclusal superior",
+  lower_occlusal: "Oclusal inferior",
+  detail: "Detalle",
+  other: "Otra",
+};
+
+/** Corrige o anula quien la subió o administración, si no está anulada. */
+export function canModifyImage(
+  image: PatientImage,
+  user: CurrentUser | null,
+): boolean {
+  if (!user || image.voided_at) return false;
+  return user.role === "admin" || image.uploaded_by.id === user.id;
+}
+
+/** Estado de los campos de metadatos en los formularios (todo como texto). */
+export interface ImageMetadataForm {
+  origin: ImageOrigin | "";
+  view: ImageView | "";
+  taken_on: string;
+  clinical_visit_id: string;
+  tooth: number | null;
+}
+
+export const EMPTY_IMAGE_METADATA: ImageMetadataForm = {
+  origin: "",
+  view: "",
+  taken_on: "",
+  clinical_visit_id: "",
+  tooth: null,
+};
+
+export function imageMetadataForm(image: PatientImage): ImageMetadataForm {
+  return {
+    origin: image.origin ?? "",
+    view: image.view ?? "",
+    taken_on: image.taken_on ?? "",
+    clinical_visit_id: image.clinical_visit
+      ? String(image.clinical_visit.id)
+      : "",
+    tooth: image.tooth,
+  };
+}
+
+/** Metadatos listos para la API, o null si falta el origen. */
+export function toImageMetadata(form: ImageMetadataForm): ImageMetadata | null {
+  if (!form.origin) return null;
+  return {
+    origin: form.origin,
+    view: form.view || null,
+    taken_on: form.taken_on || null,
+    clinical_visit_id: form.clinical_visit_id
+      ? Number(form.clinical_visit_id)
+      : null,
+    tooth: form.tooth,
+  };
+}

@@ -5,8 +5,8 @@ import toast from "react-hot-toast";
 
 import Button from "../basic/Button";
 import Card from "../basic/Card";
-import Select from "../basic/Select";
 import { getApiErrorMessage } from "../../services/apiError";
+import type { ImageMetadata } from "../../types/patientImage";
 import { getVisits } from "../../services/clinicalVisitService";
 import {
   getPhotoConsent,
@@ -14,7 +14,7 @@ import {
 } from "../../services/patientImageService";
 import ImageGallery from "./ImageGallery";
 import PhotoConsentSection from "./PhotoConsentSection";
-import ToothChart from "./ToothChart";
+import ImageMetadataFields from "./ImageMetadataFields";
 import { timelineKey } from "./timelineEvents";
 import {
   ACCEPTED_IMAGE_EXTENSIONS,
@@ -24,13 +24,12 @@ import {
   patientImagesKey,
   photoConsentKey,
   readAsDataUrl,
+  toImageMetadata,
   validateImageFile,
+  EMPTY_IMAGE_METADATA,
+  type ImageMetadataForm,
 } from "./imageUpload";
 
-const dateTime = new Intl.DateTimeFormat("es-GT", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
 
 function UploadForm({ patientId }: { patientId: number }) {
   const queryClient = useQueryClient();
@@ -38,8 +37,8 @@ function UploadForm({ patientId }: { patientId: number }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
-  const [visitId, setVisitId] = useState("");
-  const [tooth, setTooth] = useState<number | null>(null);
+  const [metadata, setMetadata] =
+    useState<ImageMetadataForm>(EMPTY_IMAGE_METADATA);
   const [progress, setProgress] = useState<number | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
 
@@ -52,23 +51,14 @@ function UploadForm({ patientId }: { patientId: number }) {
   const reset = () => {
     setFile(null);
     setPreview(null);
-    setTooth(null);
-    setVisitId("");
+    setMetadata(EMPTY_IMAGE_METADATA);
     setProgress(null);
     if (fileInput.current) fileInput.current.value = "";
   };
 
   const mutation = useMutation({
-    mutationFn: (selected: File) =>
-      uploadPatientImage(
-        patientId,
-        {
-          file: selected,
-          clinical_visit_id: visitId ? Number(visitId) : null,
-          tooth,
-        },
-        setProgress,
-      ),
+    mutationFn: ({ selected, data }: { selected: File; data: ImageMetadata }) =>
+      uploadPatientImage(patientId, { file: selected, ...data }, setProgress),
     onSuccess: () => {
       toast.success("Imagen subida");
       reset();
@@ -106,7 +96,12 @@ function UploadForm({ patientId }: { patientId: number }) {
       setFileError("Elige una fotografía.");
       return;
     }
-    mutation.mutate(file);
+    const data = toImageMetadata(metadata);
+    if (!data) {
+      toast.error("Indica el origen de la fotografía.");
+      return;
+    }
+    mutation.mutate({ selected: file, data });
   };
 
   return (
@@ -152,27 +147,10 @@ function UploadForm({ patientId }: { patientId: number }) {
           )}
         </div>
 
-        <Select
-          label="Consulta (opcional)"
-          value={visitId}
-          onChange={(e) => setVisitId(e.target.value)}
-        >
-          <option value="">Sin consulta</option>
-          {visits.map((visit) => (
-            <option key={visit.id} value={visit.id}>
-              {dateTime.format(new Date(visit.visit_at))} · {visit.reason}
-            </option>
-          ))}
-        </Select>
-
-        <ToothChart
-          value={tooth}
-          onChange={setTooth}
-          hint={
-            tooth
-              ? `Pieza ${tooth}. Tócala de nuevo para quitarla.`
-              : "Pieza (opcional): toca una pieza para asociarla a la foto."
-          }
+        <ImageMetadataFields
+          value={metadata}
+          onChange={setMetadata}
+          visits={visits}
         />
       </fieldset>
 
@@ -200,7 +178,10 @@ function UploadForm({ patientId }: { patientId: number }) {
       )}
 
       <div className="flex justify-end">
-        <Button type="submit" disabled={mutation.isPending || !file}>
+        <Button
+          type="submit"
+          disabled={mutation.isPending || !file || !metadata.origin}
+        >
           <span className="flex items-center gap-2">
             <ImagePlus size={16} />
             {mutation.isPending ? "Subiendo..." : "Subir imagen"}
@@ -266,7 +247,11 @@ export default function ImagesCard({
           )}
         </section>
 
-        <ImageGallery patientId={patientId} />
+        <ImageGallery
+          patientId={patientId}
+          canManage={canUpload}
+          isArchived={isArchived}
+        />
       </div>
     </Card>
   );

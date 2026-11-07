@@ -1,6 +1,9 @@
 import type {
+  ImageAccess,
+  ImageUpdateDTO,
   ImageUploadData,
   PatientImage,
+  PatientImageRevision,
   PhotoConsent,
   PhotoConsentDTO,
   PhotoConsentStatus,
@@ -36,6 +39,9 @@ export async function uploadPatientImage(
 ): Promise<PatientImage> {
   const form = new FormData();
   form.append("file", data.file);
+  form.append("origin", data.origin);
+  if (data.view !== null) form.append("view", data.view);
+  if (data.taken_on !== null) form.append("taken_on", data.taken_on);
   if (data.clinical_visit_id !== null) {
     form.append("clinical_visit_id", String(data.clinical_visit_id));
   }
@@ -84,6 +90,56 @@ export async function getPatientImageThumbnail(
   const response = await api.get<Blob>(
     `${imagesUrl(patientId)}/${imageId}/thumbnail`,
     { responseType: "blob" },
+  );
+
+  return response.data;
+}
+
+/** Corrige los metadatos (409 con current_revision si cambió). */
+export async function updatePatientImage(
+  patientId: number,
+  imageId: number,
+  data: ImageUpdateDTO,
+): Promise<PatientImage> {
+  const response = await api.patch<PatientImage>(
+    `${imagesUrl(patientId)}/${imageId}`,
+    data,
+  );
+
+  return response.data;
+}
+
+export async function voidPatientImage(
+  patientId: number,
+  imageId: number,
+  reason: string,
+): Promise<PatientImage> {
+  const response = await api.post<PatientImage>(
+    `${imagesUrl(patientId)}/${imageId}/void`,
+    { reason },
+  );
+
+  return response.data;
+}
+
+export async function getPatientImageRevisions(
+  patientId: number,
+  imageId: number,
+): Promise<PatientImageRevision[]> {
+  const response = await api.get<PatientImageRevision[]>(
+    `${imagesUrl(patientId)}/${imageId}/revisions`,
+  );
+
+  return response.data;
+}
+
+/** Aperturas del original (solo administración). */
+export async function getPatientImageAccessLog(
+  patientId: number,
+  imageId: number,
+): Promise<ImageAccess[]> {
+  const response = await api.get<ImageAccess[]>(
+    `${imagesUrl(patientId)}/${imageId}/access-log`,
   );
 
   return response.data;

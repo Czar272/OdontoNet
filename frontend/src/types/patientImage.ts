@@ -28,12 +28,28 @@ export interface PhotoConsentDTO {
   notes: string | null;
 }
 
-/** Fotografía clínica del paciente (ODON-166, ODON-170). */
+export type ImageOrigin = "intraoral_camera" | "phone" | "camera" | "external";
+export type ImageView =
+  | "frontal"
+  | "right_lateral"
+  | "left_lateral"
+  | "upper_occlusal"
+  | "lower_occlusal"
+  | "detail"
+  | "other";
+
+/** Fotografía clínica del paciente (ODON-166, ODON-170, ODON-178). */
 export interface PatientImage {
   id: number;
   patient_id: number;
   clinical_visit: VisitRef | null;
   tooth: number | null;
+  /** null en imágenes anteriores a ODON-178 («sin registrar»). */
+  origin: ImageOrigin | null;
+  view: ImageView | null;
+  /** YYYY-MM-DD */
+  taken_on: string | null;
+  revision: number;
   content_type: string;
   size_bytes: number;
   width: number;
@@ -41,10 +57,40 @@ export interface PatientImage {
   consent_id: number;
   uploaded_by: PersonRef;
   uploaded_at: string;
+  voided_at: string | null;
+  voided_by: PersonRef | null;
+  void_reason: string | null;
 }
 
-export interface ImageUploadData {
-  file: File;
+/** Metadatos corregibles; el archivo nunca cambia. */
+export interface ImageMetadata {
+  origin: ImageOrigin;
+  view: ImageView | null;
+  taken_on: string | null;
   clinical_visit_id: number | null;
   tooth: number | null;
+}
+
+export interface ImageUploadData extends ImageMetadata {
+  file: File;
+}
+
+export interface ImageUpdateDTO extends ImageMetadata {
+  base_revision: number;
+}
+
+export interface PatientImageRevision {
+  revision: number;
+  origin: ImageOrigin | null;
+  view: ImageView | null;
+  taken_on: string | null;
+  clinical_visit_id: number | null;
+  tooth: number | null;
+  edited_by: PersonRef;
+  edited_at: string;
+}
+
+export interface ImageAccess {
+  user: PersonRef;
+  accessed_at: string;
 }

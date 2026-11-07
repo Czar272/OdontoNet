@@ -21,8 +21,10 @@ const visit = (id: number, reason: string, voided = false): ClinicalVisit => ({
 });
 
 const uploaded: PatientImage = {
-  id: 7, patient_id: 5, clinical_visit: null, tooth: 36, content_type: "image/jpeg", size_bytes: 2048,
-  width: 640, height: 480, consent_id: 1, uploaded_by: { id: 1, name: "Dra. Ana" }, uploaded_at: "2026-11-03T15:00:00Z",
+  id: 7, patient_id: 5, clinical_visit: null, tooth: 36, origin: "intraoral_camera", view: "frontal",
+  taken_on: "2026-11-02", revision: 1, content_type: "image/jpeg", size_bytes: 2048, width: 640, height: 480,
+  consent_id: 1, uploaded_by: { id: 1, name: "Dra. Ana" }, uploaded_at: "2026-11-03T15:00:00Z",
+  voided_at: null, voided_by: null, void_reason: null,
 };
 
 let status: PhotoConsentStatus = { current: null, history: [] };
@@ -166,11 +168,18 @@ describe("ImagesCard", () => {
     fireEvent.change(select, { target: { value: "9" } });
     fireEvent.click(screen.getByRole("button", { name: "Pieza 36" }));
 
+    // El origen es obligatorio.
+    expect(screen.getByRole("button", { name: /subir imagen/i })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText(/origen/i), { target: { value: "intraoral_camera" } });
+    fireEvent.change(screen.getByLabelText(/tipo de vista/i), { target: { value: "frontal" } });
+    fireEvent.change(screen.getByLabelText("Fecha de toma"), { target: { value: "2026-11-02" } });
     fireEvent.click(screen.getByRole("button", { name: /subir imagen/i }));
 
     await waitFor(() =>
       expect(service.uploadPatientImage).toHaveBeenCalledWith(
-        5, { file: photo, clinical_visit_id: 9, tooth: 36 }, expect.any(Function),
+        5,
+        { file: photo, clinical_visit_id: 9, tooth: 36, origin: "intraoral_camera", view: "frontal", taken_on: "2026-11-02" },
+        expect.any(Function),
       ),
     );
     const grid = await screen.findByRole("list", { name: "Fotografías del paciente" });
