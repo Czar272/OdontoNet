@@ -85,3 +85,9 @@ ai-service/checkpoints/
 tmp/
 temp/
 .cache/
+
+# Herramientas locales del desarrollador
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+.mcp.json
