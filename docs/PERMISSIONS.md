@@ -62,9 +62,12 @@
 | `GET /patients/{id}/images/{image_id}/file` (archivo de una imagen clínica; otra clínica `404`) | ✅ | ✅ | ⛔ |
 | `POST /patients/{id}/images` (subir fotografía; exige consentimiento vigente) | ✅ | ✅ | ⛔ |
 | `GET /patients/{id}/images`, `GET /patients/{id}/images/{image_id}` y `.../thumbnail` (galería: metadatos y miniatura; otra clínica `404`) | ✅ | ✅ | ⛔ |
+| `PATCH /patients/{id}/images/{image_id}` y `POST .../void` (corregir metadatos o anular con motivo; solo quien la subió o administración) | ✅ | ✅ (las propias) | ⛔ |
+| `GET /patients/{id}/images/{image_id}/revisions` (historial de metadatos) | ✅ | ✅ | ⛔ |
+| `GET /patients/{id}/images/{image_id}/access-log` (quién abrió el original) | ✅ | ⛔ | ⛔ |
 | `GET`, `POST /patients/{id}/photo-consent` (consentimiento para fotografías: vigente, historial y versión nueva) | ✅ | ✅ | ⛔ |
 
-Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_password_reset.py`, `backend/tests/test_users.py`, `backend/tests/test_user_deactivation.py`, `backend/tests/test_patient_archive.py`, `backend/tests/test_appointment_api.py`, `backend/tests/test_doctor_availability.py`, `backend/tests/test_medical_history.py`, `backend/tests/test_clinical_visits.py`, `backend/tests/test_treatments.py`, `backend/tests/test_timeline.py`, `backend/tests/test_patient_images.py`, `backend/tests/test_image_upload.py` y `backend/tests/test_image_gallery.py`.
+Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_password_reset.py`, `backend/tests/test_users.py`, `backend/tests/test_user_deactivation.py`, `backend/tests/test_patient_archive.py`, `backend/tests/test_appointment_api.py`, `backend/tests/test_doctor_availability.py`, `backend/tests/test_medical_history.py`, `backend/tests/test_clinical_visits.py`, `backend/tests/test_treatments.py`, `backend/tests/test_timeline.py`, `backend/tests/test_patient_images.py`, `backend/tests/test_image_upload.py`, `backend/tests/test_image_gallery.py` y `backend/tests/test_image_metadata.py`.
 
 ### Reglas de gestión de usuarios (ODON-86)
 
@@ -139,7 +142,7 @@ Se implementarán con esta matriz cuando se desarrolle cada módulo.
 | Consultas clínicas (ODON-154) | ✅ | ✅ (edita o anula solo las propias) | ⛔ |
 | Plan de tratamiento (ODON-158) | ✅ | ✅ (cualquier tratamiento; el historial registra quién) | ⛔ |
 | Historial cronológico (ODON-162) | ✅ | ✅ | ⛔ (incluye consultas y tratamientos) |
-| Imágenes clínicas (ODON-8; subir y ver) | ✅ | ✅ | ⛔ |
+| Imágenes clínicas (ODON-8; subir y ver; corregir o anular las propias, administración cualquiera; accesos solo administración) | ✅ | ✅ | ⛔ |
 | Periodontograma | ✅ | ✅ | ⛔ |
 | Reportes operativos | ✅ | ✅ | ✅ sin datos clínicos |
 

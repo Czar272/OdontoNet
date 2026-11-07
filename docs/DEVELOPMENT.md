@@ -136,7 +136,7 @@ Cada prueba pertenece al menos a una categoría (marcador de pytest), según el 
 | `rbac` | Permisos por rol (transversal) |
 | `appointments` | Modelo, integridad y endpoints de citas |
 | `records` | Expediente clínico: historia médica, consultas, plan de tratamiento e historial cronológico |
-| `images` | Imágenes clínicas: almacenamiento privado, subida y saneamiento, consentimiento, galería y miniaturas, descarga, verificación de respaldos |
+| `images` | Imágenes clínicas: almacenamiento privado, subida y saneamiento, consentimiento, galería y miniaturas, metadatos con revisiones, anulación, auditoría de acceso, verificación de respaldos |
 
 ```powershell
 python -m pytest -m auth                      # solo autenticación
