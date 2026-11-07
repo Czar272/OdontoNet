@@ -21,6 +21,7 @@ import Select from "../../components/basic/Select";
 import Tabs, { type TabItem } from "../../components/basic/Tabs";
 import ClinicalVisitsCard from "../../components/patients/ClinicalVisitsCard";
 import ImagesCard from "../../components/patients/ImagesCard";
+import PeriodontalCard from "../../components/periodontal/PeriodontalCard";
 import TimelineCard from "../../components/patients/TimelineCard";
 import TreatmentsCard from "../../components/patients/TreatmentsCard";
 import MedicalHistoryCard from "../../components/patients/MedicalHistoryCard";
@@ -340,6 +341,8 @@ export default function PatientDetailPage() {
   const canViewTimeline = usePermission("timeline:view");
   const canViewImages = usePermission("images:view");
   const canUploadImages = usePermission("images:upload");
+  const canViewPeriodontal = usePermission("periodontal:view");
+  const canCreatePeriodontal = usePermission("periodontal:create");
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Solo las pestañas que el rol puede ver; el backend aplica los permisos.
@@ -351,6 +354,7 @@ export default function PatientDetailPage() {
       ? [{ id: "tratamientos", label: "Tratamientos" }]
       : []),
     ...(canViewImages ? [{ id: "imagenes", label: "Imágenes" }] : []),
+    ...(canViewPeriodontal ? [{ id: "periodontograma", label: "Periodontograma" }] : []),
     ...(canViewTimeline ? [{ id: "historial", label: "Historial" }] : []),
   ];
   const requested = searchParams.get("tab");
@@ -472,6 +476,14 @@ export default function PatientDetailPage() {
           <ImagesCard
             patientId={patient.id}
             canUpload={canUploadImages}
+            isArchived={isArchived}
+          />
+        )}
+
+        {activeTab === "periodontograma" && (
+          <PeriodontalCard
+            patientId={patient.id}
+            canCreate={canCreatePeriodontal}
             isArchived={isArchived}
           />
         )}

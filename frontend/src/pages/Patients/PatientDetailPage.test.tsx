@@ -57,6 +57,10 @@ vi.mock("../../services/treatmentService", () => ({
   getTreatmentHistory: vi.fn(async () => []),
 }));
 
+vi.mock("../../services/periodontalService", () => ({
+  getPeriodontalExams: vi.fn(async () => []),
+}));
+
 vi.mock("../../services/clinicalVisitService", () => ({
   getVisits: vi.fn(async () => []),
   createVisit: vi.fn(),
@@ -211,6 +215,7 @@ describe("PatientDetailPage", () => {
       "Consultas",
       "Tratamientos",
       "Imágenes",
+      "Periodontograma",
       "Historial",
     ]);
   });
@@ -274,6 +279,26 @@ describe("PatientDetailPage", () => {
     expect(await screen.findByRole("tab", { name: "Datos generales" })).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByRole("tab", { name: "Imágenes" })).not.toBeInTheDocument();
     expect(screen.queryByText("Imágenes clínicas")).not.toBeInTheDocument();
+  });
+
+  it("el doctor abre la pestaña del periodontograma", async () => {
+    renderAt("/patients/5?tab=periodontograma", "doctor");
+
+    expect(await screen.findByRole("heading", { name: "Periodontograma" })).toBeInTheDocument();
+    expect(await screen.findByText(/aún no hay periodontogramas/i)).toBeInTheDocument();
+  });
+
+  it("administración abre la pestaña del periodontograma", async () => {
+    renderAt("/patients/5?tab=periodontograma", "admin");
+
+    expect(await screen.findByRole("heading", { name: "Periodontograma" })).toBeInTheDocument();
+  });
+
+  it("recepción no ve el periodontograma aunque lo pida en la URL", async () => {
+    renderAt("/patients/5?tab=periodontograma", "receptionist");
+
+    expect(await screen.findByRole("tab", { name: "Datos generales" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByRole("tab", { name: "Periodontograma" })).not.toBeInTheDocument();
   });
 
   it("las flechas del teclado cambian de pestaña", async () => {

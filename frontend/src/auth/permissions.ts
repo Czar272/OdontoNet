@@ -35,6 +35,10 @@ export const PERMISSIONS = {
   // Imágenes clínicas y su consentimiento (ODON-8): recepción no accede.
   "images:view": ["admin", "doctor"],
   "images:upload": ["admin", "doctor"],
+  // Periodontograma (ODON-9): recepción no accede. Editar, finalizar o anular
+  // además exige ser quien lo registró o administración (canEditExam).
+  "periodontal:view": ["admin", "doctor"],
+  "periodontal:create": ["admin", "doctor"],
   "clinic:manage": ["admin"],
 } as const satisfies Record<string, readonly Role[]>;
 
