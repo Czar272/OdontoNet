@@ -420,6 +420,23 @@ def finalize_exam(
     return get_exam(db, patient.id, exam.id)
 
 
+def export_report(db: Session, patient: Patient, exam: PeriodontalExam, user: User) -> bytes:
+    """PDF de un examen finalizado y vigente (ODON-198). Queda en el registro de auditoría."""
+    if exam.voided_at is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El periodontograma está anulado.")
+    if exam.status != "final":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Finaliza el periodontograma para exportarlo."
+        )
+    from app.services.periodontal_report import build_report  # reportlab solo se carga al exportar
+
+    content = build_report(exam, patient, db.get(Clinic, patient.clinic_id))
+    audit_logger.info(
+        "periodontal_exam.exported exam_id=%s user_id=%s clinic_id=%s", exam.id, user.id, patient.clinic_id
+    )
+    return content
+
+
 def void_exam(db: Session, patient: Patient, exam: PeriodontalExam, reason: str, user: User) -> PeriodontalExam:
     exam = _lock(db, exam)
     try:

@@ -70,6 +70,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # El frontend lee el nombre del archivo de las descargas (reporte PDF, ODON-198).
+    expose_headers=["Content-Disposition"],
 )
 
 

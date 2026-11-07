@@ -4,7 +4,7 @@ Administración y doctores leen y registran exámenes; solo quien registró un
 examen o administración lo edita, finaliza o anula. Recepción no accede
 (docs/PERMISSIONS.md). La clínica sale siempre del token.
 """
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.auth.permissions import Role, require_roles
@@ -79,6 +79,30 @@ def void_exam(
     patient = service.get_clinic_patient(db, patient_id, user.clinic_id)
     exam = service.get_exam(db, patient_id, exam_id)
     return service.to_response(service.void_exam(db, patient, exam, data.reason, user))
+
+
+@router.get(
+    "/{exam_id}/report.pdf",
+    response_class=Response,
+    responses={200: {"content": {"application/pdf": {"schema": {"type": "string", "format": "binary"}}},
+                     "description": "Reporte PDF del periodontograma finalizado"}},
+)
+def export_report(patient_id: int, exam_id: int, db: Session = Depends(get_db), user: User = Depends(clinical_user)):
+    """Reporte descargable de un examen finalizado: identificación clínica, fecha, medidas y resumen descriptivo."""
+    patient = service.get_clinic_patient(db, patient_id, user.clinic_id)
+    exam = service.get_exam(db, patient_id, exam_id)
+    content = service.export_report(db, patient, exam, user)
+    # Sin el nombre del paciente en el nombre del archivo: queda en descargas y en el historial del navegador.
+    filename = f"periodontograma-{exam.exam_date.isoformat()}-{exam.id}.pdf"
+    return Response(
+        content=content,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.get("/{exam_id}/revisions", response_model=list[ExamRevisionResponse])
