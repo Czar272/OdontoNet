@@ -47,11 +47,25 @@ export function replaceToken(token: string): void {
   setToken(token, isRememberedSession());
 }
 
+/** Prefijo de los respaldos locales con datos clínicos (p. ej. periodontograma). */
+export const CLINICAL_DRAFT_PREFIX = "odontonet:periodontal-draft:";
+
+/** Borra los respaldos clínicos que la sesión dejó en el navegador. */
+export function clearSessionDrafts(): void {
+  safe(() => {
+    for (const key of Object.keys(sessionStorage)) {
+      if (key.startsWith(CLINICAL_DRAFT_PREFIX)) sessionStorage.removeItem(key);
+    }
+  }, undefined);
+}
+
 export function clearToken(): void {
   safe(() => {
     sessionStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(TOKEN_KEY);
   }, undefined);
+  // Al cerrar sesión (voluntaria o por 401) no quedan datos clínicos en la pestaña.
+  clearSessionDrafts();
 }
 
 type UnauthorizedHandler = () => void;

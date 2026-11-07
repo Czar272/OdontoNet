@@ -52,6 +52,7 @@ const service = await import("../../services/periodontalService");
 
 beforeEach(() => {
   vi.clearAllMocks();
+  sessionStorage.clear();
   current = makeExam();
 });
 
@@ -71,9 +72,14 @@ describe("PeriodontalCard", () => {
     expect(within(list).getByText(/12 sitios · sondaje medio 3.5 mm · sangrado 25 %/)).toBeInTheDocument();
   });
 
-  it("crea un borrador vacío con la fecha de hoy y lo abre", async () => {
+  it("crea un borrador en blanco con la fecha de hoy y lo abre", async () => {
     renderWithAuth(<PeriodontalCard patientId={5} canCreate isArchived={false} />, "doctor");
-    fireEvent.click(await screen.findByRole("button", { name: /nuevo periodontograma/i }));
+    await screen.findByRole("list", { name: "Periodontogramas del paciente" });
+    fireEvent.click(screen.getByRole("button", { name: /nuevo periodontograma/i }));
+    // Hay un examen previo: se elige cómo empezar; «En blanco» es la opción por defecto.
+    const form = await screen.findByRole("form", { name: "Nuevo periodontograma" });
+    expect(within(form).getByLabelText("En blanco")).toBeChecked();
+    fireEvent.click(within(form).getByRole("button", { name: "Crear" }));
     await waitFor(() => expect(service.createPeriodontalExam).toHaveBeenCalledWith(5, expect.objectContaining({ teeth: [] })));
     expect(await screen.findByRole("region", { name: "Arcada inferior" })).toBeInTheDocument();
   });

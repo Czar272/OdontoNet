@@ -67,3 +67,14 @@ describe("session", () => {
     expect(localStorage.getItem("token")).toBeNull();
   });
 });
+
+describe("respaldos clínicos de la pestaña", () => {
+  it("se borran al cerrar sesión (clearToken), sin tocar otras claves", async () => {
+    const { clearToken } = await import("./session");
+    sessionStorage.setItem("odontonet:periodontal-draft:7", "{}");
+    sessionStorage.setItem("otra-clave", "x");
+    clearToken();
+    expect(sessionStorage.getItem("odontonet:periodontal-draft:7")).toBeNull();
+    expect(sessionStorage.getItem("otra-clave")).toBe("x");
+  });
+});
