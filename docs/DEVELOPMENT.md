@@ -137,7 +137,7 @@ Cada prueba pertenece al menos a una categoría (marcador de pytest), según el 
 | `appointments` | Modelo, integridad y endpoints de citas |
 | `records` | Expediente clínico: historia médica, consultas, plan de tratamiento e historial cronológico |
 | `images` | Imágenes clínicas: almacenamiento privado, subida y saneamiento, consentimiento, galería y miniaturas, metadatos con revisiones, anulación, auditoría de acceso, verificación de respaldos |
-| `periodontal` | Periodontograma manual: modelo y restricciones, validación por pieza y sitio, borradores con revisiones, finalización, anulación y resumen |
+| `periodontal` | Periodontograma manual: modelo y restricciones, validación por pieza y sitio, borradores con revisiones, finalización, anulación, resumen, historial cronológico y reporte PDF |
 
 ```powershell
 python -m pytest -m auth                      # solo autenticación

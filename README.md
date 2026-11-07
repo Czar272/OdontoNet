@@ -23,7 +23,7 @@ Cada clínica es un espacio aislado: la API filtra todos los datos por la clíni
 | Agenda y citas | Implementado (calendario compartido, estados, horario de doctores) |
 | Expediente clínico | Historia médica versionada, consultas clínicas con historial de cambios, plan de tratamiento con estados y odontograma, e historial cronológico |
 | Imágenes clínicas | Almacenamiento privado, subida con consentimiento, galería con miniaturas, metadatos con revisiones, anulación y registro de accesos |
-| Periodontograma manual | Pendiente |
+| Periodontograma manual | Examen por pieza y sitio con dibujo en vivo, borrador con autoguardado, finalización, comparación y reporte PDF |
 | IA periodontal | Fuera del MVP inicial; servicio independiente futuro |
 
 **Aviso:** no usar con datos clínicos reales ni desplegar públicamente hasta completar auditoría, privacidad, respaldos, endurecimiento de seguridad y pruebas de aceptación.
@@ -31,7 +31,7 @@ Cada clínica es un espacio aislado: la API filtra todos los datos por la clíni
 ## Tecnologías
 
 - **Frontend:** React 19, TypeScript (strict), Vite 8, Tailwind CSS 3, React Router 7, TanStack Query, Axios.
-- **Backend:** Python 3.11, FastAPI, SQLAlchemy 2, Pydantic 1, Alembic, JWT, Pillow (imágenes clínicas), pytest.
+- **Backend:** Python 3.11, FastAPI, SQLAlchemy 2, Pydantic 1, Alembic, JWT, Pillow (imágenes clínicas), reportlab (reporte PDF del periodontograma), pytest.
 - **Base de datos:** PostgreSQL 16 en Docker Compose.
 - **Futuro módulo IA:** servicio independiente; tecnología y contratos pendientes de validación.
 
