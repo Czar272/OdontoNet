@@ -104,10 +104,12 @@ def grant(client, setup, patient_id=None, role="doctor", **body):
 
 
 def upload(client, setup, data, name="foto.jpg", content_type="image/jpeg", role="doctor", patient_id=None, **form):
+    # Origen obligatorio desde ODON-178; origin=None lo omite.
+    form = {"origin": "phone", **form}
     return client.post(
         f"/patients/{patient_id or setup['patient']}/images",
         files={"file": (name, data, content_type)},
-        data={k: str(v) for k, v in form.items()},
+        data={k: str(v) for k, v in form.items() if v is not None},
         headers=setup["headers"][role],
     )
 

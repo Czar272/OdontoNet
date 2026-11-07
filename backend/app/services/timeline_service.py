@@ -3,7 +3,8 @@
 Une en una sola línea de tiempo, de lo más reciente a lo más antiguo:
 consultas (atención, ediciones y anulación), cambios de estado de
 tratamientos, versiones de la historia médica, citas atendidas o no
-asistidas y fotografías clínicas subidas (ODON-174). Pagina por cursor (keyset): cada página es una consulta indexada,
+asistidas y fotografías clínicas (subida en ODON-174; corrección y
+anulación en ODON-178). Pagina por cursor (keyset): cada página es una consulta indexada,
 sin OFFSET, aunque el paciente tenga años de historial.
 
 Para sumar una fuente (periodontogramas en PGR04): agregar
@@ -23,7 +24,7 @@ from app.models.appointment import Appointment
 from app.models.clinical_visit import ClinicalVisit, ClinicalVisitRevision
 from app.models.doctor import Doctor
 from app.models.medical_history import PatientMedicalHistory
-from app.models.patient_image import PatientImage
+from app.models.patient_image import PatientImage, PatientImageRevision
 from app.models.treatment import Treatment, TreatmentStatusChange
 
 PAGE_SIZE = 20
@@ -57,6 +58,13 @@ SELECT occurred_at, kind, source_id FROM (
     UNION ALL
     SELECT i.uploaded_at, 'image.uploaded', i.id
       FROM patient_images i WHERE i.patient_id = :patient_id
+    UNION ALL
+    SELECT r.edited_at, 'image.edited', r.id
+      FROM patient_image_revisions r JOIN patient_images i ON i.id = r.image_id
+     WHERE i.patient_id = :patient_id AND r.revision > 1
+    UNION ALL
+    SELECT i.voided_at, 'image.voided', i.id
+      FROM patient_images i WHERE i.patient_id = :patient_id AND i.voided_at IS NOT NULL
 ) AS events
 WHERE split_part(kind, '.', 1) IN :types
   AND (CAST(:cursor_at AS timestamptz) IS NULL
@@ -97,9 +105,11 @@ def _tooth(treatment: Treatment) -> str:
 
 def _load(db: Session, rows) -> dict:
     """Carga en lote los registros de cada tipo de la página."""
+    # Las ediciones apuntan a la tabla de revisiones, no al registro principal.
+    sources = {"visit.edited": "revision", "image.edited": "image_revision"}
     ids: dict[str, set[int]] = {}
     for row in rows:
-        ids.setdefault(row.kind.split(".")[0] if not row.kind.startswith("visit.edited") else "revision", set()).add(row.source_id)
+        ids.setdefault(sources.get(row.kind, row.kind.split(".")[0]), set()).add(row.source_id)
 
     loaded = {}
     if "visit" in ids:
@@ -141,8 +151,19 @@ def _load(db: Session, rows) -> dict:
         loaded["image"] = {
             i.id: i
             for i in db.query(PatientImage)
-            .options(joinedload(PatientImage.uploaded_by), joinedload(PatientImage.clinical_visit))
+            .options(
+                joinedload(PatientImage.uploaded_by),
+                joinedload(PatientImage.clinical_visit),
+                joinedload(PatientImage.voided_by),
+            )
             .filter(PatientImage.id.in_(ids["image"]))
+        }
+    if "image_revision" in ids:
+        loaded["image_revision"] = {
+            r.id: r
+            for r in db.query(PatientImageRevision)
+            .options(joinedload(PatientImageRevision.edited_by))
+            .filter(PatientImageRevision.id.in_(ids["image_revision"]))
         }
     return loaded
 
@@ -216,6 +237,22 @@ def _build(row, loaded: dict) -> dict:
             title="Fotografía clínica" + (f" (pieza {image.tooth})" if image.tooth else ""),
             detail=f"Consulta: {image.clinical_visit.reason}" if image.clinical_visit else None,
             actor=_person(image.uploaded_by),
+            voided=image.voided_at is not None,
+        )
+    elif kind == "image.edited":
+        revision = loaded["image_revision"][source_id]
+        event.update(
+            title="Datos de fotografía corregidos" + (f" (pieza {revision.tooth})" if revision.tooth else ""),
+            detail=f"Revisión {revision.revision}",
+            actor=_person(revision.edited_by),
+            ref_id=revision.image_id,
+        )
+    elif kind == "image.voided":
+        image = loaded["image"][source_id]
+        event.update(
+            title="Fotografía anulada" + (f" (pieza {image.tooth})" if image.tooth else ""),
+            detail=f"Motivo: {image.void_reason}",
+            actor=_person(image.voided_by),
         )
     return event
 

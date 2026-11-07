@@ -1,8 +1,13 @@
 """Imágenes clínicas y consentimiento para fotografías (ODON-8)."""
 from datetime import date, datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, constr, validator
+
+from app.models.treatment import is_valid_tooth
+
+Origin = Literal["intraoral_camera", "phone", "camera", "external"]
+View = Literal["frontal", "right_lateral", "left_lateral", "upper_occlusal", "lower_occlusal", "detail", "other"]
 
 
 class PersonRef(BaseModel):
@@ -58,11 +63,53 @@ class PhotoConsentStatus(BaseModel):
     history: list[PhotoConsentResponse]
 
 
+class PatientImageUpdate(BaseModel):
+    """Corrección de metadatos (ODON-178): se envían completos. El archivo no cambia."""
+
+    base_revision: int
+    origin: Origin
+    view: Optional[View] = None
+    taken_on: Optional[date] = None
+    clinical_visit_id: Optional[int] = None
+    tooth: Optional[int] = None
+
+    @validator("tooth")
+    def _valid_tooth(cls, value):
+        if value is not None and not is_valid_tooth(value):
+            raise ValueError("Pieza dental inválida: usa la numeración FDI (11–48 o 51–85).")
+        return value
+
+
+class ImageVoid(BaseModel):
+    reason: constr(strip_whitespace=True, min_length=1, max_length=500)
+
+
+class PatientImageRevisionResponse(BaseModel):
+    revision: int
+    origin: Optional[str]
+    view: Optional[str]
+    taken_on: Optional[date]
+    clinical_visit_id: Optional[int]
+    tooth: Optional[int]
+    edited_by: PersonRef
+    edited_at: datetime
+
+
+class ImageAccessResponse(BaseModel):
+    user: PersonRef
+    accessed_at: datetime
+
+
 class PatientImageResponse(BaseModel):
     id: int
     patient_id: int
     clinical_visit: Optional[VisitRef]
     tooth: Optional[int]
+    # null en imágenes anteriores a ODON-178 («sin registrar»).
+    origin: Optional[str]
+    view: Optional[str]
+    taken_on: Optional[date]
+    revision: int
     content_type: str
     size_bytes: int
     width: int
@@ -70,3 +117,6 @@ class PatientImageResponse(BaseModel):
     consent_id: int
     uploaded_by: PersonRef
     uploaded_at: datetime
+    voided_at: Optional[datetime]
+    voided_by: Optional[PersonRef]
+    void_reason: Optional[str]

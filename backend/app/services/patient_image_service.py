@@ -1,23 +1,39 @@
-"""Imágenes clínicas del paciente (ODON-166, ODON-170).
+"""Imágenes clínicas del paciente (ODON-166, ODON-170, ODON-174, ODON-178).
 
 Guarda el archivo en el almacenamiento privado y su registro en la base como
 una sola operación: si la base falla, el archivo recién escrito se descarta.
 Subir exige un consentimiento vigente y pasa por el saneamiento de
-image_processing. Las imágenes no se borran.
+image_processing. El archivo nunca cambia: los metadatos se corrigen con
+revisiones y una foto errónea se anula con motivo. Las imágenes no se borran.
 """
 import hashlib
 import logging
+from datetime import date, datetime, timezone
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException, status
-from sqlalchemy import update
+from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
+from app.auth.permissions import Role
+from app.models.clinic import Clinic
 from app.models.clinical_visit import ClinicalVisit
 from app.models.patient import Patient
-from app.models.patient_image import IMAGE_TYPES, PatientImage, image_max_bytes
+from app.models.patient_image import (
+    IMAGE_METADATA_FIELDS,
+    IMAGE_ORIGINS,
+    IMAGE_TYPES,
+    IMAGE_VIEWS,
+    ImageAccessLog,
+    PatientImage,
+    PatientImageRevision,
+    image_max_bytes,
+)
 from app.models.treatment import is_valid_tooth
 from app.models.user import User
+from app.schemas.patient_image_schema import PatientImageUpdate
 from app.services.image_processing import make_thumbnail, sanitize_image
 from app.services.image_storage import ImageStorage, StoredImageNotFound
 from app.services.photo_consent_service import require_active_consent
@@ -39,7 +55,9 @@ def get_clinic_patient(db: Session, patient_id: int, clinic_id: int) -> Patient:
 
 def _images(db: Session):
     return db.query(PatientImage).options(
-        joinedload(PatientImage.clinical_visit), joinedload(PatientImage.uploaded_by)
+        joinedload(PatientImage.clinical_visit),
+        joinedload(PatientImage.uploaded_by),
+        joinedload(PatientImage.voided_by),
     )
 
 
@@ -75,6 +93,10 @@ def to_response(image: PatientImage) -> dict:
             else None
         ),
         "tooth": image.tooth,
+        "origin": image.origin,
+        "view": image.view,
+        "taken_on": image.taken_on,
+        "revision": image.revision,
         "content_type": image.content_type,
         "size_bytes": image.size_bytes,
         "width": image.width,
@@ -82,6 +104,9 @@ def to_response(image: PatientImage) -> dict:
         "consent_id": image.consent_id,
         "uploaded_by": {"id": image.uploaded_by.id, "name": image.uploaded_by.name},
         "uploaded_at": image.uploaded_at,
+        "voided_at": image.voided_at,
+        "voided_by": {"id": image.voided_by.id, "name": image.voided_by.name} if image.voided_by else None,
+        "void_reason": image.void_reason,
     }
 
 
@@ -96,11 +121,11 @@ def check_size(data: bytes) -> None:
         )
 
 
-def _validate_context(db: Session, patient: Patient, visit_id, tooth) -> None:
+def _validate_context(db: Session, patient: Patient, visit_id, tooth, action: str = "agregar imágenes") -> None:
     if patient.archived_at is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="El paciente está archivado. Reactívalo para agregar imágenes.",
+            detail=f"El paciente está archivado. Reactívalo para {action}.",
         )
     if tooth is not None and not is_valid_tooth(tooth):
         raise _unprocessable("La pieza dental no es válida (numeración FDI).")
@@ -116,6 +141,33 @@ def _validate_context(db: Session, patient: Patient, visit_id, tooth) -> None:
             raise _unprocessable("La consulta está anulada.")
 
 
+def _validate_metadata(db: Session, patient: Patient, origin, view, taken_on: Optional[date]) -> None:
+    """Origen obligatorio, vista opcional y fecha de toma no futura (ODON-178)."""
+    if origin is None:
+        raise _unprocessable("Indica el origen de la fotografía.")
+    if origin not in IMAGE_ORIGINS:
+        raise _unprocessable("El origen de la fotografía no es válido.")
+    if view is not None and view not in IMAGE_VIEWS:
+        raise _unprocessable("El tipo de vista no es válido.")
+    if taken_on is not None:
+        clinic = db.get(Clinic, patient.clinic_id)
+        today = datetime.now(timezone.utc).astimezone(ZoneInfo(clinic.timezone)).date()
+        if taken_on > today:
+            raise _unprocessable("La fecha de toma no puede ser futura.")
+
+
+def _add_revision(db: Session, image: PatientImage, editor: User) -> None:
+    db.add(
+        PatientImageRevision(
+            clinic_id=image.clinic_id,
+            image_id=image.id,
+            revision=image.revision,
+            edited_by_user_id=editor.id,
+            **{field: getattr(image, field) for field in IMAGE_METADATA_FIELDS},
+        )
+    )
+
+
 def store_image(
     db: Session,
     storage: ImageStorage,
@@ -129,6 +181,9 @@ def store_image(
     clinical_visit_id: Optional[int] = None,
     tooth: Optional[int] = None,
     thumbnail: Optional[bytes] = None,
+    origin: Optional[str] = None,
+    view: Optional[str] = None,
+    taken_on: Optional[date] = None,
 ) -> PatientImage:
     """Valida, guarda el archivo (y su miniatura) y registra la imagen.
 
@@ -157,6 +212,10 @@ def store_image(
         patient_id=patient.id,
         clinical_visit_id=clinical_visit_id,
         tooth=tooth,
+        origin=origin,
+        view=view,
+        taken_on=taken_on,
+        revision=1,
         storage_key=key,
         thumbnail_key=thumbnail_key,
         content_type=content_type,
@@ -169,6 +228,8 @@ def store_image(
     )
     try:
         db.add(image)
+        db.flush()
+        _add_revision(db, image, author)
         db.commit()
     except Exception:
         db.rollback()
@@ -193,11 +254,15 @@ def upload_image(
     author: User,
     clinical_visit_id: Optional[int] = None,
     tooth: Optional[int] = None,
+    origin: Optional[str] = None,
+    view: Optional[str] = None,
+    taken_on: Optional[date] = None,
 ) -> PatientImage:
-    """Subida desde la API: contexto, consentimiento, tamaño y saneamiento.
+    """Subida desde la API: contexto, metadatos, consentimiento, tamaño y saneamiento.
 
     Las validaciones baratas van antes de abrir la imagen con Pillow."""
     _validate_context(db, patient, clinical_visit_id, tooth)
+    _validate_metadata(db, patient, origin, view, taken_on)
     consent = require_active_consent(db, patient)
     check_size(raw)
     processed = sanitize_image(raw, filename)
@@ -214,6 +279,9 @@ def upload_image(
         clinical_visit_id=clinical_visit_id,
         tooth=tooth,
         thumbnail=make_thumbnail(processed.data),
+        origin=origin,
+        view=view,
+        taken_on=taken_on,
     )
     return _images(db).filter(PatientImage.id == image.id).one()
 
@@ -261,3 +329,124 @@ def read_thumbnail(db: Session, storage: ImageStorage, image: PatientImage) -> b
     else:
         db.commit()
     return thumbnail
+
+
+# --- Correcciones, anulación y accesos (ODON-178) -------------------------
+
+
+def _ensure_can_modify(image: PatientImage, user: User) -> None:
+    if user.role != Role.ADMIN.value and image.uploaded_by_user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo quien subió la imagen o administración pueden modificarla.",
+        )
+    if image.voided_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="La imagen está anulada y no se puede modificar."
+        )
+
+
+def _lock(db: Session, image: PatientImage) -> PatientImage:
+    """Bloquea la fila para que una corrección y una anulación no se crucen."""
+    db.execute(select(PatientImage.id).where(PatientImage.id == image.id).with_for_update())
+    db.refresh(image)
+    return image
+
+
+def _revision_conflict(current: int) -> HTTPException:
+    exc = HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="La imagen cambió mientras la editabas. Revisa la versión actual antes de guardar.",
+    )
+    exc.extra = {"current_revision": current}
+    return exc
+
+
+def update_metadata(
+    db: Session, patient: Patient, image: PatientImage, data: PatientImageUpdate, editor: User
+) -> PatientImage:
+    """Corrige los metadatos con base_revision. El archivo no cambia."""
+    image = _lock(db, image)
+    _ensure_can_modify(image, editor)
+    _validate_context(db, patient, data.clinical_visit_id, data.tooth, action="modificar imágenes")
+    if data.base_revision != image.revision:
+        current = image.revision
+        db.rollback()
+        raise _revision_conflict(current)
+    _validate_metadata(db, patient, data.origin, data.view, data.taken_on)
+
+    changed = [field for field in IMAGE_METADATA_FIELDS if getattr(image, field) != getattr(data, field)]
+    if not changed:
+        db.rollback()
+        return get_image(db, patient.id, image.id)
+
+    for field in changed:
+        setattr(image, field, getattr(data, field))
+    image.revision += 1
+    _add_revision(db, image, editor)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise _revision_conflict(get_image(db, patient.id, image.id).revision)
+
+    audit_logger.info(
+        "image.updated image_id=%s revision=%s user_id=%s clinic_id=%s fields=%s",
+        image.id, image.revision, editor.id, patient.clinic_id, ",".join(changed),
+    )
+    return get_image(db, patient.id, image.id)
+
+
+def void_image(db: Session, patient: Patient, image: PatientImage, reason: str, user: User) -> PatientImage:
+    """Anula una foto errónea con motivo: se conserva, pero sale de la galería."""
+    image = _lock(db, image)
+    _ensure_can_modify(image, user)
+    if patient.archived_at is not None:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="El paciente está archivado. Reactívalo para modificar imágenes.",
+        )
+    image.voided_at = datetime.now(timezone.utc)
+    image.voided_by_user_id = user.id
+    image.void_reason = reason
+    db.commit()
+
+    audit_logger.info("image.voided image_id=%s user_id=%s clinic_id=%s", image.id, user.id, patient.clinic_id)
+    return get_image(db, patient.id, image.id)
+
+
+def list_revisions(db: Session, image: PatientImage) -> list[dict]:
+    revisions = (
+        db.query(PatientImageRevision)
+        .options(joinedload(PatientImageRevision.edited_by))
+        .filter(PatientImageRevision.image_id == image.id)
+        .order_by(PatientImageRevision.revision.desc())
+        .all()
+    )
+    return [
+        {
+            **{field: getattr(r, field) for field in IMAGE_METADATA_FIELDS},
+            "revision": r.revision,
+            "edited_by": {"id": r.edited_by.id, "name": r.edited_by.name},
+            "edited_at": r.edited_at,
+        }
+        for r in revisions
+    ]
+
+
+def record_access(db: Session, image: PatientImage, user: User) -> None:
+    """Registra la apertura del original (las miniaturas no se registran)."""
+    db.add(ImageAccessLog(clinic_id=image.clinic_id, image_id=image.id, user_id=user.id))
+    db.commit()
+
+
+def list_access(db: Session, image: PatientImage) -> list[dict]:
+    logs = (
+        db.query(ImageAccessLog)
+        .options(joinedload(ImageAccessLog.user))
+        .filter(ImageAccessLog.image_id == image.id)
+        .order_by(ImageAccessLog.accessed_at.desc(), ImageAccessLog.id.desc())
+        .all()
+    )
+    return [{"user": {"id": log.user.id, "name": log.user.name}, "accessed_at": log.accessed_at} for log in logs]

@@ -18,7 +18,7 @@ class TimelineEvent(BaseModel):
     type: EventType
     # visit: attended | edited | voided · treatment: proposed | accepted | in_progress |
     # completed | cancelled · medical_history: version · appointment: completed | no_show
-    # · image: uploaded
+    # · image: uploaded | edited | voided
     action: str
     occurred_at: datetime
     title: str
@@ -27,7 +27,7 @@ class TimelineEvent(BaseModel):
     actor: Optional[PersonRef]
     # id de la consulta, tratamiento, cita o imagen; número de versión en la historia médica.
     ref_id: int
-    # La consulta de este evento está anulada.
+    # La consulta o la fotografía de este evento está anulada.
     voided: bool
 
 
