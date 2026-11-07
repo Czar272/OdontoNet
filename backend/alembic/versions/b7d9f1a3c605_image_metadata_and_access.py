@@ -93,6 +93,10 @@ def upgrade() -> None:
             ["edited_by_user_id", "clinic_id"], ["users.id", "users.clinic_id"],
             name="fk_image_revisions_author_clinic",
         ),
+        sa.ForeignKeyConstraint(
+            ["clinical_visit_id", "clinic_id"], ["clinical_visits.id", "clinical_visits.clinic_id"],
+            name="fk_image_revisions_visit_clinic",
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("image_id", "revision", name="uq_image_revisions_image_revision"),
     )

@@ -151,6 +151,11 @@ class PatientImageRevision(Base):
             ["users.id", "users.clinic_id"],
             name="fk_image_revisions_author_clinic",
         ),
+        ForeignKeyConstraint(
+            ["clinical_visit_id", "clinic_id"],
+            ["clinical_visits.id", "clinical_visits.clinic_id"],
+            name="fk_image_revisions_visit_clinic",
+        ),
         CheckConstraint("revision >= 1", name="ck_image_revisions_revision"),
         CheckConstraint(ORIGIN_CHECK, name="ck_image_revisions_origin"),
         CheckConstraint(VIEW_CHECK, name="ck_image_revisions_view"),

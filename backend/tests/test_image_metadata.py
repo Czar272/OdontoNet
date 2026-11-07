@@ -290,3 +290,69 @@ def test_hash_of_file_unchanged_after_void(ctx, client):
     void(client, ctx)
     stored = ctx["storage"].read(image.storage_key)
     assert hashlib.sha256(stored).hexdigest() == image.sha256
+
+
+# --- Hallazgos de la revisión de ODON-178 ---------------------------------
+
+
+def test_correction_keeps_a_visit_voided_later(ctx, client):
+    """Una foto ligada a una consulta que se anuló después se puede corregir sin desligarla."""
+    response = upload(client, ctx, jpeg(), clinical_visit_id=ctx["visit"])
+    assert response.status_code == 201, response.text
+    ctx["image"] = response.json()
+    response = client.post(
+        f"/patients/{ctx['patient']}/visits/{ctx['visit']}/void",
+        json={"reason": "Registrada por error"},
+        headers=ctx["headers"]["doctor"],
+    )
+    assert response.status_code == 200, response.text
+
+    response = edit(client, ctx, view="detail")
+    assert response.status_code == 200, response.text
+    assert response.json()["clinical_visit"]["id"] == ctx["visit"]
+
+
+def test_correction_cannot_link_a_voided_visit(ctx, client):
+    client.post(
+        f"/patients/{ctx['patient']}/visits/{ctx['visit']}/void",
+        json={"reason": "Registrada por error"},
+        headers=ctx["headers"]["doctor"],
+    )
+    response = edit(client, ctx, clinical_visit_id=ctx["visit"])
+    assert response.status_code == 422
+    assert "anulada" in response.json()["detail"]
+
+
+def test_admin_of_another_clinic_gets_404_on_access_log(ctx, client):
+    db = ctx["db"]
+    other_clinic_id = db.get(Patient, ctx["other"]).clinic_id
+    db.add(User(
+        name="Admin Ajena", email="admin@ajena-subidas.com", hashed_password=hash_password(PASSWORD),
+        role="admin", clinic_id=other_clinic_id,
+    ))
+    db.commit()
+    headers = auth_headers(client, "admin@ajena-subidas.com")
+    for patient_id in (ctx["patient"], ctx["other"]):
+        path = url(ctx, "/access-log", patient_id=patient_id)
+        assert client.get(path, headers=headers).status_code == 404
+
+
+def test_revision_visit_must_belong_to_the_same_clinic(ctx, client):
+    """FK compuesta (clinical_visit_id, clinic_id) en patient_image_revisions."""
+    db = ctx["db"]
+    other_doctor = db.query(Doctor).join(User, Doctor.user_id == User.id).filter(
+        User.email == "doc@ajena-subidas.com"
+    ).one()
+    response = client.post(
+        f"/patients/{ctx['other']}/visits",
+        json={"visit_at": YESTERDAY + "T10:00:00Z", "doctor_id": other_doctor.id, "reason": "Control"},
+        headers=ctx["headers"]["other"],
+    )
+    assert response.status_code == 201, response.text
+    with pytest.raises(IntegrityError):
+        db.execute(
+            text("UPDATE patient_image_revisions SET clinical_visit_id = :visit WHERE image_id = :image"),
+            {"visit": response.json()["id"], "image": ctx["image"]["id"]},
+        )
+        db.commit()
+    db.rollback()

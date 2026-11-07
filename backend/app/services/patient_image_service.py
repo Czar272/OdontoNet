@@ -368,7 +368,10 @@ def update_metadata(
     """Corrige los metadatos con base_revision. El archivo no cambia."""
     image = _lock(db, image)
     _ensure_can_modify(image, editor)
-    _validate_context(db, patient, data.clinical_visit_id, data.tooth, action="modificar imágenes")
+    # La consulta solo se valida si cambia: una foto puede conservar la consulta
+    # a la que ya estaba ligada aunque esa consulta se haya anulado después.
+    new_visit = data.clinical_visit_id if data.clinical_visit_id != image.clinical_visit_id else None
+    _validate_context(db, patient, new_visit, data.tooth, action="modificar imágenes")
     if data.base_revision != image.revision:
         current = image.revision
         db.rollback()
@@ -386,8 +389,12 @@ def update_metadata(
     _add_revision(db, image, editor)
     try:
         db.commit()
-    except IntegrityError:
+    except IntegrityError as exc:
         db.rollback()
+        # Solo el choque de número de revisión es una edición simultánea;
+        # cualquier otra violación es un error real y no debe disfrazarse de 409.
+        if "uq_image_revisions_image_revision" not in str(exc.orig):
+            raise
         raise _revision_conflict(get_image(db, patient.id, image.id).revision)
 
     audit_logger.info(
@@ -398,7 +405,8 @@ def update_metadata(
 
 
 def void_image(db: Session, patient: Patient, image: PatientImage, reason: str, user: User) -> PatientImage:
-    """Anula una foto errónea con motivo: se conserva, pero sale de la galería."""
+    """Anula una foto errónea con motivo. Se conserva y el listado la sigue
+    devolviendo con voided_at; la galería la oculta salvo que se pida verla."""
     image = _lock(db, image)
     _ensure_can_modify(image, user)
     if patient.archived_at is not None:
