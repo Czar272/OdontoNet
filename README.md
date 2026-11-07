@@ -17,12 +17,13 @@ Cada clínica es un espacio aislado: la API filtra todos los datos por la clíni
 | Interfaz React (español), rutas, layout y componentes reutilizables | Implementado |
 | Login JWT, `GET /auth/me`, logout, «Recuérdame», recuperación y cambio de contraseña | Implementado |
 | Aislamiento por clínica y permisos por rol | Implementado y cubierto por pruebas |
-| Alta de usuarios por administrador (`POST /auth/register`) | Implementado; edición y desactivación pendientes |
+| Alta de usuarios por administrador (`POST /auth/register`) | Implementado, con edición y desactivación |
 | Pacientes | Listado paginado, búsqueda, detalle, creación, edición y archivado |
 | Doctores | Listado, detalle y alta de perfil (admin) |
 | Agenda y citas | Implementado (calendario compartido, estados, horario de doctores) |
 | Expediente clínico | Historia médica versionada, consultas clínicas con historial de cambios, plan de tratamiento con estados y odontograma, e historial cronológico |
-| Imágenes, periodontograma manual | Pendientes |
+| Imágenes clínicas | Almacenamiento privado, subida con consentimiento, galería con miniaturas, metadatos con revisiones, anulación y registro de accesos |
+| Periodontograma manual | Pendiente |
 | IA periodontal | Fuera del MVP inicial; servicio independiente futuro |
 
 **Aviso:** no usar con datos clínicos reales ni desplegar públicamente hasta completar auditoría, privacidad, respaldos, endurecimiento de seguridad y pruebas de aceptación.

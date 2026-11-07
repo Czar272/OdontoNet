@@ -235,7 +235,7 @@ python -m scripts.seed_dev
 - Solo corre contra una base **local** (`localhost`/`127.0.0.1`) y con `APP_ENV` igual a `development` (valor por defecto).
 - No contiene contraseñas: todos los usuarios demo usan la de `SEED_PASSWORD`. Los correos se imprimen al terminar (por ejemplo, `admin.norte@odontonet-demo.com`).
 
-Un `seed.py` personal en `backend/scripts/` sigue ignorado por Git. El alta segura de la primera clínica real está pendiente (ODON-74).
+Un `seed.py` personal en `backend/scripts/` sigue ignorado por Git. El alta segura de la primera clínica real está pendiente; se planifica aparte con el rol `superadmin`.
 
 La futura importación de datos de clínicas existentes será una funcionalidad específica, con validación de estructura, duplicados, permisos y trazabilidad; **no** equivale al seed de desarrollo.
 

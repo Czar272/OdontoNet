@@ -158,7 +158,7 @@ Recoge la visión del desarrollador sin cambiar lo implementado. Cada fila se ap
 
 | Nivel | Rol (clave) | Alcance | Cuándo |
 | --- | --- | --- | --- |
-| Plataforma | `superadmin` (nuevo) | Crear y administrar clínicas, soporte. No pertenece a una clínica; actúa sobre una clínica de forma explícita y auditada. Un solo usuario por ahora. | Con ODON-74 (alta de clínicas) |
+| Plataforma | `superadmin` (nuevo) | Crear y administrar clínicas, soporte. No pertenece a una clínica; actúa sobre una clínica de forma explícita y auditada. Un solo usuario por ahora. | Con el alta de clínicas (pendiente, se planifica aparte) |
 | Clínica | `admin` («Administración») | Toda su clínica: personal, configuración, pacientes y agenda. Puede tener perfil de doctor. | Implementado |
 | Clínica | `doctor` | Atención clínica completa. Edita su propio perfil; no gestiona usuarios ni roles y no puede desactivarse. | Implementado; falta «Mi perfil» |
 | Clínica | `receptionist` («Recepción») | Pacientes (datos generales, doctor asignado), agenda y lectura de la historia médica. Sin periodontograma, diagnósticos ni notas clínicas. | Historia médica: ODON-150 |
