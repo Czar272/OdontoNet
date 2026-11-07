@@ -76,7 +76,7 @@ from app.services.image_storage import LocalImageStorage, get_image_storage  # n
 
 PASSWORD = "Test-Password-123"
 
-TEST_CATEGORIES = {"auth", "patients", "doctors", "users", "api", "seed", "isolation", "rbac", "appointments", "records", "images"}
+TEST_CATEGORIES = {"auth", "patients", "doctors", "users", "api", "seed", "isolation", "rbac", "appointments", "records", "images", "periodontal"}
 
 
 def pytest_collection_modifyitems(config, items):
