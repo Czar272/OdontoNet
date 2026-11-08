@@ -1,0 +1,16 @@
+# Cobertura del backend (ODON-210). En CI: python -m pytest --cov
+# El mínimo hace fallar la ejecución si la cobertura baja (decisión del desarrollador).
+[run]
+source = app
+branch = True
+
+[report]
+# Medida al introducirla (ODON-210): 98 % de líneas y ramas. El margen evita
+# fallos por variaciones pequeñas; una caída real hace fallar el CI.
+fail_under = 95
+skip_empty = True
+show_missing = True
+skip_covered = True
+exclude_also =
+    if __name__ == .__main__.:
+    raise NotImplementedError

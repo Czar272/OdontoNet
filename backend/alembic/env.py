@@ -30,20 +30,26 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
+def _run_with(connection) -> None:
+    context.configure(connection=connection, target_metadata=target_metadata)
+    with context.begin_transaction():
+        context.run_migrations()
+
+
 def run_migrations_online() -> None:
+    # Una conexión dada por quien invoca (p. ej. la prueba de la cadena de
+    # migraciones sobre una base temporal, ODON-210) tiene prioridad.
+    connection = config.attributes.get("connection")
+    if connection is not None:
+        _run_with(connection)
+        return
+
     connectable = create_engine(
         DATABASE_URL,
         poolclass=pool.NullPool,
     )
-
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-        )
-
-        with context.begin_transaction():
-            context.run_migrations()
+        _run_with(connection)
 
 
 if context.is_offline_mode():

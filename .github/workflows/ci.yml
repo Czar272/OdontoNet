@@ -56,7 +56,9 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: Pruebas
-        run: python -m pytest -p no:cacheprovider
+        # Con cobertura y mínimo en backend/.coveragerc (ODON-210). Incluye la
+        # cadena completa de migraciones sobre una base vacía (test_migrations.py).
+        run: python -m pytest -p no:cacheprovider --cov
 
   frontend:
     name: Frontend (lint, test, build)
