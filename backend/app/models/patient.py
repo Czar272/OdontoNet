@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Date, DateTime, ForeignKey, ForeignKeyConstraint, Integer, String, UniqueConstraint
+from sqlalchemy import Column, Date, DateTime, ForeignKey, ForeignKeyConstraint, Index, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import relationship
 
 from app.database.connection import Base
@@ -10,6 +10,7 @@ class Patient(Base):
 
     __tablename__ = "patients"
     __table_args__ = (
+        Index("ix_patients_clinic_created_at", "clinic_id", "created_at"),
         # El correo es único dentro de cada clínica, no en todo el sistema.
         UniqueConstraint("clinic_id", "email", name="uq_patients_clinic_email"),
         # Permite que appointments referencie (patient_id, clinic_id) a la vez.
@@ -34,6 +35,9 @@ class Patient(Base):
     clinic_id = Column(Integer, ForeignKey("clinics.id"), nullable=False, index=True)
     # NULL = activo. Archivar conserva todos los datos y el historial (ODON-122).
     archived_at = Column(DateTime(timezone=True), nullable=True)
+    # Fecha de alta en el sistema (ODON-202). Los pacientes creados antes de esta
+    # columna quedan en NULL: no se inventa una fecha.
+    created_at = Column(DateTime(timezone=True), nullable=True, server_default=func.now())
 
     doctor = relationship("Doctor", back_populates="patients", foreign_keys=[doctor_id])
     clinic = relationship("Clinic", back_populates="patients", foreign_keys=[clinic_id])

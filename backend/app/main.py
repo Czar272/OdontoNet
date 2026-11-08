@@ -11,6 +11,7 @@ from app.api.appointment_routes import router as appointment_router
 from app.api.auth_routes import router as auth_router
 from app.api.clinic_routes import router as clinic_router
 from app.api.clinical_visit_routes import router as clinical_visit_router
+from app.api.dashboard_routes import router as dashboard_router
 from app.api.doctor_routes import router as doctor_router
 from app.api.medical_history_routes import router as medical_history_router
 from app.api.patient_routes import router as patient_router
@@ -56,6 +57,7 @@ app.include_router(timeline_router)
 app.include_router(patient_image_router)
 app.include_router(photo_consent_router)
 app.include_router(periodontal_router)
+app.include_router(dashboard_router)
 
 # Orígenes permitidos separados por coma (CORS_ORIGINS en backend/.env).
 origins = [
