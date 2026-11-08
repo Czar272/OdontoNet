@@ -96,6 +96,14 @@ Si `odonto_venv` ya existe, omite su creación. `alembic current` y `alembic hea
 
 Los endpoints `/auth/me`, `/patients/`, `/doctors/` y `/users/` **requieren** JWT y devuelven solo datos de la clínica del usuario autenticado. Para probarlo, usa `POST /auth/login`, copia `access_token`, presiona `Authorize` en Swagger y ejecuta `GET /auth/me`. Sin token, la API responde `401 {"detail": "No autenticado."}`; es lo esperado al abrir un endpoint protegido en el navegador.
 
+### Auditoría (ODON-222)
+
+`audit_events` no admite cambios ni borrados (trigger). Para comprobar que nadie alteró la auditoría directamente en la base, desde `backend/`:
+
+```powershell
+python -m scripts.verify_audit   # sale con 1 si encuentra problemas
+```
+
 ### Imágenes clínicas y respaldos
 
 Las fotografías se guardan en `IMAGE_STORAGE_DIR` (por defecto `backend/storage/images`, ignorada por Git). Esa carpeta es privada: nunca se sirve como estática ni se copia al repositorio, y los nombres de archivo son aleatorios. Que una foto no tenga nombre no la hace anónima. En desarrollo solo se usan imágenes sintéticas (las pruebas las generan en memoria con Pillow). Para subir una foto el paciente necesita un consentimiento vigente, registrado en la pestaña «Imágenes» de su ficha; al guardarla se recodifica sin metadatos.
@@ -171,6 +179,7 @@ Durante el desarrollo y al verificar un ticket basta con las categorías del ár
 | Doctores y horarios | `python -m pytest -m "doctors or appointments"` | `npx vitest run src/pages/Doctors src/components/doctors src/pages/Agenda` |
 | Agenda y citas | `python -m pytest -m "appointments or doctors"` | `npx vitest run src/pages/Agenda src/components/appointments` |
 | Clínica | `python -m pytest -m isolation` | `npx vitest run src/pages/Clinic` |
+| Auditoría (`audit_*`, cualquier operación que registra eventos) | `python -m pytest -m "records or rbac or isolation"` | `npx vitest run src/pages/Audit` |
 | Permisos (`permissions.py` / `permissions.ts`) | `python -m pytest -m "rbac or isolation"` | `npx vitest run src/auth src/config src/routes` |
 | Seed | `python -m pytest -m seed` | — |
 | Migración nueva, modelo compartido, `conftest.py`, `core/errors.py` | `python -m pytest` (completa) | — |

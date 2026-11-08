@@ -72,9 +72,10 @@
 | `GET /dashboard` (panel de inicio: indicadores agregados y agenda de hoy; `doctor_id` de otra clínica `404`) | ✅ | ✅ | ✅ |
 | `GET /reports/appointments`, `GET /reports/patients` (reportes agregados por día, semana o mes) | ✅ | ✅ | ✅ |
 | `GET /reports/appointments.csv`, `GET /reports/patients.csv` (exportación CSV agregada, auditada) | ✅ | ⛔ | ⛔ |
+| `GET /audit` (auditoría de cambios y exportaciones; filtros y cursor) | ✅ toda la clínica | ✅ solo sus acciones | ⛔ |
 | `GET`, `POST /patients/{id}/photo-consent` (consentimiento para fotografías: vigente, historial y versión nueva) | ✅ | ✅ | ⛔ |
 
-Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_password_reset.py`, `backend/tests/test_users.py`, `backend/tests/test_user_deactivation.py`, `backend/tests/test_patient_archive.py`, `backend/tests/test_appointment_api.py`, `backend/tests/test_doctor_availability.py`, `backend/tests/test_medical_history.py`, `backend/tests/test_clinical_visits.py`, `backend/tests/test_treatments.py`, `backend/tests/test_timeline.py`, `backend/tests/test_patient_images.py`, `backend/tests/test_image_upload.py`, `backend/tests/test_image_gallery.py` y `backend/tests/test_image_metadata.py`, `backend/tests/test_periodontal.py`, `backend/tests/test_dashboard.py`, `backend/tests/test_reports.py`.
+Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_password_reset.py`, `backend/tests/test_users.py`, `backend/tests/test_user_deactivation.py`, `backend/tests/test_patient_archive.py`, `backend/tests/test_appointment_api.py`, `backend/tests/test_doctor_availability.py`, `backend/tests/test_medical_history.py`, `backend/tests/test_clinical_visits.py`, `backend/tests/test_treatments.py`, `backend/tests/test_timeline.py`, `backend/tests/test_patient_images.py`, `backend/tests/test_image_upload.py`, `backend/tests/test_image_gallery.py` y `backend/tests/test_image_metadata.py`, `backend/tests/test_periodontal.py`, `backend/tests/test_dashboard.py`, `backend/tests/test_reports.py`, `backend/tests/test_audit.py`.
 
 ### Reglas de gestión de usuarios (ODON-86)
 
@@ -129,6 +130,7 @@ Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_password_reset.
 - Un paciente con citas próximas pendientes (programadas o confirmadas que aún no terminan) no se archiva (`409 El paciente tiene N citas próximas...`).
 - Las horas se muestran en la hora local del navegador (decisión del 2026-11-02).
 - En el frontend, `appointments:view` (menú «Agenda» y ruta `/agenda`) y `appointments:manage` (agendar, arrastrar y reprogramar) son para los tres roles.
+- Auditoría (ODON-222): `audit:view` (menú «Auditoría» y ruta `/audit`) para administración y doctores; el backend limita a cada doctor a sus propias acciones.
 - Reportes (ODON-206): `reports:view` (menú «Reportes» y ruta `/reports`) es para los tres roles; `reports:export` (botones «Exportar CSV») solo para administración.
 
 ### Horario de los doctores (ODON-142)
