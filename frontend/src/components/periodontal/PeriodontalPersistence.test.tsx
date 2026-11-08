@@ -94,7 +94,9 @@ async function openExam(role: "doctor" | "admin" = "doctor") {
   return screen.findByRole("region", { name: "Arcada superior" });
 }
 
-describe("guardado y recuperación (ODON-190)", () => {
+// El editor completo es pesado de renderizar: con toda la suite en paralelo, el
+// autoguardado real (AUTOSAVE_MS) más el render superaba el límite general de 15 s.
+describe("guardado y recuperación (ODON-190)", { timeout: 40_000 }, () => {
   it("autoguarda unos segundos después del último cambio", async () => {
     await openExam();
     fireEvent.change(screen.getByLabelText("Sondaje 11 vestibular"), { target: { value: "3" } });

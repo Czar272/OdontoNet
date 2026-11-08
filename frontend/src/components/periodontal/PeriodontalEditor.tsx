@@ -196,8 +196,28 @@ export default function PeriodontalEditor({ exam, isArchived, onDirtyChange }: P
       if (!auto) toast.success("Borrador guardado");
     },
     onError: onSaveError,
+    onSettled: () => {
+      saveInFlight.current = false;
+    },
   });
-  const { mutate: saveDraft, isPending: saving } = save;
+  const { mutate, isPending: saving } = save;
+  // Marcas síncronas: `saving` y `saveFailed` llegan con el siguiente render, y
+  // con el hilo ocupado el temporizador del autoguardado podía dispararse antes
+  // y enviar una segunda petición con la misma revisión base. Un guardado en
+  // curso bloquea otro, y un temporizador queda sin efecto si algún guardado
+  // empezó después de programarlo.
+  const saveInFlight = useRef(false);
+  const saveStarts = useRef(0);
+  const saveDraft = (variables: { seq: number; auto: boolean }) => {
+    if (saveInFlight.current) return;
+    saveInFlight.current = true;
+    saveStarts.current += 1;
+    mutate(variables);
+  };
+  const saveDraftRef = useRef(saveDraft);
+  useEffect(() => {
+    saveDraftRef.current = saveDraft;
+  });
 
   const finalize = useMutation({
     mutationFn: async () => {
@@ -278,9 +298,13 @@ export default function PeriodontalEditor({ exam, isArchived, onDirtyChange }: P
     // viajan dos peticiones con la misma revisión base (409 falso).
     if (!editable || !dirty || conflict || saveFailed || saving || errors.length > 0) return;
     if (recovery || confirmFinalize || finalizing || voiding || voidPending) return;
-    const timer = setTimeout(() => saveDraft({ seq: editSeq.current, auto: true }), AUTOSAVE_MS);
+    const startsWhenScheduled = saveStarts.current;
+    const timer = setTimeout(() => {
+      if (saveStarts.current !== startsWhenScheduled) return;
+      saveDraftRef.current({ seq: editSeq.current, auto: true });
+    }, AUTOSAVE_MS);
     return () => clearTimeout(timer);
-  }, [chart, examDate, visitId, notes, editable, dirty, conflict, saveFailed, saving, errors.length, saveDraft,
+  }, [chart, examDate, visitId, notes, editable, dirty, conflict, saveFailed, saving, errors.length,
     recovery, confirmFinalize, finalizing, voiding, voidPending]);
 
   // Respaldo en esta pestaña mientras haya cambios sin guardar.
