@@ -128,10 +128,11 @@ export function chartFromExam(exam: PeriodontalExam): ToothData[] {
       mobility: tooth.mobility,
       furcation: { ...emptyFurcation(), ...tooth.furcation },
       note: tooth.note,
+      source: tooth.source ?? "manual",
       sites: Object.fromEntries(
         SITES.map((site) => {
-          const { probing_depth, gingival_margin, bleeding, suppuration, plaque } = tooth.sites[site];
-          return [site, { probing_depth, gingival_margin, bleeding, suppuration, plaque }];
+          const { probing_depth, gingival_margin, bleeding, suppuration, plaque, source } = tooth.sites[site];
+          return [site, { probing_depth, gingival_margin, bleeding, suppuration, plaque, source: source ?? "manual" }];
         }),
       ) as Record<SiteCode, SiteData>,
     };
@@ -208,6 +209,7 @@ export function summarize(chart: ToothData[]): ExamSummary {
     bleeding_pct: pct(measured.filter((site) => site.bleeding).length),
     plaque_pct: pct(measured.filter((site) => site.plaque).length),
     deep_sites_pct: pct(measured.filter((site) => (site.probing_depth as number) >= DEEP_SITE_MM).length),
+    default_sites: measured.filter((site) => site.source === "default").length,
   };
 }
 
@@ -360,3 +362,69 @@ export const today = () => {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 };
+
+// --- Valores de salud (ODON-262) ---------------------------------------------
+
+/**
+ * Valores que se proponen para los sitios vacíos de piezas sanas. Referencia:
+ * definición de salud periodontal del World Workshop 2017 (Chapple et al.,
+ * 2018): sondaje ≤ 3 mm, sangrado en menos del 10 % de los sitios, sin pérdida
+ * de inserción ni ósea; surco sano de 1–3 mm. Ojo: con la convención del margen
+ * (0 = en la UAC), sondaje 2 y margen 0 dan NIC 2; en un periodonto intacto la
+ * encía queda coronal a la UAC (margen positivo, NIC ≈ 0). Los valores son una
+ * propuesta que el profesional elige antes de aplicar; no hay valores propios
+ * de la población guatemalteca.
+ */
+export interface HealthyValues {
+  probingDepth: number;
+  gingivalMargin: number;
+  /** También movilidad 0 en las piezas que no la tienen registrada. */
+  mobility: boolean;
+}
+
+export const DEFAULT_HEALTHY: HealthyValues = { probingDepth: 2, gingivalMargin: 0, mobility: true };
+export const HEALTHY_PROBING_OPTIONS = [1, 2, 3];
+export const HEALTHY_MARGIN_OPTIONS = [0, 1, 2, 3];
+
+/**
+ * Llena con valores de salud solo los sitios vacíos de piezas presentes y no
+ * implantes, marcándolos como predeterminados. Nunca cambia lo ya escrito.
+ * Devuelve el nuevo contenido y cuántos sitios llenó.
+ */
+export function fillHealthy(
+  chart: ToothData[],
+  values: HealthyValues,
+): { chart: ToothData[]; filled: number; mobilityFilled: number } {
+  let filled = 0;
+  let mobilityFilled = 0;
+  const next = chart.map((tooth) => {
+    if (tooth.missing || tooth.implant) return tooth;
+    const sites = { ...tooth.sites };
+    for (const site of SITES) {
+      const current = sites[site];
+      const empty =
+        current.probing_depth === null &&
+        current.gingival_margin === null &&
+        !current.bleeding &&
+        !current.suppuration &&
+        !current.plaque;
+      if (!empty) continue;
+      sites[site] = {
+        ...current,
+        probing_depth: values.probingDepth,
+        gingival_margin: values.gingivalMargin,
+        source: "default",
+      };
+      filled += 1;
+    }
+    const fillMobility = values.mobility && tooth.mobility === null;
+    if (fillMobility) mobilityFilled += 1;
+    return {
+      ...tooth,
+      sites,
+      ...(fillMobility ? { mobility: 0, source: "default" as const } : {}),
+    };
+  });
+  return { chart: next, filled, mobilityFilled };
+}
+

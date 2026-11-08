@@ -4,6 +4,8 @@ import type { PersonRef } from "./clinicalVisit";
 export type SiteCode = "mb" | "b" | "db" | "ml" | "l" | "dl";
 export type FurcationEntrance = "b" | "mp" | "dp" | "l";
 export type ExamStatus = "draft" | "final";
+/** manual: lo escribió el profesional; default: valor propuesto aún no editado (ODON-262). */
+export type ValueSource = "manual" | "default";
 
 export interface SiteData {
   probing_depth: number | null;
@@ -12,6 +14,8 @@ export interface SiteData {
   bleeding: boolean;
   suppuration: boolean;
   plaque: boolean;
+  /** Ausente equivale a "manual". */
+  source?: ValueSource;
 }
 
 export interface SiteResponse extends SiteData {
@@ -28,6 +32,8 @@ export interface ToothData {
   mobility: number | null;
   furcation: Furcation;
   note: string | null;
+  /** Origen de la movilidad (default si se propuso con los valores de salud). */
+  source?: ValueSource;
   sites: Record<SiteCode, SiteData>;
 }
 
@@ -44,6 +50,8 @@ export interface ExamSummary {
   bleeding_pct: number | null;
   plaque_pct: number | null;
   deep_sites_pct: number | null;
+  /** Sitios con sondaje cuyo valor es predeterminado (no editado). */
+  default_sites: number;
 }
 
 export interface PeriodontalExamListItem {

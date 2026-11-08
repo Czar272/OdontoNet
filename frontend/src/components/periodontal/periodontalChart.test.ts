@@ -8,6 +8,7 @@ import {
   attachmentLevel,
   displaySites,
   emptyChart,
+  fillHealthy,
   marginY,
   round,
   pocketY,
@@ -78,6 +79,7 @@ describe("resumen", () => {
       bleeding_pct: 40,
       plaque_pct: 20,
       deep_sites_pct: 40,
+      default_sites: 0,
     });
   });
 
@@ -127,3 +129,45 @@ describe("contenido y validación", () => {
     ]);
   });
 });
+
+describe("valores de salud (ODON-262)", () => {
+  const values = { probingDepth: 2, gingivalMargin: 0, mobility: true };
+
+  it("llena solo los sitios vacíos de piezas presentes y no implantes", () => {
+    const chart = emptyChart();
+    chart.find((t) => t.tooth === 18)!.missing = true;
+    chart.find((t) => t.tooth === 21)!.implant = true;
+    const t16 = chart.find((t) => t.tooth === 16)!;
+    t16.sites.mb = { probing_depth: 5, gingival_margin: -1, bleeding: true, suppuration: false, plaque: false };
+    t16.mobility = 2;
+
+    const { chart: next, filled } = fillHealthy(chart, values);
+    expect(filled).toBe((32 - 2) * 6 - 1);
+    const n16 = next.find((t) => t.tooth === 16)!;
+    expect(n16.sites.mb).toMatchObject({ probing_depth: 5, gingival_margin: -1, bleeding: true });
+    expect(n16.sites.mb.source).toBeUndefined(); // no se tocó
+    expect(n16.sites.b).toMatchObject({ probing_depth: 2, gingival_margin: 0, source: "default" });
+    expect(n16.mobility).toBe(2); // ya registrada
+    expect(next.find((t) => t.tooth === 11)!).toMatchObject({ mobility: 0, source: "default" });
+    expect(next.find((t) => t.tooth === 18)!.sites.b.probing_depth).toBeNull();
+    expect(next.find((t) => t.tooth === 21)!.sites.b.probing_depth).toBeNull();
+  });
+
+  it("los sitios con solo sangrado o placa no se consideran vacíos", () => {
+    const chart = emptyChart();
+    chart.find((t) => t.tooth === 11)!.sites.b.bleeding = true;
+    const { chart: next } = fillHealthy(chart, values);
+    expect(next.find((t) => t.tooth === 11)!.sites.b.probing_depth).toBeNull();
+  });
+
+  it("sin movilidad elegida no la llena", () => {
+    const { chart: next } = fillHealthy(emptyChart(), { ...values, mobility: false });
+    expect(next.find((t) => t.tooth === 11)!.mobility).toBeNull();
+  });
+
+  it("el resumen cuenta los predeterminados", () => {
+    const { chart: next } = fillHealthy(emptyChart(), values);
+    expect(summarize(next).default_sites).toBe(192);
+  });
+});
+

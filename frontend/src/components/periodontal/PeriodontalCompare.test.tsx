@@ -38,7 +38,7 @@ function exam(id: number, date: string, values: Record<string, SiteValues>, extr
     finalized_by: { id: 1, name: "Dra. Ana" }, finalized_at: `${date}T16:00:00Z`,
     voided_by: null, voided_at: null, void_reason: null,
     summary: { present_teeth: 32, measured_sites: 2, mean_probing_depth: 3, mean_attachment_level: 3,
-      bleeding_pct: 50, plaque_pct: 0, deep_sites_pct: 50 },
+      bleeding_pct: 50, plaque_pct: 0, deep_sites_pct: 50, default_sites: 0 },
     teeth, ...extra,
   };
 }
@@ -46,7 +46,7 @@ function exam(id: number, date: string, values: Record<string, SiteValues>, extr
 const older = exam(1, "2026-05-01", { "16mb": { pd: 3, gm: 0 }, "16b": { pd: 2, gm: 0, bop: true }, "36db": { pd: 4, gm: -1 } });
 const newer = exam(2, "2026-11-01", { "16mb": { pd: 6, gm: -1, bop: true }, "16b": { pd: 2, gm: 0 }, "36db": { pd: 3, gm: -1 } },
   { summary: { present_teeth: 31, measured_sites: 3, mean_probing_depth: 3.67, mean_attachment_level: 4,
-    bleeding_pct: 33.3, plaque_pct: 0, deep_sites_pct: 33.3 } });
+    bleeding_pct: 33.3, plaque_pct: 0, deep_sites_pct: 33.3, default_sites: 0 } });
 newer.teeth = newer.teeth.map((t) => (t.tooth === 48 ? { ...t, missing: true } : t));
 
 describe("compareExams", () => {

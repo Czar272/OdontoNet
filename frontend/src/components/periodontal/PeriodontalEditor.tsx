@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 
@@ -43,9 +44,14 @@ import {
   chartFromExam,
   emptyFurcation,
   emptySite,
+  DEFAULT_HEALTHY,
+  HEALTHY_MARGIN_OPTIONS,
+  HEALTHY_PROBING_OPTIONS,
+  fillHealthy,
   summarize,
   toContent,
   today,
+  type HealthyValues,
 } from "./periodontalChart";
 
 interface PeriodontalEditorProps {
@@ -86,6 +92,11 @@ export default function PeriodontalEditor({ exam, isArchived, onDirtyChange }: P
     return null;
   });
   const noteOpener = useRef<HTMLElement | null>(null);
+  const [fillOpen, setFillOpen] = useState(false);
+  const [healthy, setHealthy] = useState<HealthyValues>(DEFAULT_HEALTHY);
+  // Contenido anterior al último llenado, para poder deshacerlo.
+  const [undoChart, setUndoChart] = useState<ToothData[] | null>(null);
+  const [lastFilled, setLastFilled] = useState(0);
   // Cuenta las ediciones: un guardado solo deja el examen «limpio» si no hubo
   // cambios mientras viajaba la petición.
   const editSeq = useRef(0);
@@ -94,6 +105,9 @@ export default function PeriodontalEditor({ exam, isArchived, onDirtyChange }: P
     editSeq.current += 1;
     setSaveFailed(false);
     setDirty(true);
+    // «Deshacer el llenado» solo vale hasta la siguiente edición: después
+    // restauraría una copia vieja y borraría lo escrito o lo recargado.
+    setUndoChart(null);
   };
 
   useEffect(() => {
@@ -119,9 +133,14 @@ export default function PeriodontalEditor({ exam, isArchived, onDirtyChange }: P
   };
 
   const actions: ChartActions = {
+    // Cualquier edición de un sitio lo vuelve «manual»: ya lo decidió el profesional.
     updateSite: (number: number, site: SiteCode, patch: Partial<SiteData>) =>
-      change((tooth) => ({ ...tooth, sites: { ...tooth.sites, [site]: { ...tooth.sites[site], ...patch } } }), number),
-    updateTooth: (number, patch) => change((tooth) => ({ ...tooth, ...patch }), number),
+      change(
+        (tooth) => ({ ...tooth, sites: { ...tooth.sites, [site]: { ...tooth.sites[site], ...patch, source: "manual" } } }),
+        number,
+      ),
+    updateTooth: (number, patch) =>
+      change((tooth) => ({ ...tooth, ...patch, ...("mobility" in patch ? { source: "manual" as const } : {}) }), number),
     // Marcar ausente vacía la pieza: una pieza ausente no lleva mediciones.
     toggleMissing: (number) =>
       change(
@@ -294,6 +313,25 @@ export default function PeriodontalEditor({ exam, isArchived, onDirtyChange }: P
     touch();
   };
 
+  const applyHealthy = () => {
+    const { chart: next, filled, mobilityFilled } = fillHealthy(chart, healthy);
+    setFillOpen(false);
+    if (filled === 0 && mobilityFilled === 0) {
+      toast("No hay sitios vacíos ni movilidad por llenar.");
+      return;
+    }
+    setChart(next);
+    touch();
+    setUndoChart(chart);
+    setLastFilled(filled);
+  };
+
+  const undoHealthy = () => {
+    const previous = undoChart;
+    touch();
+    if (previous) setChart(previous);
+  };
+
   const discardRecovery = () => {
     clearBackup(exam.id);
     setRecovery(null);
@@ -311,6 +349,7 @@ export default function PeriodontalEditor({ exam, isArchived, onDirtyChange }: P
       setConflict(false);
       setSaveFailed(false);
       setDirty(false);
+      setUndoChart(null);
       clearBackup(exam.id);
     },
     onError: (error) => toast.error(getApiErrorMessage(error, "No se pudo cargar la versión actual")),
@@ -389,6 +428,18 @@ export default function PeriodontalEditor({ exam, isArchived, onDirtyChange }: P
           <Button variant="secondary" onClick={() => reload.mutate()} disabled={reload.isPending}>
             {reload.isPending ? "Cargando..." : "Cargar la versión actual"}
           </Button>
+        </div>
+      )}
+
+      {editable && (
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="secondary" onClick={() => setFillOpen(true)}>Llenar con valores de salud</Button>
+          {undoChart && (
+            <p role="status" className="flex items-center gap-2 text-sm text-slate-600">
+              Se llenaron {lastFilled} sitios vacíos con valores predeterminados. Deshacer vale hasta la próxima edición.
+              <button type="button" onClick={undoHealthy} className="font-medium text-teal-700 underline">Deshacer</button>
+            </p>
+          )}
         </div>
       )}
 
@@ -480,6 +531,60 @@ export default function PeriodontalEditor({ exam, isArchived, onDirtyChange }: P
           </ol>
         </section>
       )}
+
+      <Modal isOpen={fillOpen} onClose={() => setFillOpen(false)} title="Llenar con valores de salud">
+        <form
+          aria-label="Llenar con valores de salud"
+          className="flex flex-col gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            applyHealthy();
+          }}
+        >
+          <p className="text-sm text-slate-600">
+            Llena solo los sitios vacíos de las piezas presentes (no implantes) con los valores elegidos; no cambia lo
+            que ya escribiste. Quedan en gris cursiva como predeterminados hasta que edites el sitio. Referencia: salud
+            periodontal según el World Workshop 2017 (sondaje de 3 mm o menos y sangrado en menos del 10 % de los
+            sitios, sin pérdida de inserción ni ósea). La decisión clínica es tuya: revisa y corrige las piezas que lo
+            necesiten.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="healthy-pd" className="text-sm font-medium">Sondaje (mm)</label>
+              <select id="healthy-pd" value={healthy.probingDepth} className="rounded-xl border p-3"
+                onChange={(event) => setHealthy({ ...healthy, probingDepth: Number(event.target.value) })}>
+                {HEALTHY_PROBING_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="healthy-gm" className="text-sm font-medium">Margen gingival (mm)</label>
+              <select id="healthy-gm" value={healthy.gingivalMargin} className="rounded-xl border p-3"
+                onChange={(event) => setHealthy({ ...healthy, gingivalMargin: Number(event.target.value) })}>
+                {HEALTHY_MARGIN_OPTIONS.map((value) => (
+                  <option key={value} value={value}>{value > 0 ? `+${value}` : value}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <p role="note" className={clsx(
+            "rounded-lg p-2 text-sm",
+            healthy.probingDepth - healthy.gingivalMargin > 0 ? "bg-amber-50 text-amber-900" : "bg-teal-50 text-teal-900",
+          )}>
+            NIC resultante en cada sitio llenado: {healthy.probingDepth - healthy.gingivalMargin} mm (sondaje − margen).
+            {healthy.probingDepth - healthy.gingivalMargin > 0 &&
+              " Con el margen en la UAC (0) el NIC no es 0: si la encía está sana y coronal a la UAC, usa un margen positivo igual al sondaje."}
+          </p>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={healthy.mobility}
+              onChange={(event) => setHealthy({ ...healthy, mobility: event.target.checked })} />
+            Movilidad 0 en las piezas sin movilidad registrada
+          </label>
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={() => setFillOpen(false)}>Cancelar</Button>
+            <Button type="submit">Llenar sitios vacíos</Button>
+          </div>
+        </form>
+      </Modal>
 
       <ConfirmDialog
         isOpen={confirmFinalize}

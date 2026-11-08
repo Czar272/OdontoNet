@@ -40,7 +40,7 @@ interface PerioGridProps {
 const TEXT_PATTERN = /^-?\d{0,2}$/;
 
 function SiteInput({
-  field, tooth, site, value, readOnly, missing, onValue, inputs, row,
+  field, tooth, site, value, readOnly, missing, isDefault, onValue, inputs, row,
 }: {
   field: NumericField;
   tooth: number;
@@ -48,6 +48,8 @@ function SiteInput({
   value: number | null;
   readOnly: boolean;
   missing: boolean;
+  /** Valor predeterminado aún no editado: se muestra en gris cursiva. */
+  isDefault: boolean;
   onValue: (value: number | null) => void;
   inputs: MutableRefObject<Map<string, HTMLInputElement>>;
   row: string[];
@@ -86,7 +88,7 @@ function SiteInput({
   };
 
   const error = valueError(field, value);
-  const label = `${field === "probing_depth" ? "Sondaje" : "Margen gingival"} ${tooth} ${siteLabel(tooth, site)}${missing ? " (pieza ausente)" : ""}`;
+  const label = `${field === "probing_depth" ? "Sondaje" : "Margen gingival"} ${tooth} ${siteLabel(tooth, site)}${missing ? " (pieza ausente)" : ""}${isDefault && value !== null ? " (predeterminado)" : ""}`;
 
   return (
     <input
@@ -119,7 +121,10 @@ function SiteInput({
         "focus:border-teal-600 focus:ring-1 focus:ring-teal-600",
         error ? "border-red-500 bg-red-50 text-red-700" : "border-slate-200 bg-white",
         field === "gingival_margin" && value !== null && value < 0 && !error && "text-red-700",
-        field === "probing_depth" && value !== null && value >= 4 && !error && "font-semibold text-blue-700",
+        // Predeterminado gana sobre el estilo de «profundo»: un valor no editado nunca parece medido.
+        isDefault && value !== null && !error
+          ? "italic text-slate-400"
+          : field === "probing_depth" && value !== null && value >= 4 && !error && "font-semibold text-blue-700",
         readOnly && "bg-slate-50",
       )}
     />
@@ -196,6 +201,7 @@ export default function PerioGrid({ arch, face, teeth, readOnly, actions, inputs
           value={tooth.sites[site][field]}
           readOnly={readOnly || tooth.missing}
           missing={tooth.missing}
+          isDefault={tooth.sites[site].source === "default"}
           onValue={(value) => actions.updateSite(tooth.tooth, site, { [field]: value })}
           inputs={inputs}
           row={rows[field]}
@@ -246,13 +252,16 @@ export default function PerioGrid({ arch, face, teeth, readOnly, actions, inputs
           <RowLabel>Movilidad</RowLabel>
           {perTooth((tooth) => (
             <select
-              aria-label={`Movilidad ${tooth.tooth}`}
+              aria-label={`Movilidad ${tooth.tooth}${tooth.source === "default" && tooth.mobility !== null ? " (predeterminado)" : ""}`}
               disabled={readOnly || tooth.missing}
               value={tooth.mobility ?? ""}
               onChange={(event) =>
                 actions.updateTooth(tooth.tooth, { mobility: event.target.value === "" ? null : Number(event.target.value) })
               }
-              className="h-6 w-full rounded-[4px] border border-slate-200 bg-white text-center text-[11px]"
+              className={clsx(
+                "h-6 w-full rounded-[4px] border border-slate-200 bg-white text-center text-[11px]",
+                tooth.source === "default" && tooth.mobility !== null && "italic text-slate-400",
+              )}
             >
               <option value="">–</option>
               {Array.from({ length: MOBILITY_RANGE[1] - MOBILITY_RANGE[0] + 1 }, (_, i) => MOBILITY_RANGE[0] + i).map((grade) => (

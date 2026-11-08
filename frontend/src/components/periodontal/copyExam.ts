@@ -36,6 +36,8 @@ export function copyChart(previous: PeriodontalExam, options: CopyOptions): Toot
       missing,
       implant,
       mobility: !missing && options.mobilityAndFurcation ? tooth.mobility : null,
+      // Lo copiado no se midió en este examen: queda como predeterminado hasta que se edite.
+      source: !missing && options.mobilityAndFurcation && tooth.mobility !== null ? "default" : "manual",
       furcation: !missing && !implant && options.mobilityAndFurcation ? { ...tooth.furcation } : emptyFurcation(),
       note: null,
       sites: Object.fromEntries(
@@ -51,6 +53,11 @@ export function copyChart(previous: PeriodontalExam, options: CopyOptions): Toot
               bleeding: options.indicators ? source.bleeding : false,
               suppuration: options.indicators ? source.suppuration : false,
               plaque: options.indicators ? source.plaque : false,
+              source:
+                (options.measurements && (source.probing_depth !== null || source.gingival_margin !== null)) ||
+                (options.indicators && (source.bleeding || source.suppuration || source.plaque))
+                  ? "default"
+                  : "manual",
             },
           ];
         }),

@@ -23,7 +23,7 @@ const makeExam = (extra: Partial<PeriodontalExam> = {}): PeriodontalExam => ({
   created_by: { id: 1, name: "Dra. Ana" }, created_at: "2026-11-06T15:00:00Z", updated_at: "2026-11-06T15:00:00Z",
   finalized_by: null, finalized_at: null, voided_by: null, voided_at: null, void_reason: null,
   summary: { present_teeth: 32, measured_sites: 0, mean_probing_depth: null, mean_attachment_level: null,
-    bleeding_pct: null, plaque_pct: null, deep_sites_pct: null },
+    bleeding_pct: null, plaque_pct: null, deep_sites_pct: null, default_sites: 0 },
   teeth: PERMANENT_TEETH.map(emptyTooth),
   ...extra,
 });
@@ -229,7 +229,10 @@ describe("copyChart", () => {
     }).find((t) => t.tooth === 16)!;
     expect(t16.mobility).toBe(2);
     expect(t16.furcation.b).toBe(2);
-    expect(t16.sites.mb).toEqual({ probing_depth: 6, gingival_margin: -2, bleeding: true, suppuration: false, plaque: false });
+    expect(t16.sites.mb).toEqual({
+      probing_depth: 6, gingival_margin: -2, bleeding: true, suppuration: false, plaque: false, source: "default",
+    });
+    expect(t16.source).toBe("default");
   });
 });
 
@@ -347,6 +350,106 @@ describe("exportación (ODON-198)", () => {
     list = [current];
     await openExam();
     expect(screen.queryByRole("button", { name: "Descargar PDF" })).not.toBeInTheDocument();
+  });
+});
+
+describe("llenado con valores de salud (ODON-262)", () => {
+  it("llena los sitios vacíos con lo elegido, los marca y permite deshacer", async () => {
+    await openExam();
+    fireEvent.change(screen.getByLabelText("Sondaje 16 distovestibular"), { target: { value: "5" } });
+    fireEvent.click(screen.getByRole("button", { name: "Llenar con valores de salud" }));
+    const form = await screen.findByRole("form", { name: "Llenar con valores de salud" });
+    expect(within(form).getByText(/World Workshop 2017/)).toBeInTheDocument();
+    fireEvent.change(within(form).getByLabelText("Sondaje (mm)"), { target: { value: "3" } });
+    fireEvent.click(within(form).getByRole("button", { name: "Llenar sitios vacíos" }));
+
+    expect(screen.getByLabelText("Sondaje 16 distovestibular")).toHaveValue("5"); // no se sobrescribe
+    const filled = screen.getByLabelText("Sondaje 11 vestibular (predeterminado)");
+    expect(filled).toHaveValue("3");
+    expect(filled.className).toContain("italic");
+    expect(screen.getByText(/Se llenaron 191 sitios vacíos/)).toBeInTheDocument();
+    expect(screen.getByText(/191 sitios tienen un valor predeterminado sin editar/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Deshacer" }));
+    expect(screen.getByLabelText("Sondaje 11 vestibular")).toHaveValue("");
+    expect(screen.getByLabelText("Sondaje 16 distovestibular")).toHaveValue("5");
+  });
+
+  it("editar un valor predeterminado lo vuelve manual y se guarda así", async () => {
+    await openExam();
+    fireEvent.click(screen.getByRole("button", { name: "Llenar con valores de salud" }));
+    fireEvent.click(within(await screen.findByRole("form", { name: "Llenar con valores de salud" }))
+      .getByRole("button", { name: "Llenar sitios vacíos" }));
+    fireEvent.change(screen.getByLabelText("Sondaje 11 vestibular (predeterminado)"), { target: { value: "4" } });
+    expect(screen.getByLabelText("Sondaje 11 vestibular")).toHaveValue("4");
+    fireEvent.click(screen.getByRole("button", { name: "Guardar borrador" }));
+    await waitFor(() => expect(service.updatePeriodontalExam).toHaveBeenCalled());
+    const [, , body] = vi.mocked(service.updatePeriodontalExam).mock.calls.at(-1)!;
+    const t11 = body.teeth.find((t) => t.tooth === 11)!;
+    expect(t11.sites.b).toMatchObject({ probing_depth: 4, source: "manual" });
+    expect(t11.sites.mb).toMatchObject({ probing_depth: 2, gingival_margin: 0, source: "default" });
+  });
+
+  it("no aparece en un examen de solo lectura", async () => {
+    current = makeExam({ status: "final", finalized_at: "2026-11-06T16:00:00Z", finalized_by: { id: 1, name: "Dra. Ana" } });
+    list = [current];
+    await openExam();
+    expect(screen.queryByRole("button", { name: "Llenar con valores de salud" })).not.toBeInTheDocument();
+  });
+});
+
+describe("llenado: revisión de ODON-262", () => {
+  async function fill(pd?: string) {
+    fireEvent.click(screen.getByRole("button", { name: "Llenar con valores de salud" }));
+    const form = await screen.findByRole("form", { name: "Llenar con valores de salud" });
+    if (pd) fireEvent.change(within(form).getByLabelText("Sondaje (mm)"), { target: { value: pd } });
+    return form;
+  }
+
+  it("muestra el NIC que resulta de los valores elegidos", async () => {
+    await openExam();
+    const form = await fill();
+    expect(within(form).getByRole("note")).toHaveTextContent("NIC resultante en cada sitio llenado: 2 mm");
+    fireEvent.change(within(form).getByLabelText("Margen gingival (mm)"), { target: { value: "2" } });
+    expect(within(form).getByRole("note")).toHaveTextContent("NIC resultante en cada sitio llenado: 0 mm");
+  });
+
+  it("deshacer deja de estar disponible tras la siguiente edición y no borra lo escrito", async () => {
+    await openExam();
+    fireEvent.click(within(await fill()).getByRole("button", { name: "Llenar sitios vacíos" }));
+    expect(screen.getByRole("button", { name: "Deshacer" })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Sondaje 16 mesiovestibular (predeterminado)"), { target: { value: "5" } });
+    expect(screen.queryByRole("button", { name: "Deshacer" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Sondaje 16 mesiovestibular")).toHaveValue("5");
+  });
+
+  it("tras cargar la versión vigente por un 409 ya no se puede deshacer", async () => {
+    await openExam();
+    vi.mocked(service.updatePeriodontalExam).mockRejectedValueOnce(
+      Object.assign(new Error("409"), { isAxiosError: true, response: { status: 409, data: { detail: "Cambió" } } }),
+    );
+    fireEvent.click(within(await fill()).getByRole("button", { name: "Llenar sitios vacíos" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar borrador" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Cargar la versión actual" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Deshacer" })).not.toBeInTheDocument());
+  });
+
+  it("la movilidad predeterminada se distingue y puede llenarse sola", async () => {
+    await openExam();
+    fireEvent.click(within(await fill()).getByRole("button", { name: "Llenar sitios vacíos" }));
+    const mobility = screen.getByLabelText("Movilidad 11 (predeterminado)");
+    expect(mobility).toHaveValue("0");
+    expect(mobility.className).toContain("italic");
+    fireEvent.change(mobility, { target: { value: "1" } });
+    expect(screen.getByLabelText("Movilidad 11")).toHaveValue("1");
+  });
+
+  it("un sondaje profundo predeterminado no se pinta como medido", async () => {
+    await openExam();
+    fireEvent.click(within(await fill("3")).getByRole("button", { name: "Llenar sitios vacíos" }));
+    const site = screen.getByLabelText("Sondaje 11 vestibular (predeterminado)");
+    expect(site.className).toContain("italic");
+    expect(site.className).not.toContain("text-blue-700");
   });
 });
 

@@ -22,7 +22,7 @@ const makeExam = (extra: Partial<PeriodontalExam> = {}): PeriodontalExam => ({
   created_by: { id: 1, name: "Dra. Ana" }, created_at: "2026-11-06T15:00:00Z", updated_at: "2026-11-06T15:00:00Z",
   finalized_by: null, finalized_at: null, voided_by: null, voided_at: null, void_reason: null,
   summary: { present_teeth: 32, measured_sites: 0, mean_probing_depth: null, mean_attachment_level: null,
-    bleeding_pct: null, plaque_pct: null, deep_sites_pct: null },
+    bleeding_pct: null, plaque_pct: null, deep_sites_pct: null, default_sites: 0 },
   teeth: PERMANENT_TEETH.map(emptyTooth),
   ...extra,
 });

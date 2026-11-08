@@ -13,10 +13,11 @@ export default function PerioSummary({ summary }: { summary: ExamSummary }) {
     [`Sitios ≥ ${DEEP_SITE_MM} mm`, summary.deep_sites_pct === null ? "–" : `${number.format(summary.deep_sites_pct)} %`],
     ["Sitios medidos", String(summary.measured_sites)],
     ["Piezas presentes", String(summary.present_teeth)],
+    ["Predeterminados", String(summary.default_sites ?? 0)],
   ];
   return (
     <section aria-label="Resumen del periodontograma" className="rounded-xl bg-teal-50/60 p-4">
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4 lg:grid-cols-7">
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4 lg:grid-cols-8">
         {items.map(([label, value]) => (
           <div key={label}>
             <dt className="text-xs text-slate-500">{label}</dt>
@@ -26,6 +27,8 @@ export default function PerioSummary({ summary }: { summary: ExamSummary }) {
       </dl>
       <p className="mt-3 text-xs text-slate-500">
         Estadística descriptiva sobre los sitios con sondaje de las piezas presentes. No constituye diagnóstico.
+        {(summary.default_sites ?? 0) > 0 &&
+          ` ${summary.default_sites} sitios tienen un valor predeterminado sin editar (gris cursiva): revísalos antes de finalizar.`}
       </p>
     </section>
   );
@@ -41,6 +44,7 @@ export function PerioLegend() {
       <li className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-red-600" />Sangrado</li>
       <li className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-yellow-500" />Supuración</li>
       <li className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-sky-500" />Placa</li>
+      <li className="italic text-slate-400">Gris cursiva = valor predeterminado sin editar</li>
       <li>Margen: negativo = recesión · NIC = sondaje − margen</li>
     </ul>
   );
