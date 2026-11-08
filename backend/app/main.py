@@ -61,12 +61,42 @@ app.include_router(periodontal_router)
 app.include_router(dashboard_router)
 app.include_router(report_router)
 
-# Orígenes permitidos separados por coma (CORS_ORIGINS en backend/.env).
-origins = [
-    origin.strip()
-    for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
-    if origin.strip()
-]
+def cors_origins(raw: str) -> list[str]:
+    """Orígenes permitidos separados por coma (CORS_ORIGINS en backend/.env).
+
+    Con credenciales, un comodín permitiría que cualquier sitio use la sesión
+    del usuario (ODON-230): se rechaza al arrancar."""
+    origins = [origin.strip() for origin in raw.split(",") if origin.strip()]
+    if any("*" in origin for origin in origins):
+        raise RuntimeError("CORS_ORIGINS no admite '*': lista los orígenes exactos del frontend.")
+    return origins
+
+
+origins = cors_origins(os.getenv("CORS_ORIGINS", "http://localhost:5173"))
+
+# Cabeceras de seguridad en todas las respuestas (ODON-230). La documentación
+# interactiva (/docs, /redoc) carga recursos externos y no lleva CSP estricta.
+_DOCS_PATHS = ("/docs", "/redoc", "/openapi.json")
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Cross-Origin-Opener-Policy": "same-origin",
+}
+API_CSP = "default-src 'none'; frame-ancestors 'none'"
+
+
+@app.middleware("http")
+async def security_headers(request, call_next):
+    response = await call_next(request)
+    for name, value in SECURITY_HEADERS.items():
+        response.headers.setdefault(name, value)
+    if not request.url.path.startswith(_DOCS_PATHS):
+        response.headers.setdefault("Content-Security-Policy", API_CSP)
+        # Respuestas con datos de pacientes: que ningún navegador ni proxy las guarde.
+        response.headers.setdefault("Cache-Control", "no-store")
+    return response
 
 app.add_middleware(
     CORSMiddleware,

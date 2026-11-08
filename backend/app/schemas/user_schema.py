@@ -3,10 +3,12 @@ from typing import Optional
 from pydantic import BaseModel, EmailStr, constr, validator
 
 from app.auth.permissions import Role
+from app.core.password_policy import MAX_LENGTH, MIN_LENGTH, check_new_password
 from app.schemas.clinic_schema import ClinicSimpleResponse
 
 UserName = constr(strip_whitespace=True, min_length=1, max_length=120)
-UserPassword = constr(min_length=8, max_length=128)
+# Contraseña nueva (ODON-230): al menos 10 caracteres y no una de las filtradas.
+UserPassword = constr(min_length=MIN_LENGTH, max_length=MAX_LENGTH)
 
 
 class UserCreate(BaseModel):
@@ -18,6 +20,8 @@ class UserCreate(BaseModel):
     password: UserPassword
     role: Role = Role.DOCTOR
 
+    _common = validator("password", allow_reuse=True)(check_new_password)
+
 
 class UserUpdate(BaseModel):
     """Edición parcial por un administrador: solo se cambian los campos
@@ -28,6 +32,10 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     role: Optional[Role] = None
     password: Optional[UserPassword] = None
+
+    @validator("password")
+    def _common(cls, value):
+        return value if value is None else check_new_password(value)
 
 
 class TokenResponse(BaseModel):
@@ -52,10 +60,14 @@ class PasswordResetConfirm(BaseModel):
     token: constr(strip_whitespace=True, min_length=1, max_length=200)
     new_password: UserPassword
 
+    _common = validator("new_password", allow_reuse=True)(check_new_password)
+
 
 class PasswordChange(BaseModel):
     current_password: constr(min_length=1, max_length=128)
     new_password: UserPassword
+
+    _common = validator("new_password", allow_reuse=True)(check_new_password)
     # Conserva la duración de la sesión actual en el token nuevo.
     remember_me: bool = False
 

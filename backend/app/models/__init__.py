@@ -5,6 +5,7 @@ from .patient import Patient
 from .appointment import Appointment, AppointmentStatusChange
 from .availability import DoctorAvailabilityBlock
 from .password_reset import PasswordResetToken
+from .auth_attempt import AuthAttempt
 from .medical_history import PatientMedicalHistory
 from .clinical_visit import ClinicalVisit, ClinicalVisitRevision
 from .treatment import Treatment, TreatmentStatusChange

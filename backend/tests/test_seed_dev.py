@@ -112,7 +112,7 @@ def test_accepts_local_development_database():
     ensure_development("postgresql+psycopg2://u:p@127.0.0.1:5432/odontonet", "development")
 
 
-@pytest.mark.parametrize("value", [None, "", "corta"])
+@pytest.mark.parametrize("value", [None, "", "corta", "Corta-123", "password1234"])
 def test_requires_strong_enough_password(value):
     with pytest.raises(SeedError):
         read_password(value)

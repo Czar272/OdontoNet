@@ -17,7 +17,7 @@ Garantías:
 
 Uso, desde backend/ con odonto_venv activo:
 
-    $env:SEED_PASSWORD = "<contraseña de al menos 8 caracteres>"
+    $env:SEED_PASSWORD = "<contraseña de al menos 10 caracteres, no común>"
     python -m scripts.seed_dev
 """
 
@@ -35,6 +35,7 @@ from sqlalchemy.engine import make_url  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
 from app.auth.security import hash_password  # noqa: E402
+from app.core.password_policy import MIN_LENGTH, check_new_password  # noqa: E402
 from app.models import (  # noqa: E402
     Appointment,
     AppointmentStatusChange,
@@ -138,10 +139,15 @@ def ensure_development(database_url: str, environment: str) -> None:
 
 
 def read_password(value: str | None) -> str:
-    if not value or len(value) < 8:
+    # Misma política que la API (ODON-230): 10 caracteres y no una contraseña filtrada.
+    if not value or len(value) < MIN_LENGTH:
         raise SeedError(
-            "Define SEED_PASSWORD con al menos 8 caracteres antes de ejecutar el seed."
+            f"Define SEED_PASSWORD con al menos {MIN_LENGTH} caracteres antes de ejecutar el seed."
         )
+    try:
+        check_new_password(value)
+    except ValueError as exc:
+        raise SeedError(f"SEED_PASSWORD no es válida: {exc}") from exc
     return value
 
 
