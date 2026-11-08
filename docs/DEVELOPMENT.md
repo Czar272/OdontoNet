@@ -138,6 +138,7 @@ Cada prueba pertenece al menos a una categoría (marcador de pytest), según el 
 | `records` | Expediente clínico: historia médica, consultas, plan de tratamiento e historial cronológico |
 | `images` | Imágenes clínicas: almacenamiento privado, subida y saneamiento, consentimiento, galería y miniaturas, metadatos con revisiones, anulación, auditoría de acceso, verificación de respaldos |
 | `periodontal` | Periodontograma manual: modelo y restricciones, validación por pieza y sitio, borradores con revisiones, finalización, anulación, resumen, historial cronológico y reporte PDF |
+| `dashboard` | Panel de inicio: indicadores, periodo en la zona de la clínica, filtro por doctor, agenda de hoy, aislamiento y roles |
 
 ```powershell
 python -m pytest -m auth                      # solo autenticación
@@ -160,6 +161,7 @@ Durante el desarrollo y al verificar un ticket basta con las categorías del ár
 | Historia médica / expediente | `python -m pytest -m "records or rbac"` | `npx vitest run src/components/patients src/pages/Patients src/auth` |
 | Imágenes clínicas y consentimiento (`image_*`, `patient_image_*`, `photo_consent_*`, `verify_images`) | `python -m pytest -m "images or rbac or records"` | `npx vitest run src/components/patients src/pages/Patients src/auth` |
 | Periodontograma (`periodontal_*`) | `python -m pytest -m "periodontal or rbac or isolation"` | `npx vitest run src/components/periodontal src/pages/Patients` |
+| Panel de inicio (`dashboard_*`) | `python -m pytest -m "dashboard or patients"` | `npx vitest run src/pages/Dashboard` |
 | Doctores y horarios | `python -m pytest -m "doctors or appointments"` | `npx vitest run src/pages/Doctors src/components/doctors src/pages/Agenda` |
 | Agenda y citas | `python -m pytest -m "appointments or doctors"` | `npx vitest run src/pages/Agenda src/components/appointments` |
 | Clínica | `python -m pytest -m isolation` | `npx vitest run src/pages/Clinic` |

@@ -69,9 +69,10 @@
 | `POST /patients/{id}/periodontal-exams` (registrar un examen en borrador) | ✅ | ✅ | ⛔ |
 | `PUT .../{exam_id}`, `POST .../finalize`, `POST .../void` (guardar el borrador, finalizar o anular; solo quien lo registró o administración) | ✅ | ✅ (los propios) | ⛔ |
 | `GET .../{exam_id}/report.pdf` (reporte PDF de un examen finalizado) | ✅ | ✅ | ⛔ |
+| `GET /dashboard` (panel de inicio: indicadores agregados y agenda de hoy; `doctor_id` de otra clínica `404`) | ✅ | ✅ | ✅ |
 | `GET`, `POST /patients/{id}/photo-consent` (consentimiento para fotografías: vigente, historial y versión nueva) | ✅ | ✅ | ⛔ |
 
-Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_password_reset.py`, `backend/tests/test_users.py`, `backend/tests/test_user_deactivation.py`, `backend/tests/test_patient_archive.py`, `backend/tests/test_appointment_api.py`, `backend/tests/test_doctor_availability.py`, `backend/tests/test_medical_history.py`, `backend/tests/test_clinical_visits.py`, `backend/tests/test_treatments.py`, `backend/tests/test_timeline.py`, `backend/tests/test_patient_images.py`, `backend/tests/test_image_upload.py`, `backend/tests/test_image_gallery.py` y `backend/tests/test_image_metadata.py`, `backend/tests/test_periodontal.py`.
+Verificado por `backend/tests/test_rbac.py`, `backend/tests/test_password_reset.py`, `backend/tests/test_users.py`, `backend/tests/test_user_deactivation.py`, `backend/tests/test_patient_archive.py`, `backend/tests/test_appointment_api.py`, `backend/tests/test_doctor_availability.py`, `backend/tests/test_medical_history.py`, `backend/tests/test_clinical_visits.py`, `backend/tests/test_treatments.py`, `backend/tests/test_timeline.py`, `backend/tests/test_patient_images.py`, `backend/tests/test_image_upload.py`, `backend/tests/test_image_gallery.py` y `backend/tests/test_image_metadata.py`, `backend/tests/test_periodontal.py`, `backend/tests/test_dashboard.py`.
 
 ### Reglas de gestión de usuarios (ODON-86)
 
