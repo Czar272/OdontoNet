@@ -82,8 +82,12 @@ def verify(db: Session, storage: LocalImageStorage) -> Report:
     return report
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     from app.database.connection import SessionLocal
+
+    # --orphans-ok: los archivos sin registro solo avisan (ensayo de restauración, ODON-226:
+    # una imagen subida durante el respaldo queda en la carpeta pero no en el volcado).
+    orphans_ok = "--orphans-ok" in (sys.argv[1:] if argv is None else argv)
 
     storage = get_image_storage()
     if not isinstance(storage, LocalImageStorage):
@@ -106,6 +110,9 @@ def main() -> int:
         for item in items:
             print(f"  - {item}")
 
+    if not report.ok and orphans_ok and not (report.missing or report.altered or report.foreign):
+        print("OK: base e imágenes coinciden (los archivos sin registro son posteriores al volcado).")
+        return 0
     print("OK: base e imágenes coinciden." if report.ok else "Se encontraron diferencias.")
     return 0 if report.ok else 1
 
