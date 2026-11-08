@@ -1,0 +1,7 @@
+# Escaneo de secretos (ODON-230): reglas por defecto de gitleaks.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Lista pública de contraseñas filtradas para rechazarlas (no son secretos)"
+paths = ['''backend/app/core/common_passwords\.txt''']

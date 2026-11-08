@@ -80,3 +80,37 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+
+  security:
+    # Endurecimiento (ODON-230): dependencias con vulnerabilidades conocidas y
+    # secretos en los commits nuevos.
+    name: Seguridad (dependencias y secretos)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: pip-audit (backend)
+        # Informativo hasta ODON-263 (actualización de dependencias); después será bloqueante.
+        continue-on-error: true
+        run: |
+          pip install pip-audit==2.10.1
+          pip-audit -r backend/requirements.txt --progress-spinner off
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: npm audit (frontend, dependencias de producción)
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Secretos en los commits (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
