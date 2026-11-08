@@ -1,6 +1,6 @@
-import logging
 import unicodedata
 from datetime import datetime, timezone
+from typing import Callable, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query as QueryParam, status
 from sqlalchemy import func, or_
@@ -14,12 +14,9 @@ from app.models.doctor import Doctor
 from app.models.patient import Patient
 from app.models.user import User
 from app.schemas.patient_schema import PatientCreate, PatientPage, PatientResponse, PatientUpdate
+from app.services import audit_service
 from app.services.appointment_service import count_upcoming_appointments
 from app.services.doctor_service import ensure_assignable_doctor
-
-# Eventos de auditoría (sin datos personales: solo ids y nombres de campos).
-# La auditoría persistente se diseña en ODON-222.
-audit_logger = logging.getLogger("odontonet.audit")
 
 # Administración, doctores y recepción gestionan pacientes (docs/PERMISSIONS.md).
 router = APIRouter(
@@ -94,9 +91,17 @@ def _get_clinic_patient(db: Session, patient_id: int, clinic_id: int) -> Patient
     return patient
 
 
-def _commit(db: Session, clinic_id: int, email: str | None) -> None:
-    """Guarda y traduce las restricciones de la base a errores de la API."""
+def _commit(
+    db: Session, clinic_id: int, email: str | None, audit: Optional[Callable[[], None]] = None
+) -> None:
+    """Guarda y traduce las restricciones de la base a errores de la API.
+
+    `audit` registra el evento de auditoría tras el flush (el paciente ya tiene
+    id) y antes del commit, en la misma transacción (ODON-222)."""
     try:
+        db.flush()
+        if audit is not None:
+            audit()
         db.commit()
     except IntegrityError as exc:
         db.rollback()
@@ -129,6 +134,7 @@ def _commit(db: Session, clinic_id: int, email: str | None) -> None:
 def create_patient(
     patient: PatientCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
     clinic_id: int = Depends(get_current_clinic_id),
 ):
 
@@ -139,7 +145,9 @@ def create_patient(
 
     db.add(new_patient)
 
-    _commit(db, clinic_id, patient.email)
+    _commit(db, clinic_id, patient.email, lambda: audit_service.record(
+        db, current_user, "patient.created", "patient", new_patient.id, patient_id=new_patient.id,
+    ))
 
     return _clinic_patients(db, clinic_id).filter(Patient.id == new_patient.id).one()
 
@@ -252,17 +260,20 @@ def update_patient(
     for field in changed:
         setattr(patient, field, data[field])
 
-    if changed:
-        _commit(db, clinic_id, patient.email)
-        audit_logger.info(
-            "patient.updated patient_id=%s user_id=%s clinic_id=%s fields=%s",
-            patient.id, current_user.id, clinic_id, ",".join(sorted(changed)),
+    def audit() -> None:
+        audit_service.record(
+            db, current_user, "patient.updated", "patient", patient.id,
+            patient_id=patient.id, fields=changed, detail=f"fields={','.join(sorted(changed))}",
         )
         if "doctor_id" in changed:
-            audit_logger.info(
-                "patient.doctor_changed patient_id=%s user_id=%s from=%s to=%s",
-                patient.id, current_user.id, previous_doctor_id, new_doctor_id,
+            audit_service.record(
+                db, current_user, "patient.doctor_changed", "patient", patient.id,
+                patient_id=patient.id, fields=["doctor_id"],
+                detail=f"from={previous_doctor_id} to={new_doctor_id}",
             )
+
+    if changed:
+        _commit(db, clinic_id, patient.email, audit)
 
     db.expire_all()
     return _clinic_patients(db, clinic_id).filter(Patient.id == patient_id).one()
@@ -289,12 +300,11 @@ def _set_archived(
 
     if (patient.archived_at is not None) is not archived:
         patient.archived_at = datetime.now(timezone.utc) if archived else None
-        db.commit()
-        audit_logger.info(
-            "patient.%s patient_id=%s user_id=%s clinic_id=%s",
-            "archived" if archived else "reactivated",
-            patient.id, current_user.id, clinic_id,
+        audit_service.record(
+            db, current_user, "patient.archived" if archived else "patient.reactivated", "patient", patient.id,
+            patient_id=patient.id, fields=["archived_at"],
         )
+        db.commit()
 
     db.expire_all()
     return _clinic_patients(db, clinic_id).filter(Patient.id == patient_id).one()

@@ -1,5 +1,4 @@
 """Historia médica y odontológica versionada (ODON-150)."""
-import logging
 from typing import Optional
 
 from fastapi import HTTPException, status
@@ -10,8 +9,7 @@ from app.models.medical_history import PatientMedicalHistory
 from app.models.patient import Patient
 from app.models.user import User
 from app.schemas.medical_history_schema import MedicalHistoryCreate
-
-audit_logger = logging.getLogger("odontonet.audit")
+from app.services import audit_service
 
 
 def get_clinic_patient(db: Session, patient_id: int, clinic_id: int) -> Patient:
@@ -80,6 +78,12 @@ def create_version(
     )
     db.add(history)
     try:
+        db.flush()
+        audit_service.record(
+            db, author, "medical_history.created", "medical_history", history.id,
+            patient_id=patient.id, clinic_id=patient.clinic_id,
+            detail=f"patient_id={patient.id} version={history.version}",
+        )
         db.commit()
     except IntegrityError:
         # Dos guardados simultáneos sobre la misma versión: gana el primero.
@@ -87,8 +91,4 @@ def create_version(
         latest = current_history(db, patient.id)
         raise _stale(latest.version if latest else None)
 
-    audit_logger.info(
-        "medical_history.created patient_id=%s version=%s user_id=%s clinic_id=%s",
-        patient.id, history.version, author.id, patient.clinic_id,
-    )
     return get_version(db, patient.id, history.version)

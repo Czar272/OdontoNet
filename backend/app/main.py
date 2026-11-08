@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.api.audit_routes import router as audit_router
 from app.api.appointment_routes import router as appointment_router
 from app.api.auth_routes import router as auth_router
 from app.api.clinic_routes import router as clinic_router
@@ -61,6 +62,7 @@ app.include_router(photo_consent_router)
 app.include_router(periodontal_router)
 app.include_router(dashboard_router)
 app.include_router(report_router)
+app.include_router(audit_router)
 
 def cors_origins(raw: str) -> list[str]:
     """Orígenes permitidos separados por coma (CORS_ORIGINS en backend/.env).

@@ -8,7 +8,7 @@ from app.auth.permissions import CLINICAL_PROFILE_ROLES
 from app.auth.security import hash_password
 from app.models.doctor import Doctor
 from app.models.user import User
-from app.services import password_service
+from app.services import audit_service, password_service
 from app.schemas.user_schema import UserCreate, UserUpdate
 
 
@@ -32,7 +32,8 @@ def get_clinic_user(db: Session, user_id: int, clinic_id: int) -> User:
     return user
 
 
-def create_user(db: Session, data: UserCreate, clinic_id: int) -> User:
+def create_user(db: Session, data: UserCreate, acting_admin: User) -> User:
+    """Crea el usuario en la clínica del administrador que lo registra."""
     if _email_taken(db, data.email):
         raise _conflict("Ya existe un usuario con ese correo.")
 
@@ -41,9 +42,12 @@ def create_user(db: Session, data: UserCreate, clinic_id: int) -> User:
         email=data.email,
         hashed_password=hash_password(data.password),
         role=data.role.value,
-        clinic_id=clinic_id,
+        clinic_id=acting_admin.clinic_id,
     )
     db.add(user)
+    db.flush()
+    # Solo el id y el rol elegido como nombre de campo: nunca nombre, correo ni contraseña.
+    audit_service.record(db, acting_admin, "user.created", "user", user.id, detail=f"role={user.role}")
     db.commit()
     db.refresh(user)
     return user
@@ -57,7 +61,9 @@ def update_user(db: Session, user: User, data: UserUpdate, acting_admin: User) -
         # Cerraría la propia sesión; el cambio propio pide la contraseña actual.
         raise _conflict("Para cambiar tu propia contraseña usa «Cambiar contraseña».")
 
+    changed = []
     if "email" in changes and changes["email"] != user.email:
+        changed.append("email")
         if _email_taken(db, changes["email"], exclude_user_id=user.id):
             raise _conflict("Ya existe un usuario con ese correo.")
         user.email = changes["email"]
@@ -71,14 +77,20 @@ def update_user(db: Session, user: User, data: UserUpdate, acting_admin: User) -
         if has_profile and new_role not in CLINICAL_PROFILE_ROLES:
             raise _conflict("El usuario tiene un perfil de doctor; solo puede tener rol doctor o administración.")
         user.role = new_role
+        changed.append("role")
 
-    if "name" in changes:
+    if "name" in changes and changes["name"] != user.name:
         user.name = changes["name"]
+        changed.append("name")
 
     if "password" in changes:
         # Cierra las sesiones del usuario y anula sus enlaces de recuperación.
         password_service.set_password_by_admin(db, user, changes["password"])
+        changed.append("password")
 
+    if changed:
+        # Solo nombres de campos (ODON-222): ni el correo ni la contraseña nuevos.
+        audit_service.record(db, acting_admin, "user.updated", "user", user.id, fields=changed)
     db.commit()
     db.refresh(user)
     return user
@@ -95,6 +107,10 @@ def set_user_active(db: Session, user: User, active: bool, acting_admin: User) -
 
     if user.is_active is not active:
         user.is_active = active
+        audit_service.record(
+            db, acting_admin, "user.reactivated" if active else "user.deactivated", "user", user.id,
+            fields=["is_active"],
+        )
         db.commit()
         db.refresh(user)
     return user

@@ -1,5 +1,4 @@
 """Plan de tratamiento y seguimiento (ODON-158)."""
-import logging
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -17,8 +16,8 @@ from app.models.treatment import (
 )
 from app.models.user import User
 from app.schemas.treatment_schema import TreatmentCreate, TreatmentStatusUpdate, TreatmentUpdate
+from app.services import audit_service
 
-audit_logger = logging.getLogger("odontonet.audit")
 
 STATUS_LABELS = {
     TreatmentStatus.PROPOSED: "Propuesto",
@@ -188,12 +187,12 @@ def create_treatment(db: Session, patient: Patient, data: TreatmentCreate, user:
     db.add(treatment)
     db.flush()
     _record_change(db, treatment, None, TreatmentStatus.PROPOSED.value, user)
+    audit_service.record(
+        db, user, "treatment.created", "treatment", treatment.id,
+        patient_id=patient.id, clinic_id=patient.clinic_id,
+    )
     db.commit()
 
-    audit_logger.info(
-        "treatment.created treatment_id=%s patient_id=%s user_id=%s clinic_id=%s",
-        treatment.id, patient.id, user.id, patient.clinic_id,
-    )
     return get_treatment(db, patient.id, treatment.id)
 
 
@@ -234,12 +233,13 @@ def update_treatment(
         setattr(treatment, field, changes[field])
     treatment.updated_by_user_id = user.id
     treatment.updated_at = datetime.now(timezone.utc)
+    audit_service.record(
+        db, user, "treatment.updated", "treatment", treatment.id,
+        patient_id=patient.id, fields=changed, clinic_id=patient.clinic_id,
+        detail=f"fields={','.join(changed)}",
+    )
     db.commit()
 
-    audit_logger.info(
-        "treatment.updated treatment_id=%s user_id=%s clinic_id=%s fields=%s",
-        treatment.id, user.id, patient.clinic_id, ",".join(changed),
-    )
     db.expire_all()
     return get_treatment(db, patient.id, treatment.id)
 
@@ -270,11 +270,12 @@ def change_status(
     treatment.updated_by_user_id = user.id
     treatment.updated_at = datetime.now(timezone.utc)
     _record_change(db, treatment, current.value, target.value, user, data.reason)
+    audit_service.record(
+        db, user, "treatment.status_changed", "treatment", treatment.id,
+        patient_id=patient.id, fields=["status"], clinic_id=patient.clinic_id,
+        detail=f"from={current.value} to={target.value}",
+    )
     db.commit()
 
-    audit_logger.info(
-        "treatment.status_changed treatment_id=%s from=%s to=%s user_id=%s clinic_id=%s",
-        treatment.id, current.value, target.value, user.id, patient.clinic_id,
-    )
     db.expire_all()
     return get_treatment(db, patient.id, treatment.id)

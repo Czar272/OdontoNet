@@ -555,7 +555,8 @@ def test_finalized_exam_exports_a_private_pdf(exam, setup, client, caplog):
     disposition = response.headers["content-disposition"]
     assert disposition == f'attachment; filename="periodontograma-{YESTERDAY.isoformat()}-{exam["id"]}.pdf"'
     assert "Ríos" not in disposition and "Ana" not in disposition
-    assert f"periodontal_exam.exported exam_id={exam['id']}" in caplog.text
+    # Formato de audit_service.record (ODON-222): <acción> <entidad>_id=<id> ...
+    assert f"periodontal_exam.exported periodontal_exam_id={exam['id']} " in caplog.text
     assert "Ríos" not in caplog.text
 
 

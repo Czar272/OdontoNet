@@ -6,7 +6,6 @@ clínica, con los mismos filtros de periodo y doctor que el panel de inicio
 """
 import csv
 import io
-import logging
 from datetime import date, timedelta
 from typing import Literal, Optional
 
@@ -17,9 +16,8 @@ from app.models.appointment import Appointment, AppointmentStatus
 from app.models.doctor import Doctor
 from app.models.patient import Patient
 from app.models.user import User
+from app.services import audit_service
 from app.services.dashboard_service import Period, resolve_doctor, resolve_period
-
-audit_logger = logging.getLogger("odontonet.audit")
 
 Grouping = Literal["day", "week", "month"]
 
@@ -239,8 +237,18 @@ def patients_csv(report: dict) -> bytes:
     return _csv(rows)
 
 
-def log_export(kind: str, user: User, report: dict) -> None:
-    audit_logger.info(
-        "report.exported kind=%s user_id=%s clinic_id=%s doctor_id=%s from=%s to=%s group=%s",
-        kind, user.id, user.clinic_id, report["doctor_id"], report["date_from"], report["date_to"], report["group"],
+def log_export(db: Session, kind: str, user: User, report: dict) -> None:
+    """Registra la exportación en la auditoría persistente (ODON-222) y la confirma.
+
+    Un reporte agregado no es una fila de la base: entity_id queda vacío y el
+    tipo de reporte («appointments» o «patients») va como único elemento de
+    `fields`, para poder filtrarlo sin una columna nueva. Los filtros usados
+    (doctor, fechas, agrupación) solo van al log."""
+    audit_service.record(
+        db, user, "report.exported", "report", None, fields=[kind],
+        detail=(
+            f"kind={kind} doctor_id={report['doctor_id']} from={report['date_from']} "
+            f"to={report['date_to']} group={report['group']}"
+        ),
     )
+    db.commit()

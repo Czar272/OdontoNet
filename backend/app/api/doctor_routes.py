@@ -1,4 +1,3 @@
-import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,8 +14,7 @@ from app.models.doctor import Doctor
 from app.models.user import User
 from app.schemas.availability_schema import AvailabilityUpdate, DoctorAvailabilityResponse
 from app.schemas.doctor_schema import DoctorCreate, DoctorResponse, DoctorUpdate
-
-audit_logger = logging.getLogger("odontonet.audit")
+from app.services import audit_service
 
 # Todos los roles consultan doctores; solo administración crea perfiles (docs/PERMISSIONS.md).
 router = APIRouter(
@@ -43,6 +41,7 @@ def _clinic_doctors(db: Session, clinic_id: int) -> Query:
 def create_doctor(
     doctor: DoctorCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
     clinic_id: int = Depends(get_current_clinic_id),
 ):
 
@@ -73,6 +72,10 @@ def create_doctor(
     new_doctor = Doctor(**doctor.model_dump(), clinic_id=clinic_id)
     db.add(new_doctor)
     try:
+        db.flush()
+        audit_service.record(
+            db, current_user, "doctor.created", "doctor", new_doctor.id, detail=f"profile_user_id={user.id}",
+        )
         db.commit()
     except IntegrityError:
         # Dos altas simultáneas: la restricción uq_doctors_user_id decide.
@@ -169,12 +172,12 @@ def replace_doctor_availability(
     doctor.availability = [
         DoctorAvailabilityBlock(clinic_id=clinic_id, **block.model_dump()) for block in data.blocks
     ]
+    audit_service.record(
+        db, current_user, "doctor.availability_updated", "doctor", doctor.id,
+        fields=["availability"], detail=f"blocks={len(data.blocks)}",
+    )
     db.commit()
 
-    audit_logger.info(
-        "doctor.availability_updated doctor_id=%s user_id=%s clinic_id=%s blocks=%s",
-        doctor.id, current_user.id, clinic_id, len(data.blocks),
-    )
     db.expire_all()
     doctor = _get_clinic_doctor(db, doctor_id, clinic_id)
     return _availability(doctor, _clinic_timezone(db, clinic_id))
@@ -215,6 +218,7 @@ def update_doctor(
     doctor_id: int,
     changes: DoctorUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
     clinic_id: int = Depends(get_current_clinic_id),
 ):
     """Edita especialidad, colegiado o teléfono. Solo cambian los campos
@@ -227,8 +231,13 @@ def update_doctor(
             status_code=status.HTTP_404_NOT_FOUND, detail="Doctor no encontrado."
         )
 
-    for field, value in changes.model_dump(exclude_unset=True).items():
-        setattr(doctor, field, value)
-    db.commit()
+    data = changes.model_dump(exclude_unset=True)
+    changed = [field for field, value in data.items() if getattr(doctor, field) != value]
+    for field in changed:
+        setattr(doctor, field, data[field])
+    if changed:
+        # Solo nombres de campos (ODON-222); sin cambios reales no hay evento.
+        audit_service.record(db, current_user, "doctor.updated", "doctor", doctor.id, fields=changed)
+        db.commit()
 
     return _clinic_doctors(db, clinic_id).filter(Doctor.id == doctor_id).one()

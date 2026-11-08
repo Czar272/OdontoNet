@@ -66,7 +66,7 @@ def appointments_csv(
 ):
     """El reporte de citas en CSV (solo administración)."""
     report = report_service.appointments_report(db, user.clinic_id, date_from, date_to, doctor_id, group)
-    report_service.log_export("appointments", user, report)
+    report_service.log_export(db, "appointments", user, report)
     filename = f"reporte-citas-{report['date_from'].isoformat()}-{report['date_to'].isoformat()}.csv"
     return _csv_response(report_service.appointments_csv(report), filename)
 
@@ -78,6 +78,6 @@ def patients_csv(
 ):
     """El reporte de pacientes nuevos en CSV (solo administración)."""
     report = report_service.patients_report(db, user.clinic_id, date_from, date_to, doctor_id, group)
-    report_service.log_export("patients", user, report)
+    report_service.log_export(db, "patients", user, report)
     filename = f"reporte-pacientes-{report['date_from'].isoformat()}-{report['date_to'].isoformat()}.csv"
     return _csv_response(report_service.patients_csv(report), filename)

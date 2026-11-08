@@ -36,7 +36,7 @@ def register_user(
 
     Equivale a POST /users/, que es la ruta que usa el frontend."""
 
-    return user_service.create_user(db, user, admin.clinic_id)
+    return user_service.create_user(db, user, admin)
 
 
 @router.post(

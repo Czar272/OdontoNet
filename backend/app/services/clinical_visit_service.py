@@ -1,5 +1,4 @@
 """Consultas clínicas con revisiones y anulación (ODON-154)."""
-import logging
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -14,9 +13,9 @@ from app.models.doctor import Doctor
 from app.models.patient import Patient
 from app.models.user import User
 from app.schemas.clinical_visit_schema import VisitContent, VisitUpdate
+from app.services import audit_service
 from app.services.doctor_service import ensure_assignable_doctor
 
-audit_logger = logging.getLogger("odontonet.audit")
 
 # Margen para relojes desajustados: una consulta no puede registrarse a futuro.
 FUTURE_TOLERANCE = timedelta(minutes=5)
@@ -176,12 +175,12 @@ def create_visit(db: Session, patient: Patient, data: VisitContent, author: User
     db.add(visit)
     db.flush()
     _add_revision(db, visit, author)
+    audit_service.record(
+        db, author, "clinical_visit.created", "clinical_visit", visit.id,
+        patient_id=patient.id, clinic_id=patient.clinic_id,
+    )
     db.commit()
 
-    audit_logger.info(
-        "clinical_visit.created visit_id=%s patient_id=%s user_id=%s clinic_id=%s",
-        visit.id, patient.id, author.id, patient.clinic_id,
-    )
     return get_visit(db, patient.id, visit.id)
 
 
@@ -223,6 +222,12 @@ def update_visit(
     visit.revision += 1
     _add_revision(db, visit, editor)
     try:
+        db.flush()
+        audit_service.record(
+            db, editor, "clinical_visit.updated", "clinical_visit", visit.id,
+            patient_id=patient.id, fields=changed, clinic_id=patient.clinic_id,
+            detail=f"revision={visit.revision} fields={','.join(changed)}",
+        )
         db.commit()
     except IntegrityError:
         # Otra edición simultánea ya creó esta revisión.
@@ -234,10 +239,6 @@ def update_visit(
         exc.extra = {"current_revision": get_visit(db, patient.id, visit.id).revision}
         raise exc
 
-    audit_logger.info(
-        "clinical_visit.updated visit_id=%s revision=%s user_id=%s clinic_id=%s fields=%s",
-        visit.id, visit.revision, editor.id, patient.clinic_id, ",".join(changed),
-    )
     return get_visit(db, patient.id, visit.id)
 
 
@@ -248,10 +249,11 @@ def void_visit(db: Session, patient: Patient, visit: ClinicalVisit, reason: str,
     visit.voided_at = datetime.now(timezone.utc)
     visit.voided_by_user_id = user.id
     visit.void_reason = reason
+    # El motivo no se guarda en la auditoría: solo el nombre del campo.
+    audit_service.record(
+        db, user, "clinical_visit.voided", "clinical_visit", visit.id,
+        patient_id=patient.id, fields=["void_reason", "voided_at"], clinic_id=patient.clinic_id,
+    )
     db.commit()
 
-    audit_logger.info(
-        "clinical_visit.voided visit_id=%s user_id=%s clinic_id=%s",
-        visit.id, user.id, patient.clinic_id,
-    )
     return get_visit(db, patient.id, visit.id)

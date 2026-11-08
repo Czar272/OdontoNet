@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_clinic_id
+from app.auth.dependencies import get_current_clinic_id, get_current_user
 from app.auth.permissions import ALL_ROLES, Role, require_roles
 from app.database.dependencies import get_db
 from app.models.clinic import Clinic
+from app.models.user import User
 from app.schemas.clinic_schema import ClinicResponse, ClinicUpdate
+from app.services import audit_service
 
 # Datos de la clínica de la sesión: todos los roles consultan, solo
 # administración edita (docs/PERMISSIONS.md). No hay rutas con id: un usuario
@@ -41,6 +43,7 @@ def get_clinic(
 def update_clinic(
     changes: ClinicUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
     clinic_id: int = Depends(get_current_clinic_id),
 ):
     """Edita nombre, dirección, teléfono, correo o zona horaria de la propia clínica."""
@@ -58,8 +61,12 @@ def update_clinic(
             detail="El nombre de la clínica es obligatorio.",
         )
 
-    for field, value in data.items():
-        setattr(clinic, field, value)
-    db.commit()
+    changed = [field for field, value in data.items() if getattr(clinic, field) != value]
+    for field in changed:
+        setattr(clinic, field, data[field])
+    if changed:
+        # Solo nombres de campos (ODON-222).
+        audit_service.record(db, current_user, "clinic.updated", "clinic", clinic.id, fields=changed)
+        db.commit()
     db.refresh(clinic)
     return clinic

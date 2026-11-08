@@ -174,7 +174,8 @@ def test_appointments_csv(client, setup, caplog):  # noqa: F811
     # Solo datos agregados: ningún nombre de paciente.
     assert "Ana" not in response.text and "Ríos" not in response.text
     audit = [r.getMessage() for r in caplog.records if r.name == "odontonet.audit"]
-    assert any("report.exported kind=appointments" in message for message in audit)
+    # El log lo escribe audit_service.record (ODON-222): el tipo va como detalle al final.
+    assert any(message.startswith("report.exported ") and "kind=appointments" in message for message in audit)
     assert not any("Ana" in message for message in audit)
 
 

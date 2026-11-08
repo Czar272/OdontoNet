@@ -9,7 +9,6 @@ Reglas:
   registra otro. Nada se borra.
 - El resumen es estadística descriptiva, no un diagnóstico.
 """
-import logging
 from datetime import date, datetime, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
@@ -33,8 +32,7 @@ from app.models.periodontal import (
 )
 from app.models.user import User
 from app.schemas.periodontal_schema import ExamContent, ExamUpdate, SiteData, ToothData
-
-audit_logger = logging.getLogger("odontonet.audit")
+from app.services import audit_service
 
 FURCATION_COLUMNS = ("b", "mp", "dp", "l")
 SITE_FIELDS = ("probing_depth", "gingival_margin", "bleeding", "suppuration", "plaque", "source")
@@ -305,12 +303,12 @@ def create_exam(db: Session, patient: Patient, data: ExamContent, author: User) 
     _apply(exam, data)
     db.flush()
     _add_revision(db, exam, author)
+    audit_service.record(
+        db, author, "periodontal_exam.created", "periodontal_exam", exam.id,
+        patient_id=patient.id, clinic_id=patient.clinic_id,
+    )
     db.commit()
 
-    audit_logger.info(
-        "periodontal_exam.created exam_id=%s patient_id=%s user_id=%s clinic_id=%s",
-        exam.id, patient.id, author.id, patient.clinic_id,
-    )
     return get_exam(db, patient.id, exam.id)
 
 
@@ -384,6 +382,11 @@ def update_exam(
     db.flush()
     _add_revision(db, exam, editor)
     try:
+        db.flush()
+        audit_service.record(
+            db, editor, "periodontal_exam.updated", "periodontal_exam", exam.id,
+            patient_id=patient.id, clinic_id=patient.clinic_id, detail=f"revision={exam.revision}",
+        )
         db.commit()
     except IntegrityError as exc:
         db.rollback()
@@ -391,10 +394,6 @@ def update_exam(
             raise
         raise _revision_conflict(get_exam(db, patient.id, exam.id).revision)
 
-    audit_logger.info(
-        "periodontal_exam.updated exam_id=%s revision=%s user_id=%s clinic_id=%s",
-        exam.id, exam.revision, editor.id, patient.clinic_id,
-    )
     return get_exam(db, patient.id, exam.id)
 
 
@@ -418,11 +417,12 @@ def finalize_exam(
     exam.finalized_at = datetime.now(timezone.utc)
     exam.updated_at = exam.finalized_at
     exam.finalized_by_user_id = user.id
+    audit_service.record(
+        db, user, "periodontal_exam.finalized", "periodontal_exam", exam.id,
+        patient_id=patient.id, fields=["status"], clinic_id=patient.clinic_id,
+    )
     db.commit()
 
-    audit_logger.info(
-        "periodontal_exam.finalized exam_id=%s user_id=%s clinic_id=%s", exam.id, user.id, patient.clinic_id
-    )
     return get_exam(db, patient.id, exam.id)
 
 
@@ -437,9 +437,12 @@ def export_report(db: Session, patient: Patient, exam: PeriodontalExam, user: Us
     from app.services.periodontal_report import build_report  # reportlab solo se carga al exportar
 
     content = build_report(exam, patient, db.get(Clinic, patient.clinic_id))
-    audit_logger.info(
-        "periodontal_exam.exported exam_id=%s user_id=%s clinic_id=%s", exam.id, user.id, patient.clinic_id
+    # La exportación no cambia datos: el commit solo persiste el evento (ODON-222).
+    audit_service.record(
+        db, user, "periodontal_exam.exported", "periodontal_exam", exam.id,
+        patient_id=patient.id, clinic_id=patient.clinic_id,
     )
+    db.commit()
     return content
 
 
@@ -456,9 +459,11 @@ def void_exam(db: Session, patient: Patient, exam: PeriodontalExam, reason: str,
     exam.updated_at = exam.voided_at
     exam.voided_by_user_id = user.id
     exam.void_reason = reason
+    # El motivo no se guarda en la auditoría: solo el nombre del campo.
+    audit_service.record(
+        db, user, "periodontal_exam.voided", "periodontal_exam", exam.id,
+        patient_id=patient.id, fields=["void_reason", "voided_at"], clinic_id=patient.clinic_id,
+    )
     db.commit()
 
-    audit_logger.info(
-        "periodontal_exam.voided exam_id=%s user_id=%s clinic_id=%s", exam.id, user.id, patient.clinic_id
-    )
     return get_exam(db, patient.id, exam.id)

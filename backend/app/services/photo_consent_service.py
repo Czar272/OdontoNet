@@ -4,7 +4,6 @@ Versionado como la historia médica: cada registro es una versión nueva y
 ninguna se modifica ni se borra. Sin una versión vigente con granted = true
 no se pueden subir imágenes del paciente.
 """
-import logging
 from datetime import datetime, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
@@ -19,8 +18,7 @@ from app.models.patient import Patient
 from app.models.photo_consent import PatientPhotoConsent
 from app.models.user import User
 from app.schemas.patient_image_schema import PhotoConsentCreate
-
-audit_logger = logging.getLogger("odontonet.audit")
+from app.services import audit_service
 
 
 def to_response(consent: PatientPhotoConsent) -> dict:
@@ -99,6 +97,12 @@ def record_consent(db: Session, patient: Patient, data: PhotoConsentCreate, user
     )
     db.add(consent)
     try:
+        db.flush()
+        audit_service.record(
+            db, user, "photo_consent.recorded", "photo_consent", consent.id,
+            patient_id=patient.id, clinic_id=patient.clinic_id,
+            detail=f"granted={consent.granted} research_use={consent.research_use}",
+        )
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -108,8 +112,4 @@ def record_consent(db: Session, patient: Patient, data: PhotoConsentCreate, user
         )
     db.refresh(consent)
 
-    audit_logger.info(
-        "photo_consent.recorded consent_id=%s patient_id=%s user_id=%s clinic_id=%s granted=%s research_use=%s",
-        consent.id, patient.id, user.id, patient.clinic_id, consent.granted, consent.research_use,
-    )
     return consent

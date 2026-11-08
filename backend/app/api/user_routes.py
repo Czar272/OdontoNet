@@ -43,10 +43,10 @@ def get_user(
 def create_user(
     data: UserCreate,
     db: Session = Depends(get_db),
-    clinic_id: int = Depends(get_current_clinic_id),
+    admin: User = Depends(require_roles(Role.ADMIN)),
 ):
     """Crea un usuario en la clínica del administrador autenticado."""
-    return user_service.create_user(db, data, clinic_id)
+    return user_service.create_user(db, data, admin)
 
 
 @router.patch("/{user_id}", response_model=UserResponse)

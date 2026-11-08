@@ -127,7 +127,8 @@ def cleanup_sql(migrated_database) -> str:
             conn.execute(text("SELECT pg_get_serial_sequence(:t, 'id')"), {"t": table}).scalar()
             for table in tables
         ]
-    statements = [f"DELETE FROM {table}" for table in tables]
+    # audit_events es de solo agregado (ODON-222): la limpieza de pruebas se habilita solo en su transacción.
+    statements = ["SET LOCAL odontonet.allow_audit_purge = 'on'"] + [f"DELETE FROM {table}" for table in tables]
     statements += [f"ALTER SEQUENCE {sequence} RESTART" for sequence in sequences if sequence]
     return "; ".join(statements)
 

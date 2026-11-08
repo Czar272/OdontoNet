@@ -1,5 +1,6 @@
 """Reglas de la agenda: cruces de horario y citas pendientes (ODON-134)."""
 from datetime import datetime, timedelta, timezone
+from typing import Callable, Optional
 from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException, status
@@ -128,10 +129,16 @@ def ensure_no_overlap(
         )
 
 
-def commit_appointment(db: Session) -> None:
+def commit_appointment(db: Session, audit: Optional[Callable[[], None]] = None) -> None:
     """Guarda y traduce un cruce detectado por la base (carrera entre
-    peticiones) al mismo 409 que da la validación previa."""
+    peticiones) al mismo 409 que da la validación previa.
+
+    `audit` registra el evento de auditoría después del flush (la cita ya
+    tiene id) y antes del commit, en la misma transacción (ODON-222)."""
     try:
+        db.flush()
+        if audit is not None:
+            audit()
         db.commit()
     except IntegrityError as exc:
         db.rollback()

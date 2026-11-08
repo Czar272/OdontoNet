@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query as QueryParam, status
@@ -28,10 +27,8 @@ from app.services.appointment_service import (
     ensure_within_schedule,
     status_change,
 )
+from app.services import audit_service
 from app.services.doctor_service import ensure_assignable_doctor
-
-# Eventos de auditoría (solo ids y nombres de campos). Persistente en ODON-222.
-audit_logger = logging.getLogger("odontonet.audit")
 
 # Administración, doctores y recepción gestionan la agenda (docs/PERMISSIONS.md).
 router = APIRouter(
@@ -195,12 +192,11 @@ def create_appointment(
         status_change(appointment, None, appointment.status, current_user.id)
     )
     db.add(appointment)
-    commit_appointment(db)
-
-    audit_logger.info(
-        "appointment.created appointment_id=%s user_id=%s clinic_id=%s patient_id=%s doctor_id=%s",
-        appointment.id, current_user.id, clinic_id, data.patient_id, data.doctor_id,
-    )
+    commit_appointment(db, lambda: audit_service.record(
+        db, current_user, "appointment.created", "appointment", appointment.id,
+        patient_id=data.patient_id,
+        detail=f"patient_id={data.patient_id} doctor_id={data.doctor_id}",
+    ))
     return _get_clinic_appointment(db, appointment.id, clinic_id)
 
 
@@ -263,12 +259,11 @@ def update_appointment(
 
     for field in changed:
         setattr(appointment, field, data[field])
-    commit_appointment(db)
-
-    audit_logger.info(
-        "appointment.updated appointment_id=%s user_id=%s clinic_id=%s fields=%s",
-        appointment.id, current_user.id, clinic_id, ",".join(sorted(changed)),
-    )
+    commit_appointment(db, lambda: audit_service.record(
+        db, current_user, "appointment.updated", "appointment", appointment.id,
+        patient_id=appointment.patient_id, fields=changed,
+        detail=f"fields={','.join(sorted(changed))}",
+    ))
     db.expire_all()
     return _get_clinic_appointment(db, appointment_id, clinic_id)
 
@@ -315,12 +310,11 @@ def change_appointment_status(
     appointment.status_changes.append(
         status_change(appointment, previous, new_status, current_user.id, data.note)
     )
-    commit_appointment(db)
-
-    audit_logger.info(
-        "appointment.status_changed appointment_id=%s user_id=%s clinic_id=%s from=%s to=%s",
-        appointment.id, current_user.id, clinic_id, previous, new_status,
-    )
+    commit_appointment(db, lambda: audit_service.record(
+        db, current_user, "appointment.status_changed", "appointment", appointment.id,
+        patient_id=appointment.patient_id, fields=["status"],
+        detail=f"from={previous} to={new_status}",
+    ))
     db.expire_all()
     return _get_clinic_appointment(db, appointment_id, clinic_id)
 

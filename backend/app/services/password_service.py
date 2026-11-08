@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from app.auth.security import hash_password, verify_password
 from app.models.password_reset import PasswordResetToken
 from app.models.user import User
+from app.services import audit_service
 
 audit_logger = logging.getLogger("odontonet.audit")
 
@@ -127,8 +128,11 @@ def confirm_reset(db: Session, token: str, new_password: str) -> User:
 
     _mark_password_changed(user, new_password, now)
     _invalidate_open_tokens(db, user.id, now)
+    # El actor es el propio usuario (no hay sesión): su clínica (ODON-222).
+    audit_service.record(
+        db, user, "auth.password_reset_completed", "user", user.id, fields=["password"], clinic_id=user.clinic_id,
+    )
     db.commit()
-    audit_logger.info("auth.password_reset_completed user_id=%s", user.id)
     return user
 
 
@@ -144,9 +148,9 @@ def change_password(db: Session, user: User, current_password: str, new_password
     now = _now()
     _mark_password_changed(user, new_password, now)
     _invalidate_open_tokens(db, user.id, now)
+    audit_service.record(db, user, "auth.password_changed", "user", user.id, fields=["password"])
     db.commit()
     db.refresh(user)
-    audit_logger.info("auth.password_changed user_id=%s", user.id)
     return user
 
 

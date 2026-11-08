@@ -34,11 +34,10 @@ from app.models.patient_image import (
 from app.models.treatment import is_valid_tooth
 from app.models.user import User
 from app.schemas.patient_image_schema import PatientImageUpdate
+from app.services import audit_service
 from app.services.image_processing import make_thumbnail, sanitize_image
 from app.services.image_storage import ImageStorage, StoredImageNotFound
 from app.services.photo_consent_service import require_active_consent
-
-audit_logger = logging.getLogger("odontonet.audit")
 logger = logging.getLogger(__name__)
 
 
@@ -230,6 +229,11 @@ def store_image(
         db.add(image)
         db.flush()
         _add_revision(db, image, author)
+        audit_service.record(
+            db, author, "image.stored", "image", image.id,
+            patient_id=patient.id, clinic_id=patient.clinic_id,
+            detail=f"patient_id={patient.id} bytes={image.size_bytes}",
+        )
         db.commit()
     except Exception:
         db.rollback()
@@ -237,11 +241,6 @@ def store_image(
             storage.discard(saved)
         raise
     db.refresh(image)
-
-    audit_logger.info(
-        "image.stored image_id=%s patient_id=%s user_id=%s clinic_id=%s bytes=%s",
-        image.id, patient.id, author.id, patient.clinic_id, image.size_bytes,
-    )
     return image
 
 
@@ -388,6 +387,12 @@ def update_metadata(
     image.revision += 1
     _add_revision(db, image, editor)
     try:
+        db.flush()
+        audit_service.record(
+            db, editor, "image.updated", "image", image.id,
+            patient_id=patient.id, fields=changed, clinic_id=patient.clinic_id,
+            detail=f"revision={image.revision} fields={','.join(sorted(changed))}",
+        )
         db.commit()
     except IntegrityError as exc:
         db.rollback()
@@ -397,10 +402,6 @@ def update_metadata(
             raise
         raise _revision_conflict(get_image(db, patient.id, image.id).revision)
 
-    audit_logger.info(
-        "image.updated image_id=%s revision=%s user_id=%s clinic_id=%s fields=%s",
-        image.id, image.revision, editor.id, patient.clinic_id, ",".join(changed),
-    )
     return get_image(db, patient.id, image.id)
 
 
@@ -418,9 +419,13 @@ def void_image(db: Session, patient: Patient, image: PatientImage, reason: str, 
     image.voided_at = datetime.now(timezone.utc)
     image.voided_by_user_id = user.id
     image.void_reason = reason
+    # El motivo no se guarda en la auditoría: solo el nombre del campo.
+    audit_service.record(
+        db, user, "image.voided", "image", image.id,
+        patient_id=patient.id, fields=["void_reason", "voided_at"], clinic_id=patient.clinic_id,
+    )
     db.commit()
 
-    audit_logger.info("image.voided image_id=%s user_id=%s clinic_id=%s", image.id, user.id, patient.clinic_id)
     return get_image(db, patient.id, image.id)
 
 
