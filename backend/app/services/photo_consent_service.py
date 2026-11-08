@@ -78,7 +78,7 @@ def record_consent(db: Session, patient: Patient, data: PhotoConsentCreate, user
     today = datetime.now(timezone.utc).astimezone(ZoneInfo(clinic.timezone)).date()
     if data.signed_on > today:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="La fecha del documento no puede ser futura.",
         )
 

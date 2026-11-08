@@ -20,14 +20,14 @@ def ensure_assignable_doctor(db: Session, doctor_id: int, clinic_id: int) -> Doc
 
     if not doctor:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="El doctor seleccionado no pertenece a la clínica.",
         )
 
     if doctor.user.is_active is False:
         # Lo ya asignado se conserva (ODON-94); solo se bloquea lo nuevo.
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="El doctor seleccionado está inactivo.",
         )
 

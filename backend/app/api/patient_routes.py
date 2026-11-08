@@ -120,7 +120,7 @@ def _commit(db: Session, clinic_id: int, email: str | None) -> None:
         # Otra restricción (p. ej. fk_patients_doctor_clinic si el doctor cambió
         # entre la validación y el guardado): mismo mensaje que la validación.
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="El doctor seleccionado no pertenece a la clínica.",
         )
 
@@ -237,7 +237,7 @@ def update_patient(
     for required in ("first_name", "last_name"):
         if required in data and data[required] is None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Nombres y apellidos son obligatorios.",
             )
 

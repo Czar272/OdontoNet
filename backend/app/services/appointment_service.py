@@ -76,7 +76,7 @@ def ensure_not_in_past(starts_at: datetime) -> None:
     current_minute = now_utc().replace(second=0, microsecond=0)
     if starts_at < current_minute:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="La cita no puede empezar en el pasado.",
         )
 

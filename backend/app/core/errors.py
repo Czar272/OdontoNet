@@ -88,7 +88,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     ]
     fields = ", ".join(dict.fromkeys(error["field"] for error in errors))
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content={"detail": f"Revisa los campos: {fields}.", "errors": errors},
     )
 

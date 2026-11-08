@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 
 def _unprocessable(detail: str) -> HTTPException:
-    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail)
+    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=detail)
 
 
 def get_clinic_patient(db: Session, patient_id: int, clinic_id: int) -> Patient:
@@ -116,7 +116,7 @@ def check_size(data: bytes) -> None:
     max_bytes = image_max_bytes()
     if len(data) > max_bytes:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail=f"La imagen supera el máximo de {max_bytes // (1024 * 1024)} MB.",
         )
 

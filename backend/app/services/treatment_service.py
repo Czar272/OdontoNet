@@ -39,7 +39,7 @@ _STATUS_ORDER = [
 
 
 def _unprocessable(detail: str) -> HTTPException:
-    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail)
+    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=detail)
 
 
 def get_clinic_patient(db: Session, patient_id: int, clinic_id: int) -> Patient:

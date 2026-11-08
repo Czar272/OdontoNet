@@ -72,7 +72,7 @@ def _ensure_schedulable_patient(db: Session, patient_id: int, clinic_id: int) ->
     )
     if not patient:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="El paciente seleccionado no pertenece a la clínica.",
         )
     if patient.archived_at is not None:
@@ -87,7 +87,7 @@ def _ensure_schedulable_patient(db: Session, patient_id: int, clinic_id: int) ->
 def _ensure_aware(value: datetime | None, field: str) -> None:
     if value is not None and (value.tzinfo is None or value.utcoffset() is None):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"El parámetro {field} debe incluir la zona horaria.",
         )
 
@@ -112,12 +112,12 @@ def list_appointments(
 
     if (start is None) != (end is None):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Indica el inicio y el fin del rango.",
         )
     if start is None and patient_id is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Indica un rango de fechas o un paciente.",
         )
 
@@ -126,12 +126,12 @@ def list_appointments(
     if start is not None:
         if end <= start:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="El fin del rango debe ser posterior al inicio.",
             )
         if end - start > timedelta(days=MAX_RANGE_DAYS):
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"El rango no puede superar {MAX_RANGE_DAYS} días.",
             )
         query = query.filter(
@@ -226,7 +226,7 @@ def update_appointment(
     for required in ("doctor_id", "starts_at", "duration_minutes"):
         if required in data and data[required] is None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Doctor, inicio y duración son obligatorios.",
             )
 

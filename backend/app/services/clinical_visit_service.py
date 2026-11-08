@@ -128,7 +128,7 @@ def _ensure_editable_patient(patient: Patient) -> None:
 def _validate_content(db: Session, patient: Patient, data: VisitContent, current_doctor_id=None) -> None:
     if data.visit_at > datetime.now(timezone.utc) + FUTURE_TOLERANCE:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="La fecha de atención no puede estar en el futuro.",
         )
 
@@ -141,7 +141,7 @@ def _validate_content(db: Session, patient: Patient, data: VisitContent, current
         visit_day = data.visit_at.astimezone(ZoneInfo(clinic.timezone)).date()
         if data.next_visit_date <= visit_day:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="La próxima cita sugerida debe ser posterior a la consulta.",
             )
 

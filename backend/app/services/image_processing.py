@@ -44,7 +44,7 @@ def _unsupported(detail: str) -> HTTPException:
 
 
 def _invalid(detail: str) -> HTTPException:
-    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail)
+    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=detail)
 
 
 def _detect(data: bytes, filename: str) -> str:

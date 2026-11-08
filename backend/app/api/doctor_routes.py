@@ -54,13 +54,13 @@ def create_doctor(
 
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="El usuario no pertenece a la clínica.",
         )
 
     if user.role not in CLINICAL_PROFILE_ROLES:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Solo un usuario con rol doctor o administración puede tener perfil de doctor.",
         )
 

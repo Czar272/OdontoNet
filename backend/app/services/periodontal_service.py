@@ -43,7 +43,7 @@ DEEP_SITE_MM = 4
 
 
 def _unprocessable(detail: str) -> HTTPException:
-    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail)
+    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=detail)
 
 
 def _person(user: Optional[User]) -> Optional[dict]:

@@ -251,3 +251,46 @@ def test_cors_rejects_wildcards():
     assert cors_origins(" http://a.test , ,http://b.test") == ["http://a.test", "http://b.test"]
     with pytest.raises(RuntimeError):
         cors_origins("http://a.test,*")
+
+
+@pytest.mark.api
+def test_unknown_host_header_is_rejected(client):
+    # Mitigación de Starlette PYSEC-2026-161 (ODON-263): solo hosts de ALLOWED_HOSTS.
+    assert client.get("/health").status_code == 200
+    response = client.get("/health", headers={"Host": "sitio-ajeno.example"})
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Host no permitido."}
+    assert client.get("/health", headers={"Host": "LOCALHOST:8000"}).status_code == 200
+
+
+@pytest.mark.api
+def test_allowed_hosts_rejects_wildcards_and_empty_lists():
+    from app.core.allowed_hosts import parse_allowed_hosts
+    assert parse_allowed_hosts(" localhost , API.clinica.test ") == ["localhost", "api.clinica.test"]
+    for raw in ("*", "localhost,*.clinica.test", " , "):
+        with pytest.raises(RuntimeError):
+            parse_allowed_hosts(raw)
+
+
+def test_tokens_in_the_previous_library_format_stay_valid(client, user):
+    """Un token con el formato de python-jose (cabecera {"alg":"HS256","typ":"JWT"}
+    e iat fraccionario), firmado a mano, sigue siendo válido con PyJWT (ODON-263)."""
+    import base64
+    import hashlib
+    import hmac
+    import json
+    from datetime import datetime, timedelta, timezone
+
+    from app.auth.jwt_handler import SECRET_KEY
+
+    def b64(data: bytes) -> str:
+        return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
+
+    now = datetime.now(timezone.utc)
+    header = b64(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode())
+    payload = b64(json.dumps({"sub": EMAIL, "role": "admin", "exp": int((now + timedelta(minutes=5)).timestamp()),
+                              "iat": now.timestamp()}, separators=(",", ":")).encode())
+    signature = b64(hmac.new(SECRET_KEY.encode(), f"{header}.{payload}".encode(), hashlib.sha256).digest())
+    response = client.get("/auth/me", headers={"Authorization": f"Bearer {header}.{payload}.{signature}"})
+    assert response.status_code == 200
+    assert response.json()["email"] == EMAIL

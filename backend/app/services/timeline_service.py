@@ -101,7 +101,7 @@ def _decode_cursor(cursor: str) -> tuple[datetime, str, int]:
         occurred_at, kind, source_id = base64.urlsafe_b64decode(cursor.encode()).decode().split("|")
         return datetime.fromisoformat(occurred_at), kind, int(source_id)
     except (ValueError, binascii.Error, UnicodeDecodeError):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Cursor de paginación inválido.")
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Cursor de paginación inválido.")
 
 
 def _person(user) -> Optional[dict]:

@@ -22,6 +22,7 @@ from app.api.patient_image_routes import router as patient_image_router
 from app.api.photo_consent_routes import router as photo_consent_router
 from app.api.treatment_routes import router as treatment_router
 from app.api.user_routes import router as user_router
+from app.core.allowed_hosts import AllowedHostsMiddleware, parse_allowed_hosts
 from app.core.errors import register_exception_handlers
 from app.database.dependencies import get_db
 
@@ -73,6 +74,10 @@ def cors_origins(raw: str) -> list[str]:
 
 
 origins = cors_origins(os.getenv("CORS_ORIGINS", "http://localhost:5173"))
+
+# Solo se atienden peticiones dirigidas a los hosts de ALLOWED_HOSTS (ODON-263).
+allowed_hosts = parse_allowed_hosts(os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1"))
+app.add_middleware(AllowedHostsMiddleware, allowed_hosts=allowed_hosts)
 
 # Cabeceras de seguridad en todas las respuestas (ODON-230). La documentación
 # interactiva (/docs, /redoc) carga recursos externos y no lleva CSP estricta.
