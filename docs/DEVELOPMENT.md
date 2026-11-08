@@ -21,6 +21,8 @@ En `.env` de la raíz configura `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_
 
 Recuperación de contraseña (ODON-54): `FRONTEND_URL` (para armar el enlace), `PASSWORD_RESET_EXPIRE_MINUTES` y `PASSWORD_RESET_MAX_PER_HOUR` tienen valores por defecto. Con `SMTP_HOST` vacío no se envía nada: el correo, con el enlace, aparece en la consola de uvicorn (logger `odontonet.email`). Para probar con un servidor real, completa las variables `SMTP_*` de `backend/.env.example`.
 
+Límite de intentos (ODON-230): `LOGIN_MAX_FAILURES_PER_ACCOUNT` (7), `LOGIN_MAX_FAILURES_PER_IP` (30), `LOGIN_WINDOW_MINUTES` y `LOGIN_LOCK_MINUTES` (15), `PASSWORD_RESET_MAX_PER_IP` (10) y `PASSWORD_RESET_CONFIRM_MAX_FAILURES_PER_IP` (30) tienen valores por defecto. `TRUST_PROXY_HEADERS=true` solo detrás de un proxy de confianza. Si te bloqueas en desarrollo, espera 15 minutos o vacía la tabla: `docker exec odontonet-db psql -U odontonet -d odontonet -c "DELETE FROM auth_attempts"`.
+
 La contraseña, usuario, base y puerto de `DATABASE_URL` deben coincidir con los de Docker. Si una contraseña contiene caracteres reservados de URL (`@`, `:`, `/`, `#`, etc.), codifícala en la URL.
 
 Para generar una clave JWT local:
@@ -159,7 +161,7 @@ Durante el desarrollo y al verificar un ticket basta con las categorías del ár
 
 | Si cambia... | Backend | Frontend |
 | --- | --- | --- |
-| Login, sesión, contraseñas (`auth_routes`, `app/auth/`) | `python -m pytest -m "auth or users or rbac"` | `npx vitest run src/pages/Auth src/pages/Account src/services src/context` |
+| Login, sesión, contraseñas, límite de intentos, cabeceras y CORS (`auth_routes`, `app/auth/`, `core/password_policy.py`, `services/rate_limit_service.py`, `main.py`) | `python -m pytest -m "auth or users or rbac or api"` | `npx vitest run src/pages/Auth src/pages/Account src/services src/context` |
 | Usuarios (`/users`) | `python -m pytest -m "users or rbac"` | `npx vitest run src/pages/Users src/components/users` |
 | Pacientes | `python -m pytest -m "patients or isolation"` | `npx vitest run src/pages/Patients src/components/patients` |
 | Historia médica / expediente | `python -m pytest -m "records or rbac"` | `npx vitest run src/components/patients src/pages/Patients src/auth` |
@@ -308,5 +310,8 @@ Comprobaciones manuales:
 | La salida de npm no aparece en `logs/terminal` | PowerShell 5.1 no transcribe lo que los programas externos escriben directo en consola; usar `npm test 2>&1 \| Out-Host`. |
 
 ## 9. Seguridad operativa
+
+- Contraseñas (ODON-230): al menos 10 caracteres y no una de las filtradas más comunes (también `SEED_PASSWORD`); las cuentas existentes la cumplen en su próximo cambio.
+- CI revisa en cada push `npm audit --omit=dev`, secretos con gitleaks (`.gitleaks.toml`) y `pip-audit` (informativo hasta ODON-263).
 
 No desplegar públicamente el backend actual. Antes de usar datos reales deben completarse aislamiento por clínica, autorización, validación de entradas, auditoría y políticas de privacidad/retención. No compartir capturas de tokens ni archivos `.env`.
