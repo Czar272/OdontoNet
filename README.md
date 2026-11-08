@@ -95,6 +95,7 @@ Instrucciones detalladas y solución de problemas en [Desarrollo](docs/DEVELOPME
 - [Convenciones](docs/CONVENTIONS.md)
 - [Estado técnico y Jira](docs/PROJECT_STATUS.md)
 - [Respaldos y restauración](docs/BACKUPS.md)
+- [Privacidad y protección de datos (borrador)](docs/PRIVACY.md)
 
 ## Planificación
 

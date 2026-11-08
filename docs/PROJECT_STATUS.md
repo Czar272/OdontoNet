@@ -32,6 +32,7 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 7. **Producción:** auditoría (ODON-222), endurecimiento (ODON-230) y respaldos cifrados con ensayo de restauración (ODON-226) listos; falta el despliegue (épica LAN) y programar los respaldos en el servidor de la clínica (`register-tasks.ps1`). Las imágenes tienen procedimiento de respaldo y `verify_images.py` (ODON-166) y registro de accesos al original (ODON-178).
 8. **Correo y abuso:** sin `SMTP_HOST` los enlaces de recuperación van al log (solo desarrollo; en producción SMTP es obligatorio). El login y la recuperación tienen límite de intentos por cuenta y por IP (ODON-230).
 9. **Retención de imágenes:** sin plazo definido (decisión del 2026-11-04): lo fija la revisión normativa y ética de CAL03 (ODON-218/221). Mientras tanto no se borra ninguna imagen; las erróneas se anulan con motivo.
+10. **Privacidad (ODON-218):** borrador en `PRIVACY.md` (inventario de datos, acceso mínimo, consentimiento, propuesta de retención y preguntas). Falta la revisión legal (abogado) y ética (comité de la UVG a confirmar con el asesor); no usar datos reales antes.
 
 ## Decisiones vigentes
 
