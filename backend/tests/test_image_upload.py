@@ -7,6 +7,7 @@ import io
 from datetime import date, datetime, timedelta, timezone
 
 import pytest
+from zoneinfo import ZoneInfo
 from PIL import Image, PngImagePlugin
 from sqlalchemy.exc import IntegrityError
 
@@ -17,7 +18,9 @@ from tests.conftest import PASSWORD, auth_headers, create_clinic_with_doctor
 pytestmark = [pytest.mark.images]
 
 YESTERDAY = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(days=1)
-TODAY = date.today()
+# «Hoy» en la zona de la clínica (por defecto America/Guatemala): con date.today()
+# en UTC, entre las 18:00 y las 24:00 de Guatemala la fecha ya parecía futura.
+TODAY = datetime.now(ZoneInfo("America/Guatemala")).date()
 GPS_IFD = 0x8825
 ORIENTATION = 0x0112
 
