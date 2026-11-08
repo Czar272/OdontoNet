@@ -145,7 +145,7 @@ const UserForm: React.FC<UserFormProps> = ({ user, onSuccess }) => {
             <p className="text-xs text-gray-500">
               {isEdit
                 ? "Déjala vacía para conservar la actual."
-                : `Mínimo ${MIN_PASSWORD_LENGTH} caracteres.`}
+                : `Mínimo ${MIN_PASSWORD_LENGTH} caracteres. Evita contraseñas comunes.`}
             </p>
           </div>
         )}

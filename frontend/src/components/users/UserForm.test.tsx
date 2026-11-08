@@ -51,12 +51,12 @@ describe("UserForm", () => {
     });
   });
 
-  it("en alta la contraseña es obligatoria con mínimo 8 caracteres", () => {
+  it("en alta la contraseña es obligatoria con mínimo 10 caracteres", () => {
     renderWithAuth(<UserForm />, "admin");
 
     const password = screen.getByLabelText(/contraseña/i);
     expect(password).toBeRequired();
-    expect(password).toHaveAttribute("minLength", "8");
+    expect(password).toHaveAttribute("minLength", "10");
   });
 
   it("al editar solo envía lo que cambió", async () => {

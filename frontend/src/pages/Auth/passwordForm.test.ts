@@ -7,8 +7,8 @@ describe("validateNewPassword", () => {
     expect(validateNewPassword("Nueva-Clave-1", "Nueva-Clave-1")).toBeNull();
   });
 
-  it("exige al menos 8 caracteres", () => {
-    expect(validateNewPassword("corta", "corta")).toBe("La contraseña debe tener al menos 8 caracteres.");
+  it("exige al menos 10 caracteres", () => {
+    expect(validateNewPassword("corta", "corta")).toBe("La contraseña debe tener al menos 10 caracteres.");
   });
 
   it("limita a 128 caracteres", () => {

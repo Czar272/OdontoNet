@@ -1,6 +1,8 @@
 import type { CreateUserDTO, UpdateUserDTO, User } from "../../types/user";
 
-export const MIN_PASSWORD_LENGTH = 8;
+// Igual que el backend (ODON-230): 10 caracteres; el backend además rechaza las
+// contraseñas filtradas más comunes y su mensaje se muestra tal cual.
+export const MIN_PASSWORD_LENGTH = 10;
 
 export function initialUserData(user?: User): CreateUserDTO {
   return {

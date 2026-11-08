@@ -90,7 +90,7 @@ export default function ChangePasswordPage() {
           />
 
           <p className="text-xs text-gray-500">
-            Mínimo {MIN_PASSWORD_LENGTH} caracteres.
+            Mínimo {MIN_PASSWORD_LENGTH} caracteres. Evita contraseñas comunes: usa una frase propia.
           </p>
 
           {error && (
