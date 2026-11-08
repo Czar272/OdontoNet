@@ -44,7 +44,8 @@ LIGHT = colors.HexColor("#e2e8f0")
 
 DISCLAIMER = (
     "Registro clínico manual. El resumen es estadística descriptiva y no constituye diagnóstico. "
-    "Margen gingival respecto a la UAC (negativo = recesión); NIC = sondaje - margen."
+    "Margen gingival respecto a la UAC (negativo = recesión); NIC = sondaje - margen. "
+    "Gris cursiva: valor predeterminado no editado."
 )
 
 
@@ -237,6 +238,7 @@ class _Report:
             (f"Sitios >= {DEEP_SITE_MM} mm", _num(summary["deep_sites_pct"], "%")),
             ("Sitios medidos", str(summary["measured_sites"])),
             ("Piezas presentes", str(summary["present_teeth"])),
+            ("Predeterminados", str(summary["default_sites"])),
         ]
         pdf = self.pdf
         pdf.setFillColor(colors.HexColor("#f0fdfa"))
@@ -282,8 +284,11 @@ class _Report:
                     pdf.setFont("Helvetica-Bold", 7)
                     pdf.drawCentredString(cx, y - row_h + 1 * mm, f"{number}{' (aus.)' if tooth.missing else ''}")
                 elif key == "mobility":
-                    pdf.setFont("Helvetica", 7)
+                    default = tooth.source == "default"
+                    pdf.setFont("Helvetica-Oblique" if default else "Helvetica", 7)
+                    pdf.setFillColor(GREY if default else colors.black)
                     pdf.drawCentredString(cx, y - row_h + 1 * mm, "" if tooth.mobility is None else str(tooth.mobility))
+                    pdf.setFillColor(colors.black)
                 elif key == "implant":
                     pdf.setFont("Helvetica", 7)
                     pdf.drawCentredString(cx, y - row_h + 1 * mm, "Sí" if tooth.implant else "")
@@ -317,8 +322,12 @@ class _Report:
                         if value is None:
                             continue
                         deep = key == "probing_depth" and value >= DEEP_SITE_MM
-                        pdf.setFont("Helvetica-Bold" if deep else "Helvetica", 6.5)
-                        pdf.setFillColor(BLUE if deep else colors.black)
+                        default = site.source == "default"
+                        # Predeterminado (no editado) siempre en gris cursiva, también si es profundo.
+                        font = {(True, True): "Helvetica-BoldOblique", (True, False): "Helvetica-Bold",
+                                (False, True): "Helvetica-Oblique", (False, False): "Helvetica"}[(deep, default)]
+                        pdf.setFont(font, 6.5)
+                        pdf.setFillColor(GREY if default else (BLUE if deep else colors.black))
                         pdf.drawCentredString(sx, y - row_h + 1 * mm, str(value))
                         pdf.setFillColor(colors.black)
             y -= row_h

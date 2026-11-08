@@ -1,6 +1,6 @@
 """Periodontograma manual (ODON-9)."""
 from datetime import date, datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, conint, constr, root_validator, validator
 
@@ -35,6 +35,8 @@ class SiteData(BaseModel):
     bleeding: bool = False
     suppuration: bool = False
     plaque: bool = False
+    # 'default': valor propuesto (valores de salud o copia) que el profesional aún no editó.
+    source: Literal["manual", "default"] = "manual"
 
     def is_empty(self) -> bool:
         return (
@@ -61,6 +63,8 @@ class ToothData(BaseModel):
     mobility: Optional[Mobility] = None
     furcation: Furcation = Furcation()
     note: Optional[Note] = None
+    # 'default' si la movilidad se propuso con los valores de salud y no se editó.
+    source: Literal["manual", "default"] = "manual"
     sites: dict[str, SiteData] = {}
 
     _blank_note = validator("note", pre=True, allow_reuse=True)(_blank_to_none)
@@ -156,6 +160,7 @@ class ToothResponse(BaseModel):
     mobility: Optional[int]
     furcation: Furcation
     note: Optional[str]
+    source: str
     sites: dict[str, SiteResponse]
 
 
@@ -169,6 +174,8 @@ class ExamSummary(BaseModel):
     bleeding_pct: Optional[float]
     plaque_pct: Optional[float]
     deep_sites_pct: Optional[float]
+    # Sitios con sondaje cuyo valor es predeterminado (no editado por el profesional).
+    default_sites: int
 
 
 class ExamListItem(BaseModel):

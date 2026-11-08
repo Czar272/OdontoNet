@@ -11,9 +11,11 @@ del margen a la unión amelocementaria, negativa si hay recesión y positiva si
 hay agrandamiento. El nivel de inserción clínica no se guarda: se calcula como
 profundidad de sondaje − margen gingival.
 
-Cada medición lleva source = 'manual'. Cuando exista el servicio de IA, sus
-sugerencias se distinguirán por este campo y nunca reemplazarán una medición
-clínica sin revisión profesional.
+Cada medición lleva su origen (source): 'manual' si la escribió el
+profesional, 'default' si es un valor propuesto que aún no editó (llenado con
+valores de salud o copia del examen anterior, ODON-262). Cuando exista el
+servicio de IA, sus sugerencias se distinguirán por este mismo campo y nunca
+reemplazarán una medición clínica sin revisión profesional.
 """
 from sqlalchemy import (
     Boolean,
@@ -59,7 +61,7 @@ MOBILITY_RANGE = (0, 3)
 FURCATION_RANGE = (1, 3)
 
 EXAM_STATUSES = ("draft", "final")
-SOURCES = ("manual",)
+SOURCES = ("manual", "default")
 
 _TEETH_SQL = ", ".join(str(tooth) for tooth in PERMANENT_TEETH)
 _SITES_SQL = ", ".join(f"'{site}'" for site in SITES)
@@ -189,6 +191,8 @@ class PeriodontalTooth(Base):
             name="ck_periodontal_teeth_furcation_l",
         ),
         CheckConstraint(f"source IN ({_SOURCES_SQL})", name="ck_periodontal_teeth_source"),
+        # Solo una movilidad registrada puede ser predeterminada.
+        CheckConstraint("source = 'manual' OR mobility IS NOT NULL", name="ck_periodontal_teeth_default_mobility"),
     )
 
     id = Column(Integer, primary_key=True, index=True)
@@ -221,6 +225,12 @@ class PeriodontalSite(Base):
             _between("gingival_margin", GINGIVAL_MARGIN_RANGE), name="ck_periodontal_sites_gingival_margin"
         ),
         CheckConstraint(f"source IN ({_SOURCES_SQL})", name="ck_periodontal_sites_source"),
+        # Un sitio vacío no tiene origen que conservar: siempre es manual.
+        CheckConstraint(
+            "source = 'manual' OR probing_depth IS NOT NULL OR gingival_margin IS NOT NULL "
+            "OR bleeding OR suppuration OR plaque",
+            name="ck_periodontal_sites_default_values",
+        ),
     )
 
     id = Column(Integer, primary_key=True, index=True)

@@ -139,10 +139,10 @@ def test_measurements_are_stored_per_site_with_computed_attachment_level(exam):
     assert t16["furcation"] == {"b": 2, "mp": 1, "dp": None, "l": None}
     mb = t16["sites"]["mb"]
     assert mb == {"probing_depth": 5, "gingival_margin": -2, "attachment_level": 7,
-                  "bleeding": True, "suppuration": False, "plaque": False}
+                  "bleeding": True, "suppuration": False, "plaque": False, "source": "manual"}
     assert t16["sites"]["ml"]["attachment_level"] == 1  # agrandamiento: NIC = 2 − 1
     assert t16["sites"]["dl"] == {"probing_depth": None, "gingival_margin": None, "attachment_level": None,
-                                  "bleeding": False, "suppuration": False, "plaque": False}
+                                  "bleeding": False, "suppuration": False, "plaque": False, "source": "manual"}
     assert tooth(exam, 21)["implant"] is True
     assert tooth(exam, 38)["missing"] is True
 
@@ -659,4 +659,93 @@ def test_palatal_furcations_follow_the_site_order():
     assert display_entrances(26, "lingual") == ["mp", "dp"]
     assert display_entrances(46, "buccal") == ["b"]
     assert display_entrances(15, "lingual") == []
+
+
+# --- Valores predeterminados (ODON-262) ------------------------------------------
+
+
+def healthy_teeth(numbers=(11, 12), pd=2, gm=0):
+    return [
+        {"tooth": n, "mobility": 0, "source": "default",
+         "sites": {s: {"probing_depth": pd, "gingival_margin": gm, "source": "default"} for s in SITES}}
+        for n in numbers
+    ]
+
+
+def test_default_values_are_stored_and_counted_apart(setup, client, db):
+    teeth = healthy_teeth()
+    teeth[0]["sites"]["mb"] = {"probing_depth": 5, "gingival_margin": -1, "bleeding": True}  # medido
+    body = create(client, setup, teeth=teeth).json()
+    t11 = tooth(body, 11)
+    assert t11["sites"]["mb"]["source"] == "manual"
+    assert t11["sites"]["b"]["source"] == "default"
+    assert t11["source"] == "default"
+    assert body["summary"]["measured_sites"] == 12
+    assert body["summary"]["default_sites"] == 11
+    sources = {row.source for row in db.query(PeriodontalSite).filter_by(exam_id=body["id"], tooth=12)}
+    assert sources == {"default"}
+
+
+def test_an_empty_site_never_keeps_a_default_source(setup, client, db):
+    body = create(client, setup, teeth=[{"tooth": 11, "sites": {"b": {"source": "default"}}}]).json()
+    assert tooth(body, 11)["sites"]["b"]["source"] == "manual"
+
+
+def test_tooth_source_is_manual_without_mobility(setup, client):
+    body = create(client, setup, teeth=[{"tooth": 11, "source": "default"}]).json()
+    assert tooth(body, 11)["source"] == "manual"
+
+
+@pytest.mark.parametrize("source", ["ai", "auto", ""])
+def test_unknown_source_is_rejected(setup, client, source):
+    teeth = [{"tooth": 11, "sites": {"b": {"probing_depth": 2, "source": source}}}]
+    assert create(client, setup, teeth=teeth).status_code == 422
+
+
+def test_editing_a_default_value_is_saved_as_manual(setup, client):
+    exam = create(client, setup, teeth=healthy_teeth((11,))).json()
+    teeth = healthy_teeth((11,))
+    teeth[0]["sites"]["b"] = {"probing_depth": 4, "gingival_margin": 0, "source": "manual"}
+    body = save(client, setup, exam, teeth=teeth).json()
+    assert tooth(body, 11)["sites"]["b"]["source"] == "manual"
+    assert body["summary"]["default_sites"] == 5
+
+
+def test_revision_snapshot_keeps_the_source(setup, client, db):
+    exam = create(client, setup, teeth=healthy_teeth((11,))).json()
+    revision = db.query(PeriodontalExamRevision).filter_by(exam_id=exam["id"]).one()
+    t11 = next(t for t in revision.data["teeth"] if t["tooth"] == 11)
+    assert t11["sites"]["b"]["source"] == "default"
+
+
+def test_report_counts_default_values(setup, client):
+    exam = create(client, setup, teeth=healthy_teeth((11, 21))).json()
+    finalize(client, setup, exam["id"])
+    content = _pdf_text(client.get(url(setup, f"/{exam['id']}/report.pdf"), headers=setup["headers"]["author"]).content)
+    assert "Predeterminados" in content
+    assert "valor predeterminado no editado" in content
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "UPDATE periodontal_sites SET source = 'default' WHERE exam_id = :id AND tooth = 11 AND site = 'dl'",
+        "UPDATE periodontal_teeth SET source = 'default', mobility = NULL WHERE exam_id = :id AND tooth = 11",
+    ],
+)
+def test_database_rejects_default_source_without_values(setup, client, db, sql):
+    exam = create(client, setup).json()
+    with pytest.raises(IntegrityError):
+        db.execute(text(sql), {"id": exam["id"]})
+        db.commit()
+    db.rollback()
+
+
+def test_deep_default_value_is_never_printed_as_measured(setup, client):
+    """Un sondaje profundo copiado y sin editar sale en cursiva (BoldOblique), no como medido."""
+    teeth = [{"tooth": 16, "sites": {"mb": {"probing_depth": 6, "gingival_margin": -1, "source": "default"}}}]
+    exam = create(client, setup, teeth=teeth).json()
+    finalize(client, setup, exam["id"])
+    content = client.get(url(setup, f"/{exam['id']}/report.pdf"), headers=setup["headers"]["author"]).content
+    assert b"Helvetica-BoldOblique" in content
 

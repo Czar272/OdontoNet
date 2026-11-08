@@ -37,7 +37,7 @@ from app.schemas.periodontal_schema import ExamContent, ExamUpdate, SiteData, To
 audit_logger = logging.getLogger("odontonet.audit")
 
 FURCATION_COLUMNS = ("b", "mp", "dp", "l")
-SITE_FIELDS = ("probing_depth", "gingival_margin", "bleeding", "suppuration", "plaque")
+SITE_FIELDS = ("probing_depth", "gingival_margin", "bleeding", "suppuration", "plaque", "source")
 # Umbral descriptivo de «sitio profundo» del resumen (acordado en ODON-9).
 DEEP_SITE_MM = 4
 
@@ -105,6 +105,7 @@ def _tooth_dict(tooth: PeriodontalTooth, sites: dict[str, PeriodontalSite]) -> d
         "mobility": tooth.mobility,
         "furcation": {entrance: getattr(tooth, f"furcation_{entrance}") for entrance in FURCATION_COLUMNS},
         "note": tooth.note,
+        "source": tooth.source,
         "sites": {code: _site_dict(sites[code]) for code in SITES},
     }
 
@@ -130,6 +131,7 @@ def summarize(exam: PeriodontalExam) -> dict:
         "bleeding_pct": _pct(sum(site.bleeding for site in measured), len(measured)),
         "plaque_pct": _pct(sum(site.plaque for site in measured), len(measured)),
         "deep_sites_pct": _pct(sum(site.probing_depth >= DEEP_SITE_MM for site in measured), len(measured)),
+        "default_sites": sum(site.source == "default" for site in measured),
     }
 
 
@@ -243,10 +245,14 @@ def _apply(exam: PeriodontalExam, data: ExamContent) -> bool:
         assign(tooth, "implant", tooth_data.implant)
         assign(tooth, "mobility", tooth_data.mobility)
         assign(tooth, "note", tooth_data.note)
+        assign(tooth, "source", tooth_data.source if tooth_data.mobility is not None else "manual")
         for entrance in FURCATION_COLUMNS:
             assign(tooth, f"furcation_{entrance}", getattr(tooth_data.furcation, entrance))
         for code in SITES:
             site_data = tooth_data.sites.get(code) or SiteData()
+            if site_data.is_empty():
+                # Un sitio vacío no tiene origen que conservar.
+                site_data = SiteData()
             for field in SITE_FIELDS:
                 assign(sites[(number, code)], field, getattr(site_data, field))
     return changed
