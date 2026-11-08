@@ -17,7 +17,7 @@ Copy-Item .env.example .env
 Copy-Item backend/.env.example backend/.env
 ```
 
-En `.env` de la raíz configura `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` y `POSTGRES_PORT`. En `backend/.env` configura `DATABASE_URL`, `SECRET_KEY`, `ALGORITHM=HS256`, `ACCESS_TOKEN_EXPIRE_MINUTES` y, opcionalmente, `REMEMBER_ME_EXPIRE_DAYS` (7 por defecto).
+En `.env` de la raíz configura `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` y `POSTGRES_PORT`. En `backend/.env` configura `DATABASE_URL`, `SECRET_KEY` (al menos 32 bytes), `ALGORITHM=HS256`, `ACCESS_TOKEN_EXPIRE_MINUTES` y, opcionalmente, `REMEMBER_ME_EXPIRE_DAYS` (7 por defecto).
 
 Recuperación de contraseña (ODON-54): `FRONTEND_URL` (para armar el enlace), `PASSWORD_RESET_EXPIRE_MINUTES` y `PASSWORD_RESET_MAX_PER_HOUR` tienen valores por defecto. Con `SMTP_HOST` vacío no se envía nada: el correo, con el enlace, aparece en la consola de uvicorn (logger `odontonet.email`). Para probar con un servidor real, completa las variables `SMTP_*` de `backend/.env.example`.
 
@@ -312,6 +312,7 @@ Comprobaciones manuales:
 ## 9. Seguridad operativa
 
 - Contraseñas (ODON-230): al menos 10 caracteres y no una de las filtradas más comunes (también `SEED_PASSWORD`); las cuentas existentes la cumplen en su próximo cambio.
-- CI revisa en cada push `npm audit --omit=dev`, secretos con gitleaks (`.gitleaks.toml`) y `pip-audit` (informativo hasta ODON-263).
+- CI revisa en cada push `npm audit --omit=dev`, secretos con gitleaks (`.gitleaks.toml`) y `pip-audit` (bloqueante; excepciones de Starlette hasta ODON-264).
+- `SECRET_KEY` debe tener al menos 32 bytes; genera una con `python -c "import secrets; print(secrets.token_urlsafe(48))"`. `ALLOWED_HOSTS` lista los hosts a los que se puede dirigir la API (por defecto `localhost,127.0.0.1`; en el despliegue, el dominio real).
 
 No desplegar públicamente el backend actual. Antes de usar datos reales deben completarse aislamiento por clínica, autorización, validación de entradas, auditoría y políticas de privacidad/retención. No compartir capturas de tokens ni archivos `.env`.
