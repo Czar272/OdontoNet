@@ -91,3 +91,9 @@ CLAUDE.md
 CLAUDE.local.md
 .claude/
 .mcp.json
+
+# Pruebas E2E (Playwright): reportes, trazas, capturas y videos
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/playwright/.cache/
