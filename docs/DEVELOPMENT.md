@@ -108,7 +108,7 @@ python -m scripts.verify_audit   # sale con 1 si encuentra problemas
 
 Las fotografías se guardan en `IMAGE_STORAGE_DIR` (por defecto `backend/storage/images`, ignorada por Git). Esa carpeta es privada: nunca se sirve como estática ni se copia al repositorio, y los nombres de archivo son aleatorios. Que una foto no tenga nombre no la hace anónima. En desarrollo solo se usan imágenes sintéticas (las pruebas las generan en memoria con Pillow). Para subir una foto el paciente necesita un consentimiento vigente, registrado en la pestaña «Imágenes» de su ficha; al guardarla se recodifica sin metadatos.
 
-Respaldo (hasta que la épica CAL lo automatice): la base y la carpeta de imágenes se respaldan **juntas**, en ese orden y sin subidas entre ambas, y se restauran juntas. Después de restaurar, o periódicamente:
+Respaldo: `scripts\backup\backup.ps1` respalda la base y la carpeta de imágenes **juntas**, cifradas con restic, y `restore-check.ps1` ensaya la restauración (ODON-226; procedimiento completo en [`BACKUPS.md`](BACKUPS.md)). Después de restaurar, o periódicamente:
 
 ```powershell
 cd backend
@@ -152,6 +152,7 @@ Cada prueba pertenece al menos a una categoría (marcador de pytest), según el 
 | `images` | Imágenes clínicas: almacenamiento privado, subida y saneamiento, consentimiento, galería y miniaturas, metadatos con revisiones, anulación, auditoría de acceso, verificación de respaldos |
 | `periodontal` | Periodontograma manual: modelo y restricciones, validación por pieza y sitio, borradores con revisiones, finalización, anulación, resumen, historial cronológico y reporte PDF |
 | `dashboard` | Panel de inicio y reportes: indicadores, periodo en la zona de la clínica, filtro por doctor, agenda de hoy, series por día/semana/mes, CSV, aislamiento y roles |
+| `backup` | Manifiesto de respaldos: conteos, versión y final de la cadena de auditoría; detecta restauraciones incompletas |
 | `migrations` | Cadena completa de migraciones (una sola cabeza; subir, bajar a la base vacía y volver a subir; `alembic check`) sobre una base temporal `<base>_test_migrations` |
 
 ```powershell
@@ -179,6 +180,7 @@ Durante el desarrollo y al verificar un ticket basta con las categorías del ár
 | Doctores y horarios | `python -m pytest -m "doctors or appointments"` | `npx vitest run src/pages/Doctors src/components/doctors src/pages/Agenda` |
 | Agenda y citas | `python -m pytest -m "appointments or doctors"` | `npx vitest run src/pages/Agenda src/components/appointments` |
 | Clínica | `python -m pytest -m isolation` | `npx vitest run src/pages/Clinic` |
+| Respaldos (`backup_manifest`, `scripts/backup/`) | `python -m pytest -m backup` y un ensayo con `restore-check.ps1` (ver `BACKUPS.md`) | — |
 | Auditoría (`audit_*`, cualquier operación que registra eventos) | `python -m pytest -m "records or rbac or isolation"` | `npx vitest run src/pages/Audit` |
 | Permisos (`permissions.py` / `permissions.ts`) | `python -m pytest -m "rbac or isolation"` | `npx vitest run src/auth src/config src/routes` |
 | Seed | `python -m pytest -m seed` | — |

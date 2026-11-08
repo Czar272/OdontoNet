@@ -94,6 +94,7 @@ Instrucciones detalladas y solución de problemas en [Desarrollo](docs/DEVELOPME
 - [Entorno de desarrollo](docs/DEVELOPMENT.md)
 - [Convenciones](docs/CONVENTIONS.md)
 - [Estado técnico y Jira](docs/PROJECT_STATUS.md)
+- [Respaldos y restauración](docs/BACKUPS.md)
 
 ## Planificación
 
