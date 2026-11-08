@@ -8,6 +8,7 @@ import LoginPage from "../pages/Auth/LoginPage";
 import ResetPasswordPage from "../pages/Auth/ResetPasswordPage";
 import DashboardPage from "../pages/Dashboard/DashboardPage";
 import ClinicPage from "../pages/Clinic/ClinicPage";
+import AuditPage from "../pages/Audit/AuditPage";
 import DoctorsPage from "../pages/Doctors/DoctorsPage";
 import PatientDetailPage from "../pages/Patients/PatientDetailPage";
 import PatientsPage from "../pages/Patients/PatientsPage";
@@ -43,6 +44,15 @@ export default function AppRouter() {
           <Route path="/dashboard" element={<DashboardPage />} />
 
           <Route path="/account/password" element={<ChangePasswordPage />} />
+
+          <Route
+            path="/audit"
+            element={
+              <RequirePermission permission="audit:view">
+                <AuditPage />
+              </RequirePermission>
+            }
+          />
 
           <Route
             path="/reports"

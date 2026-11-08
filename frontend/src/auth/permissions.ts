@@ -42,6 +42,8 @@ export const PERMISSIONS = {
   // Reportes (ODON-206): todos consultan datos agregados; solo administración exporta.
   "reports:view": ["admin", "doctor", "receptionist"],
   "reports:export": ["admin"],
+  // Auditoría (ODON-222): administración ve toda la clínica; un doctor, sus acciones.
+  "audit:view": ["admin", "doctor"],
   "clinic:manage": ["admin"],
 } as const satisfies Record<string, readonly Role[]>;
 

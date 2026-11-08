@@ -6,13 +6,12 @@ const labels = (items: NavItem[]) => items.map((item) => item.label);
 
 describe("getNavigation", () => {
   it("administración ve todas las secciones", () => {
-    expect(labels(getNavigation("admin"))).toEqual(["Inicio", "Agenda", "Pacientes", "Doctores", "Reportes", "Usuarios", "Clínica"]);
+    expect(labels(getNavigation("admin"))).toEqual(["Inicio", "Agenda", "Pacientes", "Doctores", "Reportes", "Usuarios", "Clínica", "Auditoría"]);
   });
 
   it("doctor y recepción no ven Usuarios", () => {
-    for (const role of ["doctor", "receptionist"] as const) {
-      expect(labels(getNavigation(role))).toEqual(["Inicio", "Agenda", "Pacientes", "Doctores", "Reportes", "Clínica"]);
-    }
+    expect(labels(getNavigation("doctor"))).toEqual(["Inicio", "Agenda", "Pacientes", "Doctores", "Reportes", "Clínica", "Auditoría"]);
+    expect(labels(getNavigation("receptionist"))).toEqual(["Inicio", "Agenda", "Pacientes", "Doctores", "Reportes", "Clínica"]);
   });
 
   it("sin sesión solo quedan opciones sin permiso", () => {

@@ -16,6 +16,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: "/reports", label: "Reportes", permission: "reports:view" },
   { to: "/users", label: "Usuarios", permission: "users:manage" },
   { to: "/clinic", label: "Clínica", permission: "clinic:view" },
+  { to: "/audit", label: "Auditoría", permission: "audit:view" },
 ];
 
 /** Opciones del menú visibles para un rol. */

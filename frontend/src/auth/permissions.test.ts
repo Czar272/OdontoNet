@@ -29,6 +29,7 @@ const EXPECTED: Record<Permission, Record<Role, boolean>> = {
   "periodontal:create": { admin: true, doctor: true, receptionist: false },
   "reports:view": { admin: true, doctor: true, receptionist: true },
   "reports:export": { admin: true, doctor: false, receptionist: false },
+  "audit:view": { admin: true, doctor: true, receptionist: false },
   "clinic:manage": { admin: true, doctor: false, receptionist: false },
 };
 
