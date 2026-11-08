@@ -25,7 +25,7 @@ def test_every_success_response_is_typed(client):
         for method, operation in operations.items():
             success = next((r for code, r in operation["responses"].items() if code.startswith("2")), {})
             content = success.get("content", {})
-            # Archivos (imágenes clínicas): contenido binario declarado en lugar de JSON.
+            # Archivos (imágenes, PDF, CSV): contenido binario declarado en lugar de JSON.
             binary = content and all(
                 media.get("schema") == {"type": "string", "format": "binary"} for media in content.values()
             )
