@@ -121,7 +121,7 @@ python -m pytest
 python -m pytest --cov            # con cobertura (más lento; es lo que corre CI)
 ```
 
-**Cobertura (ODON-210):** `backend/.coveragerc` mide `app/` con ramas y exige un mínimo de 95 % (al introducirla era 98 %). En CI la suite corre con `--cov`, así que una caída de cobertura hace fallar el push. Localmente no hace falta en cada cambio: es bastante más lenta.
+**Cobertura (ODON-210):** `backend/.coveragerc` mide `app/` con ramas y exige un mínimo de 95 % (al introducirla era 98 %). En CI la suite corre con `--cov`, así que una caída de cobertura hace fallar el push. Localmente no hace falta en cada cambio: es bastante más lenta. Usa `--cov` solo con la suite completa: con un subconjunto (`-m …`) la cobertura queda por debajo del mínimo y la ejecución falla aunque las pruebas pasen.
 
 #### Categorías
 

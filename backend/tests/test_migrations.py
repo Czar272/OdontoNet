@@ -24,7 +24,8 @@ def empty_database():
     assert name.endswith("_test_migrations")
     admin = create_engine(url.set(database="postgres"), isolation_level="AUTOCOMMIT")
     with admin.connect() as conn:
-        conn.execute(text(f'DROP DATABASE IF EXISTS "{name}"'))
+        # WITH (FORCE): una conexión olvidada (pgAdmin, un proceso interrumpido) no bloquea la prueba.
+        conn.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
         conn.execute(text(f'CREATE DATABASE "{name}"'))
     engine = create_engine(url.set(database=name))
     try:
@@ -32,7 +33,7 @@ def empty_database():
     finally:
         engine.dispose()
         with admin.connect() as conn:
-            conn.execute(text(f'DROP DATABASE IF EXISTS "{name}"'))
+            conn.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
         admin.dispose()
 
 
