@@ -2,7 +2,7 @@
 
 > Documento de continuidad técnica. Jira es la fuente de verdad de los estados de los tickets y Git es la fuente de verdad del código.
 
-**Última actualización:** 2026-11-07 — ODON-10 (dashboard y reportes): ODON-202 (panel de inicio) y ODON-206 (reportes y CSV) en Testing.
+**Última actualización:** 2026-11-07 — ODON-10 (dashboard y reportes) cerrada: ODON-202 y ODON-206 Done. Siguiente épica propuesta: ODON-11 (calidad, privacidad y seguridad).
 
 ## Alcance
 
@@ -52,14 +52,14 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 - **ODON-7 Expediente clínico — Done (2026-11-03):** ODON-150, 154, 158, 162, 260 (EXP-ENH01, odontograma para elegir la pieza) y 261 (EXP-ENH02, ficha en pestañas). Imágenes y periodontogramas se sumarán al historial en ODON-174 y ODON-194.
 - **ODON-8 Imágenes clínicas — Done (2026-11-07):** definida el 2026-11-03 (comentarios en la épica y en ODON-178). ODON-166 (almacenamiento privado), ODON-170 (subida y consentimiento), ODON-174 (galería, miniaturas e historial) y ODON-178 (origen, vista y fecha de toma; archivo inmutable con revisiones de metadatos; anulación con motivo; registro de accesos al original). La retención se difiere a CAL03 (ODON-218/221).
 - **ODON-9 Periodontograma manual — Done (2026-11-07):** definida el 2026-11-07 (comentario en la épica; referencia funcional periodontalchart-online.com con estilo propio). ODON-182 (modelo), ODON-186 (editor), ODON-190 (guardado y recuperación), ODON-194 (historial y comparación), ODON-198 (PDF) y ODON-262 (PGR-ENH01, llenado con valores de salud con origen predeterminado). Pendiente con dentistas: margen por defecto del llenado y fuente clínica de los umbrales.
-- **ODON-10 Dashboard y reportes — In Progress:** definida el 2026-11-07 (comentario en la épica). ODON-202 (panel de inicio: indicadores, filtro por doctor, agenda de hoy; `patients.created_at`) y ODON-206 (reportes de citas y pacientes por día, semana o mes; CSV solo administración) en Testing.
+- **ODON-10 Dashboard y reportes — Done (2026-11-07):** definida el 2026-11-07 (comentario en la épica). ODON-202 (panel de inicio: indicadores, filtro por doctor, agenda de hoy; `patients.created_at`) y ODON-206 (reportes de citas y pacientes por día, semana o mes; CSV solo administración).
 - **ODON-4 Personal y doctores — Done:** ODON-78, 82, 86, 90 y 94.
 - **ODON-11 Calidad:** ODON-254 (categorías de pruebas backend) Done; ODON-256 (pruebas rápidas y CI) Done; ODON-259 (CAL-ENH03, pytest más rápido y guía por área) Done.
 
 ## Próximo paso
 
 1. Prueba del sistema con dos dentistas: recoger mejoras y comentarios y convertirlos en historias.
-2. ODON-10: verificar ODON-202 y ODON-206 y cerrar la épica; después lo que no dependa de terceros en CAL (ODON-11) y LAN (ODON-12).
+2. Siguiente épica: ODON-11 (calidad, privacidad y seguridad), empezando por lo que no dependa de terceros ni de la revisión normativa; después LAN (ODON-12).
 3. El alta de clínicas por `superadmin` se planifica aparte según el modelo de roles aprobado.
 4. ODON-258 (ausencias de doctores) queda para después del MVP.
 
