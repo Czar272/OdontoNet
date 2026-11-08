@@ -312,7 +312,7 @@ Comprobaciones manuales:
 ## 9. Seguridad operativa
 
 - Contraseñas (ODON-230): al menos 10 caracteres y no una de las filtradas más comunes (también `SEED_PASSWORD`); las cuentas existentes la cumplen en su próximo cambio.
-- CI revisa en cada push `npm audit --omit=dev`, secretos con gitleaks (`.gitleaks.toml`) y `pip-audit` (bloqueante; excepciones de Starlette hasta ODON-264).
+- CI revisa en cada push `npm audit --omit=dev`, secretos con gitleaks (`.gitleaks.toml`) y `pip-audit` (bloqueante y sin excepciones desde ODON-264).
 - `SECRET_KEY` debe tener al menos 32 bytes; genera una con `python -c "import secrets; print(secrets.token_urlsafe(48))"`. `ALLOWED_HOSTS` lista los hosts a los que se puede dirigir la API (por defecto `localhost,127.0.0.1`; en el despliegue, el dominio real).
 
 No desplegar públicamente el backend actual. Antes de usar datos reales deben completarse aislamiento por clínica, autorización, validación de entradas, auditoría y políticas de privacidad/retención. No compartir capturas de tokens ni archivos `.env`.

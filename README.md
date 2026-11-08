@@ -32,7 +32,7 @@ Cada clínica es un espacio aislado: la API filtra todos los datos por la clíni
 ## Tecnologías
 
 - **Frontend:** React 19, TypeScript (strict), Vite 8, Tailwind CSS 3, React Router 7, TanStack Query, Axios, FullCalendar (agenda), Recharts (reportes).
-- **Backend:** Python 3.11, FastAPI, SQLAlchemy 2, Pydantic 1, Alembic, JWT, Pillow (imágenes clínicas), reportlab (reporte PDF del periodontograma), pytest.
+- **Backend:** Python 3.11, FastAPI, SQLAlchemy 2, Pydantic 2, Alembic, JWT, Pillow (imágenes clínicas), reportlab (reporte PDF del periodontograma), pytest.
 - **Base de datos:** PostgreSQL 16 en Docker Compose.
 - **Futuro módulo IA:** servicio independiente; tecnología y contratos pendientes de validación.
 
