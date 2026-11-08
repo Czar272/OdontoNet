@@ -2,7 +2,7 @@
 
 > Documento de continuidad técnica. Jira es la fuente de verdad de los estados de los tickets y Git es la fuente de verdad del código.
 
-**Última actualización:** 2026-11-07 — ODON-9 (periodontograma manual): ODON-182, 186, 190, 194 y 198 Done tras verificación manual; ODON-262 (PGR-ENH01, llenado con valores de salud) en Testing; luego se cierra la épica.
+**Última actualización:** 2026-11-07 — ODON-9 (periodontograma manual): ODON-182, 186, 190, 194, 198 y 262 (PGR-ENH01, llenado con valores de salud) Done tras verificación manual; pendiente el cierre de la épica.
 
 ## Alcance
 
