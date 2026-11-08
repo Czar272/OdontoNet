@@ -2,7 +2,7 @@
 
 > Documento de continuidad técnica. Jira es la fuente de verdad de los estados de los tickets y Git es la fuente de verdad del código.
 
-**Última actualización:** 2026-11-07 — ODON-9 (periodontograma manual): ODON-182, 186, 190, 194, 198 y 262 (PGR-ENH01, llenado con valores de salud) Done tras verificación manual; pendiente el cierre de la épica.
+**Última actualización:** 2026-11-07 — ODON-9 (periodontograma manual) cerrada: ODON-182, 186, 190, 194, 198 y 262 Done. Siguiente épica propuesta: ODON-10 (dashboard y reportes).
 
 ## Alcance
 
@@ -51,14 +51,14 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 - **ODON-2 Autenticación — Done:** ODON-38, 42, 46, 50, 52, 54 y 255.
 - **ODON-7 Expediente clínico — Done (2026-11-03):** ODON-150, 154, 158, 162, 260 (EXP-ENH01, odontograma para elegir la pieza) y 261 (EXP-ENH02, ficha en pestañas). Imágenes y periodontogramas se sumarán al historial en ODON-174 y ODON-194.
 - **ODON-8 Imágenes clínicas — Done (2026-11-07):** definida el 2026-11-03 (comentarios en la épica y en ODON-178). ODON-166 (almacenamiento privado), ODON-170 (subida y consentimiento), ODON-174 (galería, miniaturas e historial) y ODON-178 (origen, vista y fecha de toma; archivo inmutable con revisiones de metadatos; anulación con motivo; registro de accesos al original). La retención se difiere a CAL03 (ODON-218/221).
-- **ODON-9 Periodontograma manual — In Progress:** definida el 2026-11-07 (comentario en la épica; referencia funcional periodontalchart-online.com con estilo propio). ODON-182 (PGR01: examen en borrador o finalizado, 32 piezas permanentes y 6 sitios normalizados, NIC calculado, revisiones, resumen descriptivo) y ODON-186 (PGR02: editor con grilla por sitio, dibujo SVG propio de margen y bolsa en vivo, captura con teclado, resumen en vivo, guardado con revisión base y aviso de conflicto) y ODON-190 (PGR03: autoguardado, respaldo de sesión y recuperación, finalizar, anular, guardados y copia del examen anterior) y ODON-194 (PGR04: comparación de dos exámenes con cambios ≥ 2 mm resaltados y eventos en el historial cronológico) y ODON-198 (PGR05: reporte PDF de exámenes finalizados con identificación clínica, medidas, dibujo y aviso de que no es diagnóstico) Done (2026-11-07, verificadas por el desarrollador).
+- **ODON-9 Periodontograma manual — Done (2026-11-07):** definida el 2026-11-07 (comentario en la épica; referencia funcional periodontalchart-online.com con estilo propio). ODON-182 (modelo), ODON-186 (editor), ODON-190 (guardado y recuperación), ODON-194 (historial y comparación), ODON-198 (PDF) y ODON-262 (PGR-ENH01, llenado con valores de salud con origen predeterminado). Pendiente con dentistas: margen por defecto del llenado y fuente clínica de los umbrales.
 - **ODON-4 Personal y doctores — Done:** ODON-78, 82, 86, 90 y 94.
 - **ODON-11 Calidad:** ODON-254 (categorías de pruebas backend) Done; ODON-256 (pruebas rápidas y CI) Done; ODON-259 (CAL-ENH03, pytest más rápido y guía por área) Done.
 
 ## Próximo paso
 
-1. Planificar y desarrollar ODON-9 (periodontograma manual: PGR01–05), objetivo específico 2 del protocolo.
-2. Decisiones de ODON-8: disco privado detrás de `ImageStorage`, JPEG/PNG/WebP ≤ 10 MB recodificadas sin metadatos, consentimiento versionado, archivo inmutable, solo Doctor y Admin; el uso para investigación y el plazo de retención los fijan el protocolo del comité de ética y la revisión de CAL03.
+1. Prueba del sistema con dos dentistas: recoger mejoras y comentarios y convertirlos en historias.
+2. Siguiente épica: ODON-10 (dashboard operativo por clínica y reportes de citas y pacientes); después lo que no dependa de terceros en CAL (ODON-11) y LAN (ODON-12).
 3. El alta de clínicas por `superadmin` se planifica aparte según el modelo de roles aprobado.
 4. ODON-258 (ausencias de doctores) queda para después del MVP.
 
