@@ -118,7 +118,10 @@ docker exec odontonet-db createdb -U odontonet odontonet_test
 # En backend/, con odonto_venv activo
 python -m pip install -r requirements-dev.txt
 python -m pytest
+python -m pytest --cov            # con cobertura (más lento; es lo que corre CI)
 ```
+
+**Cobertura (ODON-210):** `backend/.coveragerc` mide `app/` con ramas y exige un mínimo de 95 % (al introducirla era 98 %). En CI la suite corre con `--cov`, así que una caída de cobertura hace fallar el push. Localmente no hace falta en cada cambio: es bastante más lenta.
 
 #### Categorías
 
@@ -139,6 +142,7 @@ Cada prueba pertenece al menos a una categoría (marcador de pytest), según el 
 | `images` | Imágenes clínicas: almacenamiento privado, subida y saneamiento, consentimiento, galería y miniaturas, metadatos con revisiones, anulación, auditoría de acceso, verificación de respaldos |
 | `periodontal` | Periodontograma manual: modelo y restricciones, validación por pieza y sitio, borradores con revisiones, finalización, anulación, resumen, historial cronológico y reporte PDF |
 | `dashboard` | Panel de inicio y reportes: indicadores, periodo en la zona de la clínica, filtro por doctor, agenda de hoy, series por día/semana/mes, CSV, aislamiento y roles |
+| `migrations` | Cadena completa de migraciones (una sola cabeza; subir, bajar a la base vacía y volver a subir; `alembic check`) sobre una base temporal `<base>_test_migrations` |
 
 ```powershell
 python -m pytest -m auth                      # solo autenticación
@@ -188,7 +192,7 @@ Las pruebas usan bcrypt con costo 4 (`BCRYPT_ROUNDS`, fijado en `tests/conftest.
 
 ### Integración continua (GitHub Actions)
 
-`.github/workflows/ci.yml` se ejecuta en cada push a `main` y en cada pull request, en servidores de GitHub: backend contra un PostgreSQL 16 temporal y frontend con `lint`, `test` y `build`. El resultado aparece como ✔ o ✖ junto al commit en GitHub (pestaña *Actions*). Se puede lanzar a mano con *Run workflow*. No usa secretos reales ni la base local.
+`.github/workflows/ci.yml` se ejecuta en cada push a `main` y en cada pull request, en servidores de GitHub: backend contra un PostgreSQL 16 temporal, con cobertura mínima de 95 % y la cadena completa de migraciones, y frontend con `lint`, `test` y `build`. El resultado aparece como ✔ o ✖ junto al commit en GitHub (pestaña *Actions*). Se puede lanzar a mano con *Run workflow*. No usa secretos reales ni la base local.
 
 **Qué correr y cuándo:**
 
@@ -267,7 +271,7 @@ Checklist antes de commitear una migración:
 2. Escribir un `downgrade()` que revierta exactamente el `upgrade()` o documentar por qué no es posible.
 3. `alembic upgrade head` y `alembic check` (sin operaciones pendientes).
 4. `python -m pytest`: las pruebas aplican todas las migraciones sobre la base `_test`.
-5. `scripts\dev\verify-infra.ps1`: prueba la cadena completa en una base vacía temporal.
+5. `python -m pytest -m migrations` (también corre en CI) y, en Windows, `scripts\dev\verify-infra.ps1`: prueban la cadena completa en una base vacía temporal.
 
 ## 7. Comprobaciones rápidas
 
