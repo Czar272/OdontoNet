@@ -96,14 +96,10 @@ jobs:
           python-version: "3.11"
 
       - name: pip-audit (backend)
-        # Bloqueante (ODON-263). Excepciones: vulnerabilidades de Starlette que solo
-        # se corrigen en 1.x (exige Pydantic v2); se quitan en ODON-264. Detalle y
-        # mitigaciones en docs/PROJECT_STATUS.md (riesgo 6).
+        # Bloqueante y sin excepciones desde ODON-264 (Pydantic v2, Starlette 1.x).
         run: |
           pip install pip-audit==2.10.1
-          pip-audit -r backend/requirements.txt --progress-spinner off \
-            --ignore-vuln PYSEC-2026-161 --ignore-vuln PYSEC-2026-248 --ignore-vuln PYSEC-2026-249 \
-            --ignore-vuln PYSEC-2026-2280 --ignore-vuln PYSEC-2026-2281
+          pip-audit -r backend/requirements.txt --progress-spinner off
 
       - uses: actions/setup-node@v4
         with:
