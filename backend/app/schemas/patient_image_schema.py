@@ -1,10 +1,11 @@
 """Imágenes clínicas y consentimiento para fotografías (ODON-8)."""
-from datetime import date, datetime
-from typing import Literal, Optional
+from datetime import date
+from typing import Annotated, Literal, Optional
 
-from pydantic import BaseModel, constr, validator
+from pydantic import BaseModel, StringConstraints, ValidationInfo, field_validator
 
 from app.models.treatment import is_valid_tooth
+from app.schemas.fields import DateTime
 
 Origin = Literal["intraoral_camera", "phone", "camera", "external"]
 View = Literal["frontal", "right_lateral", "left_lateral", "upper_occlusal", "lower_occlusal", "detail", "other"]
@@ -17,7 +18,7 @@ class PersonRef(BaseModel):
 
 class VisitRef(BaseModel):
     id: int
-    visit_at: datetime
+    visit_at: DateTime
     reason: str
     voided: bool
 
@@ -30,17 +31,17 @@ class PhotoConsentCreate(BaseModel):
     research_use: bool = False
     # Fecha del documento (firma o revocación).
     signed_on: date
-    notes: Optional[constr(strip_whitespace=True, max_length=500)] = None
+    notes: Optional[Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)]] = None
 
-    @validator("notes", pre=True)
+    @field_validator("notes", mode="before")
     def _blank_notes(cls, value):
         if isinstance(value, str) and not value.strip():
             return None
         return value
 
-    @validator("research_use")
-    def _research_requires_grant(cls, value, values):
-        if value and not values.get("granted"):
+    @field_validator("research_use")
+    def _research_requires_grant(cls, value, info: ValidationInfo):
+        if value and not info.data.get("granted"):
             raise ValueError("El uso en investigación requiere autorizar las fotografías clínicas.")
         return value
 
@@ -51,15 +52,15 @@ class PhotoConsentResponse(BaseModel):
     granted: bool
     research_use: bool
     signed_on: date
-    notes: Optional[str]
+    notes: Optional[str] = None
     recorded_by: PersonRef
-    recorded_at: datetime
+    recorded_at: DateTime
 
 
 class PhotoConsentStatus(BaseModel):
     """Versión vigente (o null si nunca se registró) e historial, la más reciente primero."""
 
-    current: Optional[PhotoConsentResponse]
+    current: Optional[PhotoConsentResponse] = None
     history: list[PhotoConsentResponse]
 
 
@@ -73,7 +74,7 @@ class PatientImageUpdate(BaseModel):
     clinical_visit_id: Optional[int] = None
     tooth: Optional[int] = None
 
-    @validator("tooth")
+    @field_validator("tooth")
     def _valid_tooth(cls, value):
         if value is not None and not is_valid_tooth(value):
             raise ValueError("Pieza dental inválida: usa la numeración FDI (11–48 o 51–85).")
@@ -81,34 +82,34 @@ class PatientImageUpdate(BaseModel):
 
 
 class ImageVoid(BaseModel):
-    reason: constr(strip_whitespace=True, min_length=1, max_length=500)
+    reason: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
 
 
 class PatientImageRevisionResponse(BaseModel):
     revision: int
-    origin: Optional[str]
-    view: Optional[str]
-    taken_on: Optional[date]
-    clinical_visit_id: Optional[int]
-    tooth: Optional[int]
+    origin: Optional[str] = None
+    view: Optional[str] = None
+    taken_on: Optional[date] = None
+    clinical_visit_id: Optional[int] = None
+    tooth: Optional[int] = None
     edited_by: PersonRef
-    edited_at: datetime
+    edited_at: DateTime
 
 
 class ImageAccessResponse(BaseModel):
     user: PersonRef
-    accessed_at: datetime
+    accessed_at: DateTime
 
 
 class PatientImageResponse(BaseModel):
     id: int
     patient_id: int
-    clinical_visit: Optional[VisitRef]
-    tooth: Optional[int]
+    clinical_visit: Optional[VisitRef] = None
+    tooth: Optional[int] = None
     # null en imágenes anteriores a ODON-178 («sin registrar»).
-    origin: Optional[str]
-    view: Optional[str]
-    taken_on: Optional[date]
+    origin: Optional[str] = None
+    view: Optional[str] = None
+    taken_on: Optional[date] = None
     revision: int
     content_type: str
     size_bytes: int
@@ -116,7 +117,7 @@ class PatientImageResponse(BaseModel):
     height: int
     consent_id: int
     uploaded_by: PersonRef
-    uploaded_at: datetime
-    voided_at: Optional[datetime]
-    voided_by: Optional[PersonRef]
-    void_reason: Optional[str]
+    uploaded_at: DateTime
+    voided_at: Optional[DateTime] = None
+    voided_by: Optional[PersonRef] = None
+    void_reason: Optional[str] = None

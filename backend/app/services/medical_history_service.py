@@ -70,7 +70,7 @@ def create_version(
     if data.base_version != current_version:
         raise _stale(current_version)
 
-    content = data.dict(exclude={"base_version"})
+    content = data.model_dump(exclude={"base_version"})
     history = PatientMedicalHistory(
         clinic_id=patient.clinic_id,
         patient_id=patient.id,

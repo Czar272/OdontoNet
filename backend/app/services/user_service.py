@@ -51,7 +51,7 @@ def create_user(db: Session, data: UserCreate, clinic_id: int) -> User:
 
 def update_user(db: Session, user: User, data: UserUpdate, acting_admin: User) -> User:
     # Un campo enviado como null se trata como no enviado: ninguno admite vacío.
-    changes = {key: value for key, value in data.dict(exclude_unset=True).items() if value is not None}
+    changes = {key: value for key, value in data.model_dump(exclude_unset=True).items() if value is not None}
 
     if "password" in changes and user.id == acting_admin.id:
         # Cerraría la propia sesión; el cambio propio pide la contraseña actual.

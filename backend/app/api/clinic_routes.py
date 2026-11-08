@@ -46,7 +46,7 @@ def update_clinic(
     """Edita nombre, dirección, teléfono, correo o zona horaria de la propia clínica."""
     clinic = _current_clinic(db, clinic_id)
 
-    data = changes.dict(exclude_unset=True)
+    data = changes.model_dump(exclude_unset=True)
     if data.get("timezone", "") is None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,

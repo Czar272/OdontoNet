@@ -70,7 +70,7 @@ def create_doctor(
             detail="El usuario ya tiene un perfil de doctor.",
         )
 
-    new_doctor = Doctor(**doctor.dict(), clinic_id=clinic_id)
+    new_doctor = Doctor(**doctor.model_dump(), clinic_id=clinic_id)
     db.add(new_doctor)
     try:
         db.commit()
@@ -167,7 +167,7 @@ def replace_doctor_availability(
         )
 
     doctor.availability = [
-        DoctorAvailabilityBlock(clinic_id=clinic_id, **block.dict()) for block in data.blocks
+        DoctorAvailabilityBlock(clinic_id=clinic_id, **block.model_dump()) for block in data.blocks
     ]
     db.commit()
 
@@ -227,7 +227,7 @@ def update_doctor(
             status_code=status.HTTP_404_NOT_FOUND, detail="Doctor no encontrado."
         )
 
-    for field, value in changes.dict(exclude_unset=True).items():
+    for field, value in changes.model_dump(exclude_unset=True).items():
         setattr(doctor, field, value)
     db.commit()
 

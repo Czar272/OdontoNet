@@ -16,6 +16,7 @@ import logging
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic_core import PydanticCustomError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logger = logging.getLogger("odontonet.api")
@@ -28,40 +29,70 @@ _DEFAULT_DETAILS = {
 }
 
 _VALIDATION_MESSAGES = {
-    "value_error.missing": "Campo obligatorio.",
-    "value_error.email": "Correo electrónico inválido.",
-    "value_error.date": "Fecha inválida.",
-    "type_error.date": "Fecha inválida.",
-    "type_error.integer": "Debe ser un número entero.",
-    "type_error.enum": "Valor no permitido.",
-    "type_error.bool": "Debe ser verdadero o falso.",
-    "type_error.none.not_allowed": "Campo obligatorio.",
-    "value_error.jsondecode": "El cuerpo de la petición no es JSON válido.",
+    "missing": "Campo obligatorio.",
+    "date_parsing": "Fecha inválida.",
+    "date_from_datetime_parsing": "Fecha inválida.",
+    "date_from_datetime_inexact": "Fecha inválida.",
+    "date_type": "Fecha inválida.",
+    "int_parsing": "Debe ser un número entero.",
+    "int_type": "Debe ser un número entero.",
+    "int_from_float": "Debe ser un número entero.",
+    "enum": "Valor no permitido.",
+    "bool_parsing": "Debe ser verdadero o falso.",
+    "bool_type": "Debe ser verdadero o falso.",
+    "json_invalid": "El cuerpo de la petición no es JSON válido.",
 }
+
+# Pydantic antepone este prefijo al mensaje de los ValueError de los validadores propios.
+_VALUE_ERROR_PREFIX = "Value error, "
+_EMAIL_ERROR_PREFIX = "value is not a valid email address"
+
+# Tipo de error de los validadores de modelo (validan varios campos a la vez).
+# Se informan con el campo "__root__", como antes de Pydantic 2.
+ROOT_ERROR_TYPE = "root_value_error"
+
+
+def root_error(message: str) -> PydanticCustomError:
+    """Error de un validador de modelo con su mensaje en español."""
+    return PydanticCustomError(ROOT_ERROR_TYPE, message)
 
 
 def _validation_message(error: dict) -> str:
     error_type = error.get("type", "")
     ctx = error.get("ctx") or {}
 
-    if error_type == "value_error.any_str.min_length":
-        limit = ctx.get("limit_value", 1)
+    # null en un campo que no lo admite.
+    if error.get("input", ...) is None and error_type not in ("value_error", ROOT_ERROR_TYPE):
+        return "Campo obligatorio."
+    if error_type == "string_too_short":
+        limit = ctx.get("min_length", 1)
         return "Campo obligatorio." if limit == 1 else f"Debe tener al menos {limit} caracteres."
-    if error_type == "value_error.any_str.max_length":
-        return f"Debe tener como máximo {ctx.get('limit_value')} caracteres."
-    if error_type == "value_error.number.not_ge":
-        return f"Debe ser mayor o igual a {ctx.get('limit_value')}."
-    if error_type == "value_error.number.not_le":
-        return f"Debe ser menor o igual a {ctx.get('limit_value')}."
+    if error_type == "string_too_long":
+        return f"Debe tener como máximo {ctx.get('max_length')} caracteres."
+    if error_type == "greater_than_equal":
+        return f"Debe ser mayor o igual a {ctx.get('ge')}."
+    if error_type == "less_than_equal":
+        return f"Debe ser menor o igual a {ctx.get('le')}."
     if error_type in _VALIDATION_MESSAGES:
         return _VALIDATION_MESSAGES[error_type]
     if error_type == "value_error":
+        message = error.get("msg") or "Valor inválido."
+        if message.startswith(_EMAIL_ERROR_PREFIX):
+            return "Correo electrónico inválido."
         # Validadores propios: su mensaje ya está en español.
-        return error.get("msg", "Valor inválido.")
+        return message.removeprefix(_VALUE_ERROR_PREFIX)
+    if error_type == ROOT_ERROR_TYPE:
+        return error.get("msg") or "Valor inválido."
     return "Valor inválido."
 
 
-def _field_name(loc) -> str:
+def _field_name(error: dict) -> str:
+    loc = tuple(error.get("loc", ()))
+    # JSON mal formado: el loc trae la posición del error, no un campo.
+    if error.get("type") == "json_invalid":
+        return "body"
+    if error.get("type") == ROOT_ERROR_TYPE:
+        loc += ("__root__",)
     parts = [str(part) for part in loc if part not in ("body", "query", "path", "header")]
     return ".".join(parts) or "body"
 
@@ -83,7 +114,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     errors = [
-        {"field": _field_name(error.get("loc", ())), "message": _validation_message(error)}
+        {"field": _field_name(error), "message": _validation_message(error)}
         for error in exc.errors()
     ]
     fields = ", ".join(dict.fromkeys(error["field"] for error in errors))

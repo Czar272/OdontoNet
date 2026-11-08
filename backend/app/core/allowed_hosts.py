@@ -1,9 +1,9 @@
 """Hosts permitidos (ODON-263).
 
-Solo se atienden peticiones cuyo encabezado Host está en ALLOWED_HOSTS. Mitiga
-que un Host falso se use al reconstruir URLs (Starlette PYSEC-2026-161) hasta
-actualizar a Starlette 1.x (ODON-264). A diferencia del TrustedHostMiddleware
-de Starlette, responde con el formato de errores de la API, en español.
+Solo se atienden peticiones cuyo encabezado Host está en ALLOWED_HOSTS. Nació
+como mitigación de Starlette PYSEC-2026-161; desde Starlette 1.x (ODON-264) se
+mantiene como defensa adicional. A diferencia del TrustedHostMiddleware de
+Starlette, responde con el formato de errores de la API, en español.
 """
 from starlette.datastructures import Headers
 from starlette.responses import JSONResponse

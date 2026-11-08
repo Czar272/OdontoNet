@@ -1,8 +1,10 @@
 """Panel de inicio: indicadores de la clínica (ODON-202)."""
-from datetime import date, datetime
+from datetime import date
 from typing import Optional
 
 from pydantic import BaseModel
+
+from app.schemas.fields import DateTime
 
 
 class PersonRef(BaseModel):
@@ -18,19 +20,19 @@ class DashboardIndicators(BaseModel):
     appointments_week: int
     appointments_period: int
     # Porcentajes 0–100 con un decimal; null si no hay base para calcularlos.
-    attendance_rate: Optional[float]
-    no_show_rate: Optional[float]
-    cancellation_rate: Optional[float]
+    attendance_rate: Optional[float] = None
+    no_show_rate: Optional[float] = None
+    cancellation_rate: Optional[float] = None
     visits_registered: int
     treatments_completed: int
     periodontal_finalized: int
     images_uploaded: int
-    occupancy_rate: Optional[float]
+    occupancy_rate: Optional[float] = None
 
 
 class AgendaItem(BaseModel):
     id: int
-    starts_at: datetime
+    starts_at: DateTime
     duration_minutes: int
     status: str
     patient: PersonRef
@@ -41,6 +43,6 @@ class DashboardRead(BaseModel):
     date_from: date
     date_to: date
     timezone: str
-    doctor_id: Optional[int]
+    doctor_id: Optional[int] = None
     indicators: DashboardIndicators
     agenda_today: list[AgendaItem]

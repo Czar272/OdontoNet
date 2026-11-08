@@ -186,7 +186,7 @@ def create_appointment(
     )
 
     appointment = Appointment(
-        **data.dict(exclude={"allow_outside_schedule"}),
+        **data.model_dump(exclude={"allow_outside_schedule"}),
         clinic_id=clinic_id,
         status=AppointmentStatus.SCHEDULED.value,
         created_by_user_id=current_user.id,
@@ -221,7 +221,7 @@ def update_appointment(
             detail="Solo se pueden modificar citas programadas o confirmadas.",
         )
 
-    data = changes.dict(exclude_unset=True)
+    data = changes.model_dump(exclude_unset=True)
     allow_outside = data.pop("allow_outside_schedule", False)
     for required in ("doctor_id", "starts_at", "duration_minutes"):
         if required in data and data[required] is None:

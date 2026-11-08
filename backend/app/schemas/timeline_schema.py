@@ -1,8 +1,9 @@
 """Historial cronológico del paciente (ODON-162)."""
-from datetime import datetime
 from typing import Literal, Optional
 
 from pydantic import BaseModel
+
+from app.schemas.fields import DateTime
 
 EventType = Literal["visit", "treatment", "medical_history", "appointment", "image", "periodontal"]
 
@@ -20,11 +21,11 @@ class TimelineEvent(BaseModel):
     # completed | cancelled · medical_history: version · appointment: completed | no_show
     # · image: uploaded | edited | voided
     action: str
-    occurred_at: datetime
+    occurred_at: DateTime
     title: str
-    detail: Optional[str]
+    detail: Optional[str] = None
     # Doctor que atendió (consultas y citas) o usuario que hizo el cambio.
-    actor: Optional[PersonRef]
+    actor: Optional[PersonRef] = None
     # id de la consulta, tratamiento, cita o imagen; número de versión en la historia médica.
     ref_id: int
     # La consulta o la fotografía de este evento está anulada.
@@ -34,4 +35,4 @@ class TimelineEvent(BaseModel):
 class TimelinePage(BaseModel):
     items: list[TimelineEvent]
     # null cuando no hay más eventos.
-    next_cursor: Optional[str]
+    next_cursor: Optional[str] = None

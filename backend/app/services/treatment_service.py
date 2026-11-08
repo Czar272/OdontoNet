@@ -220,7 +220,7 @@ def update_treatment(
     _lock(db, treatment)
     _ensure_open(treatment)
 
-    changes = data.dict(exclude_unset=True)
+    changes = data.model_dump(exclude_unset=True)
     if "procedure" in changes and changes["procedure"] is None:
         raise _unprocessable("Indica el procedimiento.")
     if changes.get("proposed_visit_id") is not None and changes["proposed_visit_id"] != treatment.proposed_visit_id:

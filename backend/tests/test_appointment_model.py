@@ -190,8 +190,8 @@ def test_create_schema_defaults():
     assert data.duration_minutes == 30
     assert data.reason is None
     assert data.starts_at.utcoffset() == timedelta(hours=-6)
-    assert "status" not in data.dict()
-    assert "clinic_id" not in data.dict()
+    assert "status" not in data.model_dump()
+    assert "clinic_id" not in data.model_dump()
 
 
 @pytest.mark.parametrize(
@@ -205,7 +205,7 @@ def test_create_schema_rejects_ambiguous_times(starts_at, message):
     with pytest.raises(ValidationError) as error:
         AppointmentCreate(patient_id=1, doctor_id=2, starts_at=starts_at)
 
-    assert error.value.errors()[0]["msg"] == message
+    assert str(error.value.errors()[0]["ctx"]["error"]) == message
 
 
 @pytest.mark.parametrize("minutes", [4, 481])
@@ -222,9 +222,9 @@ def test_create_schema_rejects_long_reason():
 def test_update_schema_is_partial_and_has_no_patient_or_status():
     changes = AppointmentUpdate(duration_minutes=60)
 
-    assert changes.dict(exclude_unset=True) == {"duration_minutes": 60}
-    assert "patient_id" not in AppointmentUpdate.__fields__
-    assert "status" not in AppointmentUpdate.__fields__
+    assert changes.model_dump(exclude_unset=True) == {"duration_minutes": 60}
+    assert "patient_id" not in AppointmentUpdate.model_fields
+    assert "status" not in AppointmentUpdate.model_fields
 
 
 def test_update_schema_validates_starts_at():
@@ -237,7 +237,7 @@ def test_response_schema_exposes_end_and_minimal_patient(db, agenda):
     save(db, appointment)
     db.refresh(appointment)
 
-    body = AppointmentResponse.from_orm(appointment).dict()
+    body = AppointmentResponse.model_validate(appointment).model_dump()
 
     assert body["ends_at"] == NINE + timedelta(minutes=45)
     assert body["status"] == "scheduled"

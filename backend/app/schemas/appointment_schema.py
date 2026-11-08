@@ -1,13 +1,14 @@
 from datetime import datetime
-from typing import Optional
+from typing import Annotated, Optional
 
-from pydantic import BaseModel, conint, constr, validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
 from app.models.appointment import MAX_DURATION_MINUTES, MIN_DURATION_MINUTES, AppointmentStatus
 from app.schemas.doctor_schema import DoctorResponse
+from app.schemas.fields import DateTime
 
-DurationMinutes = conint(ge=MIN_DURATION_MINUTES, le=MAX_DURATION_MINUTES)
-Reason = constr(strip_whitespace=True, max_length=255)
+DurationMinutes = Annotated[int, Field(ge=MIN_DURATION_MINUTES, le=MAX_DURATION_MINUTES)]
+Reason = Annotated[str, StringConstraints(strip_whitespace=True, max_length=255)]
 
 DEFAULT_DURATION_MINUTES = 30
 
@@ -37,14 +38,14 @@ class AppointmentCreate(BaseModel):
 
     patient_id: int
     doctor_id: int
-    starts_at: datetime
+    starts_at: DateTime
     duration_minutes: DurationMinutes = DEFAULT_DURATION_MINUTES
     reason: Optional[Reason] = None
     # Confirmación explícita para agendar fuera del horario del doctor (ODON-142).
     allow_outside_schedule: bool = False
 
-    _starts_at = validator("starts_at", allow_reuse=True)(_validate_starts_at)
-    _reason = validator("reason", pre=True, allow_reuse=True)(_empty_to_none)
+    _starts_at = field_validator("starts_at")(_validate_starts_at)
+    _reason = field_validator("reason", mode="before")(_empty_to_none)
 
 
 class AppointmentUpdate(BaseModel):
@@ -52,13 +53,13 @@ class AppointmentUpdate(BaseModel):
     no cambia (se crea otra cita) y el estado se gestiona en ODON-146."""
 
     doctor_id: Optional[int] = None
-    starts_at: Optional[datetime] = None
+    starts_at: Optional[DateTime] = None
     duration_minutes: Optional[DurationMinutes] = None
     reason: Optional[Reason] = None
     allow_outside_schedule: bool = False
 
-    _starts_at = validator("starts_at", allow_reuse=True)(_validate_starts_at)
-    _reason = validator("reason", pre=True, allow_reuse=True)(_empty_to_none)
+    _starts_at = field_validator("starts_at")(_validate_starts_at)
+    _reason = field_validator("reason", mode="before")(_empty_to_none)
 
 
 class AppointmentPatient(BaseModel):
@@ -69,10 +70,9 @@ class AppointmentPatient(BaseModel):
     first_name: str
     last_name: str
     phone: str | None = None
-    archived_at: datetime | None = None
+    archived_at: DateTime | None = None
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AppointmentResponse(BaseModel):
@@ -80,22 +80,21 @@ class AppointmentResponse(BaseModel):
     clinic_id: int
     patient_id: int
     doctor_id: int
-    starts_at: datetime
-    ends_at: datetime
+    starts_at: DateTime
+    ends_at: DateTime
     duration_minutes: int
     status: AppointmentStatus
-    reason: str | None
+    reason: str | None = None
     created_by_user_id: int
-    created_at: datetime
-    updated_at: datetime
+    created_at: DateTime
+    updated_at: DateTime
     patient: AppointmentPatient
     doctor: DoctorResponse
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
-Note = constr(strip_whitespace=True, max_length=255)
+Note = Annotated[str, StringConstraints(strip_whitespace=True, max_length=255)]
 
 
 class AppointmentStatusUpdate(BaseModel):
@@ -104,24 +103,22 @@ class AppointmentStatusUpdate(BaseModel):
     status: AppointmentStatus
     note: Optional[Note] = None
 
-    _note = validator("note", pre=True, allow_reuse=True)(_empty_to_none)
+    _note = field_validator("note", mode="before")(_empty_to_none)
 
 
 class StatusChangeUser(BaseModel):
     id: int
     name: str
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AppointmentStatusChangeResponse(BaseModel):
     id: int
-    from_status: AppointmentStatus | None
+    from_status: AppointmentStatus | None = None
     to_status: AppointmentStatus
-    note: str | None
-    changed_at: datetime
+    note: str | None = None
+    changed_at: DateTime
     changed_by: StatusChangeUser
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

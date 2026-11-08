@@ -1,12 +1,12 @@
-from typing import Optional
+from typing import Annotated, Optional
 
-from pydantic import BaseModel, constr, validator
+from pydantic import BaseModel, ConfigDict, StringConstraints, field_validator
 
 from app.schemas.user_schema import UserResponse
 
-Specialization = constr(strip_whitespace=True, max_length=100)
-LicenseNumber = constr(strip_whitespace=True, max_length=50)
-Phone = constr(strip_whitespace=True, max_length=30)
+Specialization = Annotated[str, StringConstraints(strip_whitespace=True, max_length=100)]
+LicenseNumber = Annotated[str, StringConstraints(strip_whitespace=True, max_length=50)]
+Phone = Annotated[str, StringConstraints(strip_whitespace=True, max_length=30)]
 
 
 class _DoctorProfileFields(BaseModel):
@@ -14,7 +14,7 @@ class _DoctorProfileFields(BaseModel):
     license_number: Optional[LicenseNumber] = None
     phone: Optional[Phone] = None
 
-    @validator("specialization", "license_number", "phone", pre=True)
+    @field_validator("specialization", "license_number", "phone", mode="before")
     def empty_string_to_none(cls, value):
         # Los formularios envían "" en campos opcionales vacíos.
         if isinstance(value, str) and not value.strip():
@@ -36,11 +36,10 @@ class DoctorUpdate(_DoctorProfileFields):
 class DoctorResponse(BaseModel):
     id: int
     user_id: int
-    specialization: str | None
-    license_number: str | None
-    phone: str | None
+    specialization: str | None = None
+    license_number: str | None = None
+    phone: str | None = None
     user: UserResponse
     clinic_id: int
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

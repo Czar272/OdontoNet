@@ -17,8 +17,8 @@ class StatusCounts(BaseModel):
     no_show: int
     total: int
     # Sobre atendidas + no asistió; null sin base.
-    attendance_rate: Optional[float]
-    no_show_rate: Optional[float]
+    attendance_rate: Optional[float] = None
+    no_show_rate: Optional[float] = None
 
 
 class Bucket(BaseModel):
@@ -41,7 +41,7 @@ class AppointmentsReport(BaseModel):
     date_to: date
     timezone: str
     group: Grouping
-    doctor_id: Optional[int]
+    doctor_id: Optional[int] = None
     series: list[AppointmentBucket]
     by_doctor: list[DoctorAppointments]
     totals: StatusCounts
@@ -56,7 +56,7 @@ class PatientsReport(BaseModel):
     date_to: date
     timezone: str
     group: Grouping
-    doctor_id: Optional[int]
+    doctor_id: Optional[int] = None
     series: list[PatientBucket]
     total_new: int
     # Pacientes sin fecha de alta (registrados antes de ODON-202).

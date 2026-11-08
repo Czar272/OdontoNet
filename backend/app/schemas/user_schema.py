@@ -1,14 +1,14 @@
-from typing import Optional
+from typing import Annotated, Optional
 
-from pydantic import BaseModel, EmailStr, constr, validator
+from pydantic import BaseModel, ConfigDict, EmailStr, StringConstraints, field_validator
 
 from app.auth.permissions import Role
 from app.core.password_policy import MAX_LENGTH, MIN_LENGTH, check_new_password
 from app.schemas.clinic_schema import ClinicSimpleResponse
 
-UserName = constr(strip_whitespace=True, min_length=1, max_length=120)
+UserName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
 # Contraseña nueva (ODON-230): al menos 10 caracteres y no una de las filtradas.
-UserPassword = constr(min_length=MIN_LENGTH, max_length=MAX_LENGTH)
+UserPassword = Annotated[str, StringConstraints(min_length=MIN_LENGTH, max_length=MAX_LENGTH)]
 
 
 class UserCreate(BaseModel):
@@ -20,7 +20,7 @@ class UserCreate(BaseModel):
     password: UserPassword
     role: Role = Role.DOCTOR
 
-    _common = validator("password", allow_reuse=True)(check_new_password)
+    _common = field_validator("password")(check_new_password)
 
 
 class UserUpdate(BaseModel):
@@ -33,7 +33,7 @@ class UserUpdate(BaseModel):
     role: Optional[Role] = None
     password: Optional[UserPassword] = None
 
-    @validator("password")
+    @field_validator("password")
     def _common(cls, value):
         return value if value is None else check_new_password(value)
 
@@ -57,17 +57,17 @@ class PasswordResetRequest(BaseModel):
 
 
 class PasswordResetConfirm(BaseModel):
-    token: constr(strip_whitespace=True, min_length=1, max_length=200)
+    token: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
     new_password: UserPassword
 
-    _common = validator("new_password", allow_reuse=True)(check_new_password)
+    _common = field_validator("new_password")(check_new_password)
 
 
 class PasswordChange(BaseModel):
-    current_password: constr(min_length=1, max_length=128)
+    current_password: Annotated[str, StringConstraints(min_length=1, max_length=128)]
     new_password: UserPassword
 
-    _common = validator("new_password", allow_reuse=True)(check_new_password)
+    _common = field_validator("new_password")(check_new_password)
     # Conserva la duración de la sesión actual en el token nuevo.
     remember_me: bool = False
 
@@ -84,13 +84,12 @@ class UserResponse(BaseModel):
     clinic_id: int
     is_active: bool = True
 
-    @validator("is_active", pre=True)
+    @field_validator("is_active", mode="before")
     def _null_is_active(cls, value):
         # Filas antiguas sin valor se consideran activas, igual que en el login.
         return True if value is None else value
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CurrentUserResponse(BaseModel):
@@ -101,5 +100,4 @@ class CurrentUserResponse(BaseModel):
     role: str
     clinic: ClinicSimpleResponse
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

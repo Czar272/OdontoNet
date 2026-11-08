@@ -135,7 +135,7 @@ def create_patient(
     if patient.doctor_id is not None:
         ensure_assignable_doctor(db, patient.doctor_id, clinic_id)
 
-    new_patient = Patient(**patient.dict(), clinic_id=clinic_id)
+    new_patient = Patient(**patient.model_dump(), clinic_id=clinic_id)
 
     db.add(new_patient)
 
@@ -232,7 +232,7 @@ def update_patient(
             detail="El paciente está archivado. Reactívalo para editar sus datos.",
         )
 
-    data = changes.dict(exclude_unset=True)
+    data = changes.model_dump(exclude_unset=True)
 
     for required in ("first_name", "last_name"):
         if required in data and data[required] is None:

@@ -97,6 +97,7 @@ def test_invalid_json_body_is_422(client, two_clinics):
     )
     assert response.status_code == 422
     assert isinstance(response.json()["detail"], str)
+    assert response.json()["errors"] == [{"field": "body", "message": "El cuerpo de la petición no es JSON válido."}]
 
 
 def test_unhandled_errors_do_not_leak_internals():
@@ -115,3 +116,50 @@ def test_unhandled_errors_do_not_leak_internals():
     assert response.status_code == 500
     assert response.json() == {"detail": "Error interno del servidor."}
     assert "secreto" not in response.text
+
+
+# --- Contrato que fija la migración a Pydantic v2 (ODON-264) -------------------
+
+def test_invalid_date_has_spanish_message(client, two_clinics):
+    response = client.post("/patients/", json={"first_name": "A", "last_name": "B", "birth_date": "2020-13-01"},
+                           headers=two_clinics["a"]["headers"])
+    assert response.status_code == 422
+    assert response.json()["errors"] == [{"field": "birth_date", "message": "Fecha inválida."}]
+
+
+@pytest.mark.records
+def test_model_validator_errors_keep_root_field(client, two_clinics):
+    patient = client.post("/patients/", json={"first_name": "A", "last_name": "B"},
+                          headers=two_clinics["a"]["headers"]).json()
+    response = client.post(f"/patients/{patient['id']}/medical-history",
+                          json={"base_version": None, "smoking_status": "former", "cigarettes_per_day": 5},
+                          headers=two_clinics["a"]["headers"])
+    assert response.status_code == 422
+    assert response.json()["errors"][0]["field"] == "__root__"
+
+
+@pytest.mark.periodontal
+def test_nested_model_validator_errors_keep_their_path(client, two_clinics):
+    patient = client.post("/patients/", json={"first_name": "A", "last_name": "B"},
+                          headers=two_clinics["a"]["headers"]).json()
+    response = client.post(f"/patients/{patient['id']}/periodontal-exams",
+                           json={"exam_date": "2026-01-10", "teeth": [{"tooth": 11, "missing": True, "implant": True}]},
+                           headers=two_clinics["a"]["headers"])
+    assert response.status_code == 422
+    assert response.json()["errors"][0]["field"] == "teeth.0.__root__"
+
+
+@pytest.mark.appointments
+def test_datetimes_are_returned_with_utc_offset(client, two_clinics):
+    headers = two_clinics["a"]["headers"]
+    patient = client.post("/patients/", json={"first_name": "A", "last_name": "B"}, headers=headers).json()
+    response = client.post("/appointments/", headers=headers, json={
+        "patient_id": patient["id"], "doctor_id": two_clinics["a"]["doctor"],
+        "starts_at": "2030-01-15T15:00:00Z", "duration_minutes": 30, "allow_outside_schedule": True})
+    assert response.status_code == 201, response.text
+    assert response.json()["starts_at"] == "2030-01-15T15:00:00+00:00"
+
+
+def test_openapi_keeps_datetime_format_in_responses(client):
+    schemas = client.get("/openapi.json").json()["components"]["schemas"]
+    assert schemas["AppointmentResponse"]["properties"]["starts_at"] == {"type": "string", "format": "date-time", "title": "Starts At"}
