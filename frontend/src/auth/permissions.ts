@@ -39,6 +39,9 @@ export const PERMISSIONS = {
   // además exige ser quien lo registró o administración (canEditExam).
   "periodontal:view": ["admin", "doctor"],
   "periodontal:create": ["admin", "doctor"],
+  // Reportes (ODON-206): todos consultan datos agregados; solo administración exporta.
+  "reports:view": ["admin", "doctor", "receptionist"],
+  "reports:export": ["admin"],
   "clinic:manage": ["admin"],
 } as const satisfies Record<string, readonly Role[]>;
 

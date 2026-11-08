@@ -33,17 +33,8 @@ export function statusLabel(exam: PeriodontalExamListItem): { text: string; clas
 /** Se exporta un examen finalizado y vigente (ODON-198). */
 export const canExportExam = (exam: PeriodontalExam) => exam.status === "final" && !exam.voided_at;
 
-/** Descarga un archivo recibido como blob sin dejar URLs abiertas. */
-export function saveBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-}
+// Se movió a utils para compartirla con los reportes CSV (ODON-206).
+export { saveBlob } from "../../utils/saveBlob";
 
 /** Anula su autor o administración, tanto un borrador como uno finalizado. */
 export function canVoidExam(exam: PeriodontalExam, user: CurrentUser | null, isArchived: boolean): boolean {

@@ -4,13 +4,13 @@ import { Link } from "react-router-dom";
 
 import Button from "../../components/basic/Button";
 import Card from "../../components/basic/Card";
-import Input from "../../components/basic/Input";
 import LoadingSpinner from "../../components/basic/LoadingSpinner";
 import PageHeader from "../../components/basic/PageHeader";
-import Select from "../../components/basic/Select";
+import PeriodDoctorFilters from "../../components/dashboard/PeriodDoctorFilters";
 import { useAuth } from "../../context/AuthContext";
+import { useDoctorFilter } from "../../hooks/useDoctorFilter";
+import { usePeriodFilter } from "../../hooks/usePeriodFilter";
 import { getDashboard } from "../../services/dashboardService";
-import { getDoctors } from "../../services/doctorService";
 import { STATUS_COLORS, STATUS_LABELS } from "../../types/appointment";
 import type { DashboardAgendaItem, DashboardIndicators } from "../../types/dashboard";
 import {
@@ -20,17 +20,6 @@ import {
   loadExpanded,
   saveExpanded,
 } from "./dashboardIndicators";
-import {
-  PERIOD_PRESETS,
-  formatPeriod,
-  periodError,
-  presetPeriod,
-  type Period,
-  type PeriodPreset,
-} from "./dashboardPeriod";
-
-/** "all": todos los doctores · null: aún sin elegir (se usa el valor por defecto). */
-type DoctorChoice = number | "all" | null;
 
 /**
  * Inicio (ODON-202): indicadores de la clínica en una cuadrícula de cuatro,
@@ -39,33 +28,9 @@ type DoctorChoice = number | "all" | null;
  */
 export default function DashboardPage() {
   const { user } = useAuth();
-
-  const [preset, setPreset] = useState<PeriodPreset | "custom">("this_month");
-  const [custom, setCustom] = useState<Period>(() => presetPeriod("this_month"));
-  const period = preset === "custom" ? custom : presetPeriod(preset);
-  const customError = preset === "custom" ? periodError(custom) : null;
-
-  const {
-    data: doctors,
-    isSuccess: doctorsLoaded,
-    isError: doctorsFailed,
-  } = useQuery({
-    queryKey: ["doctors"],
-    queryFn: () => getDoctors(),
-  });
-  const activeDoctors = (doctors ?? []).filter((doctor) => doctor.user.is_active);
-  const ownDoctor =
-    user?.role === "doctor"
-      ? activeDoctors.find((doctor) => doctor.user_id === user.id)
-      : undefined;
-
-  const [doctorChoice, setDoctorChoice] = useState<DoctorChoice>(null);
-  const doctorId =
-    doctorChoice === "all" ? null : (doctorChoice ?? ownDoctor?.id ?? null);
-  // Un doctor espera a conocer su perfil para no pedir primero toda la clínica.
-  // Si la lista de doctores falla, se muestra toda la clínica en vez de quedar en blanco.
-  const ready =
-    user?.role !== "doctor" || doctorsLoaded || doctorsFailed || doctorChoice !== null;
+  const periodFilter = usePeriodFilter();
+  const { period, error: customError } = periodFilter;
+  const { activeDoctors, ownDoctor, doctorId, setDoctorChoice, ready } = useDoctorFilter();
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["dashboard", period.from, period.to, doctorId],
@@ -88,69 +53,13 @@ export default function DashboardPage() {
         description={`Bienvenido a OdontoNet${user ? `, ${user.name}` : ""}. ${user?.clinic.name ?? ""}`}
       />
 
-      <div className="flex flex-wrap items-end gap-4 mb-6">
-        <div className="w-48">
-          <Select
-            label="Periodo"
-            value={preset}
-            onChange={(event) => setPreset(event.target.value as PeriodPreset | "custom")}
-          >
-            {PERIOD_PRESETS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-            <option value="custom">Personalizado</option>
-          </Select>
-        </div>
-
-        {preset === "custom" && (
-          <>
-            <div className="w-44">
-              <Input
-                label="Desde"
-                type="date"
-                value={custom.from}
-                onChange={(event) => setCustom({ ...custom, from: event.target.value })}
-              />
-            </div>
-            <div className="w-44">
-              <Input
-                label="Hasta"
-                type="date"
-                value={custom.to}
-                onChange={(event) => setCustom({ ...custom, to: event.target.value })}
-              />
-            </div>
-          </>
-        )}
-
-        <div className="w-64">
-          <Select
-            label="Doctor"
-            value={doctorId === null ? "all" : String(doctorId)}
-            onChange={(event) =>
-              setDoctorChoice(event.target.value === "all" ? "all" : Number(event.target.value))
-            }
-          >
-            <option value="all">Todos los doctores</option>
-            {activeDoctors.map((doctor) => (
-              <option key={doctor.id} value={doctor.id}>
-                {doctor.user.name}
-                {doctor.id === ownDoctor?.id ? " (yo)" : ""}
-              </option>
-            ))}
-          </Select>
-        </div>
-
-        <p className="text-sm text-gray-500 pb-3">{formatPeriod(period)}</p>
-      </div>
-
-      {customError && (
-        <p role="alert" className="text-sm text-red-600 mb-6">
-          {customError}
-        </p>
-      )}
+      <PeriodDoctorFilters
+        periodFilter={periodFilter}
+        doctors={activeDoctors}
+        ownDoctorId={ownDoctor?.id}
+        doctorId={doctorId}
+        onDoctorChange={setDoctorChoice}
+      />
 
       {isError && (
         <p role="alert" className="text-red-600 mb-6">

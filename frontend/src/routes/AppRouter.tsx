@@ -20,6 +20,8 @@ import RequirePermission from "./RequirePermission";
 // La agenda carga el calendario (FullCalendar) en un archivo aparte:
 // el resto de la aplicación no paga su peso.
 const AgendaPage = lazy(() => import("../pages/Agenda/AgendaPage"));
+// Reportes carga Recharts en su propio archivo (ODON-206).
+const ReportsPage = lazy(() => import("../pages/Reports/ReportsPage"));
 
 export default function AppRouter() {
   return (
@@ -41,6 +43,17 @@ export default function AppRouter() {
           <Route path="/dashboard" element={<DashboardPage />} />
 
           <Route path="/account/password" element={<ChangePasswordPage />} />
+
+          <Route
+            path="/reports"
+            element={
+              <RequirePermission permission="reports:view">
+                <Suspense fallback={<LoadingSpinner />}>
+                  <ReportsPage />
+                </Suspense>
+              </RequirePermission>
+            }
+          />
 
           <Route
             path="/agenda"

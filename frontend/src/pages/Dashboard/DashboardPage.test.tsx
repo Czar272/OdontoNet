@@ -8,7 +8,7 @@ import type { Role } from "../../types/auth";
 import type { Dashboard } from "../../types/dashboard";
 import type { Doctor } from "../../types/doctor";
 import DashboardPage from "./DashboardPage";
-import { presetPeriod } from "./dashboardPeriod";
+import { presetPeriod } from "../../components/dashboard/period";
 
 function doctor(id: number, userId: number, name: string, isActive = true): Doctor {
   return {

@@ -13,6 +13,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: "/agenda", label: "Agenda", permission: "appointments:view" },
   { to: "/patients", label: "Pacientes", permission: "patients:view" },
   { to: "/doctors", label: "Doctores", permission: "doctors:view" },
+  { to: "/reports", label: "Reportes", permission: "reports:view" },
   { to: "/users", label: "Usuarios", permission: "users:manage" },
   { to: "/clinic", label: "Clínica", permission: "clinic:view" },
 ];

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatPeriod, periodError, presetPeriod, toIsoDate } from "./dashboardPeriod";
+import { formatPeriod, periodError, presetPeriod, toIsoDate } from "./period";
 
 // Miércoles 11 de marzo de 2026, hora local.
 const TODAY = new Date(2026, 2, 11, 15, 30);
