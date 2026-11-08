@@ -58,7 +58,7 @@ except Exception as exc:  # noqa: BLE001
 
 # Debe definirse antes de importar la app: load_dotenv no sobrescribe variables existentes.
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
-os.environ.setdefault("SECRET_KEY", "test-only-secret-key")
+os.environ.setdefault("SECRET_KEY", "test-only-secret-key-at-least-32-bytes-long")
 # Las pruebas nunca escriben en la carpeta real de imágenes (ODON-166).
 os.environ["IMAGE_STORAGE_DIR"] = tempfile.mkdtemp(prefix="odontonet-test-images-")
 atexit.register(shutil.rmtree, os.environ["IMAGE_STORAGE_DIR"], ignore_errors=True)

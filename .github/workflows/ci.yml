@@ -38,7 +38,7 @@ jobs:
     env:
       # Credenciales desechables, solo existen dentro de este job.
       TEST_DATABASE_URL: postgresql://odontonet:ci-only-password@localhost:5432/odontonet_test
-      SECRET_KEY: ci-only-secret-key
+      SECRET_KEY: ci-only-secret-key-at-least-32-bytes-long
       BCRYPT_ROUNDS: "4"
 
     steps:

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urlparse
 
 import pytest
-from jose import jwt
+import jwt
 
 from app.auth import jwt_handler
 from app.auth.security import hash_password

@@ -2,7 +2,7 @@
 import pytest
 from datetime import datetime, timedelta, timezone
 
-from jose import jwt
+import jwt
 
 from app.auth.jwt_handler import ALGORITHM, SECRET_KEY, decode_token
 from app.auth.security import verify_password
@@ -95,7 +95,7 @@ def test_me_rejects_token_signed_with_other_key(client, db):
     create_clinic_with_doctor(db, "Clinica Firma", "firma@clinica.com")
     forged = jwt.encode(
         {"sub": "firma@clinica.com", "exp": datetime.now(timezone.utc) + timedelta(minutes=5)},
-        "otra-clave-secreta",
+        "otra-clave-secreta-de-al-menos-32-bytes",
         algorithm=ALGORITHM,
     )
 
