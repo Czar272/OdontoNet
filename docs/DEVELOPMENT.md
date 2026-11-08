@@ -205,7 +205,7 @@ Las pruebas usan bcrypt con costo 4 (`BCRYPT_ROUNDS`, fijado en `tests/conftest.
 
 ### Integración continua (GitHub Actions)
 
-`.github/workflows/ci.yml` se ejecuta en cada push a `main` y en cada pull request, en servidores de GitHub: backend contra un PostgreSQL 16 temporal, con cobertura mínima de 95 % y la cadena completa de migraciones, y frontend con `lint`, `test` y `build`. El resultado aparece como ✔ o ✖ junto al commit en GitHub (pestaña *Actions*). Se puede lanzar a mano con *Run workflow*. No usa secretos reales ni la base local.
+`.github/workflows/ci.yml` se ejecuta en cada push a `main` y en cada pull request, en servidores de GitHub: backend contra un PostgreSQL 16 temporal, con cobertura mínima de 95 % y la cadena completa de migraciones, y frontend con `lint`, `test` y `build`. En pull requests y a mano (*Run workflow*) corre además el job `e2e` (Playwright), y en cada push el job de seguridad (`pip-audit`, `npm audit`, gitleaks). El resultado aparece como ✔ o ✖ junto al commit en GitHub (pestaña *Actions*). Se puede lanzar a mano con *Run workflow*. No usa secretos reales ni la base local.
 
 **Qué correr y cuándo:**
 
@@ -214,7 +214,8 @@ Las pruebas usan bcrypt con costo 4 (`BCRYPT_ROUNDS`, fijado en `tests/conftest.
 | Al entregar un ticket | Asistente | Suite completa, E2E y build |
 | Al verificar un ticket | Desarrollador | Las categorías del área tocada (ver «Qué correr según el cambio»); `lint`/`build` solo si cambió el frontend; prueba manual |
 | En cada push | GitHub Actions | Todo, automáticamente; revisar que quede en ✔ |
-| Al cerrar una épica | Desarrollador | Suite completa, `lint`, `build` y `verify-infra.ps1` |
+| En cada pull request y a mano (*Run workflow*) | GitHub Actions | Además, las pruebas E2E (job `e2e`) |
+| Al cerrar una épica | Desarrollador | Suite completa, `lint`, `build`, `npm run e2e` y `verify-infra.ps1` |
 
 ## 4. Frontend
 
@@ -232,12 +233,27 @@ Para comprobar pruebas, compilación y lint:
 
 ```powershell
 npm test            # pruebas unitarias (Vitest + Testing Library)
+npm run e2e         # pruebas de extremo a extremo (Playwright), ver «Pruebas de extremo a extremo»
 npm run test:watch  # modo continuo mientras se desarrolla
 npm run lint
 npm run build
 ```
 
 Las pruebas viven junto al código (`*.test.ts(x)`); `src/test/renderWithAuth.tsx` permite renderizar componentes con una sesión simulada de cualquier rol.
+
+
+### Pruebas de extremo a extremo (ODON-214)
+
+Playwright (`frontend/e2e/`, Chromium) recorre los flujos principales contra la API real: inicio de sesión con los tres roles, alta y búsqueda de pacientes, agenda, expediente (consulta y tratamiento en el historial), estados vacíos, 404 de otra clínica y «Acceso denegado». Cada corrida recrea una base propia `odontonet_e2e_test`, aplica las migraciones y carga el seed sintético con una contraseña de prueba; levanta la API en el puerto 8001 y Vite en el 5174, así que no choca con los servidores de desarrollo ni toca la base `odontonet`. Requiere Docker en ejecución y, la primera vez, `npx playwright install chromium`.
+
+```powershell
+# En frontend/
+npm run e2e                              # todo (~1 min)
+npx playwright test e2e/agenda.spec.ts  # un archivo
+npx playwright show-report              # informe y trazas de un fallo
+```
+
+En CI corren solo en pull requests y a mano (decisión del desarrollador: tardan más que las unitarias).
 
 ## 5. Datos iniciales
 
