@@ -2,7 +2,7 @@
 
 > Documento de continuidad técnica. Jira es la fuente de verdad de los estados de los tickets y Git es la fuente de verdad del código.
 
-**Última actualización:** 2026-11-07 — ODON-10 (dashboard y reportes) cerrada: ODON-202 y ODON-206 Done. Siguiente épica propuesta: ODON-11 (calidad, privacidad y seguridad).
+**Última actualización:** 2026-11-08 — ODON-11 (calidad, privacidad y seguridad): ODON-210, 214, 222, 226, 230, 263 y 264 Done, con CI en verde (incluidos E2E y seguridad). Falta ODON-218, a la espera de la revisión legal y ética (ODON-220).
 
 ## Alcance
 
@@ -55,12 +55,13 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 - **ODON-9 Periodontograma manual — Done (2026-11-07):** definida el 2026-11-07 (comentario en la épica; referencia funcional periodontalchart-online.com con estilo propio). ODON-182 (modelo), ODON-186 (editor), ODON-190 (guardado y recuperación), ODON-194 (historial y comparación), ODON-198 (PDF) y ODON-262 (PGR-ENH01, llenado con valores de salud con origen predeterminado). Pendiente con dentistas: margen por defecto del llenado y fuente clínica de los umbrales.
 - **ODON-10 Dashboard y reportes — Done (2026-11-07):** definida el 2026-11-07 (comentario en la épica). ODON-202 (panel de inicio: indicadores, filtro por doctor, agenda de hoy; `patients.created_at`) y ODON-206 (reportes de citas y pacientes por día, semana o mes; CSV solo administración).
 - **ODON-4 Personal y doctores — Done:** ODON-78, 82, 86, 90 y 94.
-- **ODON-11 Calidad:** ODON-254 (categorías de pruebas backend) Done; ODON-256 (pruebas rápidas y CI) Done; ODON-259 (CAL-ENH03, pytest más rápido y guía por área) Done.
+- **ODON-11 Calidad, privacidad y seguridad — En curso:** ODON-254 (categorías de pruebas backend), ODON-256 (pruebas rápidas y CI) y ODON-259 (pytest más rápido y guía por área) Done. Done el 2026-11-08: ODON-210 (cobertura mínima y cadena de migraciones), ODON-214 (E2E con Playwright), ODON-222 (auditoría), ODON-226 (respaldos cifrados y ensayo de restauración), ODON-230 (endurecimiento), ODON-263 (dependencias) y ODON-264 (Pydantic v2). ODON-218 (privacidad) sigue en Testing: su subtarea ODON-220 depende de la revisión legal y ética.
 
 ## Próximo paso
 
 1. Prueba del sistema con dos dentistas: recoger mejoras y comentarios y convertirlos en historias.
-2. Siguiente épica: ODON-11 (calidad, privacidad y seguridad), empezando por lo que no dependa de terceros ni de la revisión normativa; después LAN (ODON-12).
+2. Obtener la revisión legal y ética de `PRIVACY.md` para terminar ODON-218/220 y cerrar ODON-11. Antes de usar datos reales: programar los respaldos en el servidor y ensayar la nube (`BACKUPS.md`).
+   Siguiente épica: LAN (ODON-12).
 3. El alta de clínicas por `superadmin` se planifica aparte según el modelo de roles aprobado.
 4. ODON-258 (ausencias de doctores) queda para después del MVP.
 
