@@ -5,6 +5,10 @@ token ya usado reaparece, alguien lo copió: se revoca toda la familia. Hay una
 excepción de `REUSE_GRACE`: dos pestañas pueden renovar a la vez con la misma
 cookie; la segunda recibe un token de acceso, sin rotar, y conserva la cookie
 que dejó la primera.
+
+Toda operación que crea o revoca tokens de un usuario toma primero un bloqueo
+por usuario: sin él, una rotación en curso crearía un token nuevo que la
+revocación concurrente no alcanza a ver.
 """
 import hashlib
 import logging
@@ -14,7 +18,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from sqlalchemy import delete, exists, select, update
+from sqlalchemy import delete, exists, select, text, update
 from sqlalchemy.orm import Session
 
 from app.core.settings import get_settings
@@ -24,6 +28,7 @@ from app.models.user import User
 audit_logger = logging.getLogger("odontonet.audit")
 
 REUSE_GRACE = timedelta(seconds=10)
+_LOCK_NAMESPACE = 2650
 # Las filas vencidas se conservan un día por si hay que revisar un incidente.
 RETENTION = timedelta(days=1)
 
@@ -44,6 +49,22 @@ def _now() -> datetime:
 
 def _hash(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _lock_user(db: Session, user_id: int) -> None:
+    db.execute(text("SELECT pg_advisory_xact_lock(:ns, :user_id)"), {"ns": _LOCK_NAMESPACE, "user_id": user_id})
+
+
+def _locked_row(db: Session, token: str) -> Optional[AuthSession]:
+    """Fila del token, leída de nuevo después de tomar el bloqueo de su usuario."""
+    token_hash = _hash(token)
+    user_id = db.execute(select(AuthSession.user_id).where(AuthSession.token_hash == token_hash)).scalar_one_or_none()
+    if user_id is None:
+        return None
+    _lock_user(db, user_id)
+    return db.execute(
+        select(AuthSession).where(AuthSession.token_hash == token_hash).execution_options(populate_existing=True)
+    ).scalar_one_or_none()
 
 
 def _lifetime(remember_me: bool) -> timedelta:
@@ -82,13 +103,9 @@ def _revoke_family(db: Session, family_id: str, now: datetime) -> None:
 
 
 def rotate(db: Session, token: str) -> Optional[IssuedSession]:
-    """Cambia el refresh token por uno nuevo. None si la sesión no es válida.
-
-    La fila se bloquea para que dos renovaciones simultáneas no creen dos hijos."""
+    """Cambia el refresh token por uno nuevo. None si la sesión no es válida."""
+    row = _locked_row(db, token)
     now = _now()
-    row = db.execute(
-        select(AuthSession).where(AuthSession.token_hash == _hash(token)).with_for_update()
-    ).scalar_one_or_none()
     if row is None or row.revoked_at is not None or row.expires_at <= now:
         return None
 
@@ -123,14 +140,15 @@ def end(db: Session, token: Optional[str]) -> None:
     """Cierra la sesión de la cookie. Sin cookie o desconocida, no hace nada."""
     if not token:
         return
-    family_id = db.execute(select(AuthSession.family_id).where(AuthSession.token_hash == _hash(token))).scalar_one_or_none()
-    if family_id is not None:
-        _revoke_family(db, family_id, _now())
+    row = _locked_row(db, token)
+    if row is not None:
+        _revoke_family(db, row.family_id, _now())
         db.commit()
 
 
 def revoke_user_sessions(db: Session, user_id: int) -> None:
     """Revoca todas las sesiones del usuario, sin commit: lo hace la operación."""
+    _lock_user(db, user_id)
     db.execute(
         update(AuthSession)
         .where(AuthSession.user_id == user_id, AuthSession.revoked_at.is_(None))
@@ -138,8 +156,8 @@ def revoke_user_sessions(db: Session, user_id: int) -> None:
     )
 
 
-def family_is_active(db: Session, family_id: str) -> bool:
-    """Un token de acceso solo vale mientras su sesión siga abierta."""
-    return db.scalar(
-        select(exists().where(AuthSession.family_id == family_id, AuthSession.revoked_at.is_(None)))
-    )
+def family_is_active(db: Session, family_id: str, user_id: int) -> bool:
+    """Un token de acceso solo vale mientras la sesión de ese usuario siga abierta."""
+    return db.scalar(select(exists().where(
+        AuthSession.family_id == family_id, AuthSession.user_id == user_id, AuthSession.revoked_at.is_(None),
+    )))

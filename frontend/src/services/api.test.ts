@@ -25,14 +25,14 @@ function respond(config: InternalAxiosRequestConfig) {
   return Promise.resolve(response);
 }
 
-const newToken = { status: 200, data: { access_token: "renovado" } };
+const newToken = { status: 200, data: { access_token: "renovado", user_id: 1 } };
 
 beforeEach(() => {
   calls = [];
   answers = {};
   api.defaults.adapter = respond as AxiosRequestConfig["adapter"];
   setUnauthorizedHandler(unauthorized);
-  setToken("vencido");
+  setToken("vencido", 1);
 });
 
 afterEach(() => {
@@ -77,6 +77,17 @@ describe("renovación de la sesión", () => {
     await expect(api.get("/patients")).rejects.toBeInstanceOf(AxiosError);
 
     expect(unauthorized).toHaveBeenCalledTimes(1);
+  });
+
+  it("no sigue trabajando si la cookie ya es de otra cuenta", async () => {
+    answers["/patients"] = [{ status: 401 }];
+    answers["/auth/refresh"] = [{ status: 200, data: { access_token: "de-otra", user_id: 2 } }];
+
+    await expect(api.get("/patients")).rejects.toBeInstanceOf(AxiosError);
+
+    expect(unauthorized).toHaveBeenCalledTimes(1);
+    expect(getToken()).toBe("vencido");
+    expect(urls()).toEqual(["/patients", "/auth/refresh"]);
   });
 
   it("no reintenta en bucle si el token nuevo también es rechazado", async () => {

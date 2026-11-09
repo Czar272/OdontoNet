@@ -1,7 +1,7 @@
 import axios, { type InternalAxiosRequestConfig } from "axios";
 
 import type { TokenResponse } from "../types/auth";
-import { getToken, notifyUnauthorized, setToken } from "./session";
+import { getSessionUserId, getToken, notifyUnauthorized, setToken } from "./session";
 
 const api = axios.create({
   // Mismo origen que la interfaz: la cookie de sesión es SameSite=Strict.
@@ -23,7 +23,11 @@ let pendingRefresh: Promise<string | null> | null = null;
 async function requestNewToken(): Promise<string | null> {
   try {
     const { data } = await api.post<TokenResponse>("/auth/refresh");
-    setToken(data.access_token);
+    const current = getSessionUserId();
+    // La cookie es de todo el navegador: si otra pestaña inició sesión con otra
+    // cuenta, esta pestaña no puede seguir trabajando a nombre de esa persona.
+    if (current !== null && current !== data.user_id) return null;
+    setToken(data.access_token, data.user_id);
     return data.access_token;
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.status === 401) return null;

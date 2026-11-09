@@ -82,7 +82,7 @@ describe("AuthProvider", () => {
   it("el login guarda el token en memoria", async () => {
     vi.mocked(refreshSession).mockResolvedValue(null);
     vi.mocked(loginRequest).mockResolvedValue({
-      access_token: "nuevo", token_type: "bearer", expires_in: 900,
+      access_token: "nuevo", token_type: "bearer", expires_in: 900, user_id: 1,
     });
     renderProvider();
     await screen.findByText("estado: unauthenticated");
@@ -107,7 +107,22 @@ describe("AuthProvider", () => {
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Sesión cerrada"));
   });
 
-  it("avisa si el servidor no confirmó el cierre de sesión", async () => {
+  it("si falla /auth/me tras el login, no deja la sesión abierta", async () => {
+    vi.mocked(refreshSession).mockResolvedValue(null);
+    vi.mocked(loginRequest).mockResolvedValue({
+      access_token: "nuevo", token_type: "bearer", expires_in: 900, user_id: 1,
+    });
+    vi.mocked(getCurrentUser).mockRejectedValue(new AxiosError("sin red"));
+    renderProvider();
+    await screen.findByText("estado: unauthenticated");
+
+    fireEvent.click(screen.getByRole("button", { name: "entrar" }));
+
+    await waitFor(() => expect(logoutRequest).toHaveBeenCalledTimes(1));
+    expect(getToken()).toBeNull();
+  });
+
+  it("si el servidor no confirma el cierre, la sesión sigue abierta y avisa", async () => {
     vi.mocked(refreshSession).mockResolvedValue("acceso");
     vi.mocked(logoutRequest).mockRejectedValue(new AxiosError("sin red"));
     renderProvider();
@@ -117,5 +132,6 @@ describe("AuthProvider", () => {
 
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
     expect(toast.success).not.toHaveBeenCalledWith("Sesión cerrada");
+    expect(screen.getByText("estado: authenticated")).toBeInTheDocument();
   });
 });

@@ -9,6 +9,7 @@
 const LEGACY_TOKEN_KEY = "token";
 
 let accessToken: string | null = null;
+let sessionUserId: number | null = null;
 
 function safe<T>(action: () => T, fallback: T): T {
   try {
@@ -29,8 +30,33 @@ export function getToken(): string | null {
   return accessToken;
 }
 
-export function setToken(token: string): void {
+/** Usuario de esta pestaña. La cookie se comparte entre pestañas; esto no. */
+export function getSessionUserId(): number | null {
+  return sessionUserId;
+}
+
+export function setToken(token: string, userId: number): void {
   accessToken = token;
+  sessionUserId = userId;
+}
+
+const channel =
+  typeof BroadcastChannel === "undefined"
+    ? null
+    : new BroadcastChannel("odontonet-session");
+
+/** Avisa a las otras pestañas quién tiene ahora la sesión; null si se cerró. */
+export function announceSession(userId: number | null): void {
+  channel?.postMessage(userId);
+}
+
+export function onSessionAnnounced(
+  handler: (userId: number | null) => void,
+): () => void {
+  if (!channel) return () => {};
+  const listener = (event: MessageEvent<number | null>) => handler(event.data);
+  channel.addEventListener("message", listener);
+  return () => channel.removeEventListener("message", listener);
 }
 
 /** Prefijo de los respaldos locales con datos clínicos (p. ej. periodontograma). */
@@ -47,6 +73,7 @@ export function clearSessionDrafts(): void {
 
 export function clearToken(): void {
   accessToken = null;
+  sessionUserId = null;
   // Al cerrar sesión (voluntaria o por 401) no quedan datos clínicos en la pestaña.
   clearSessionDrafts();
 }

@@ -49,7 +49,7 @@ def get_current_user(
 
     # Una sesión cerrada o revocada deja sin valor su token de acceso (ODON-265).
     session_id = payload.get("sid")
-    if session_id is not None and not session_service.family_is_active(db, str(session_id)):
+    if session_id is not None and not session_service.family_is_active(db, str(session_id), user.id):
         raise _unauthorized("La sesión se cerró. Inicia sesión de nuevo.")
 
     return user

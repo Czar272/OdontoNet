@@ -7,7 +7,7 @@ import { renderWithAuth } from "../../test/renderWithAuth";
 import ChangePasswordPage from "./ChangePasswordPage";
 
 vi.mock("../../services/authService", () => ({
-  changePasswordRequest: vi.fn(async () => ({ access_token: "token-nuevo", token_type: "bearer", expires_in: 3600 })),
+  changePasswordRequest: vi.fn(async () => ({ access_token: "token-nuevo", token_type: "bearer", expires_in: 900, user_id: 1 })),
 }));
 
 vi.mock("react-hot-toast", () => {
@@ -34,7 +34,7 @@ afterEach(() => {
 
 describe("ChangePasswordPage", () => {
   it("cambia la contraseña y guarda el token nuevo en memoria", async () => {
-    setToken("token-viejo");
+    setToken("token-viejo", 1);
     renderWithAuth(<ChangePasswordPage />, "doctor");
 
     fill("Actual-123", "Nueva-Clave-456");
@@ -56,7 +56,7 @@ describe("ChangePasswordPage", () => {
   });
 
   it("muestra el error si la contraseña actual es incorrecta y conserva el token", async () => {
-    setToken("token-viejo");
+    setToken("token-viejo", 1);
     vi.mocked(changePasswordRequest).mockRejectedValueOnce(
       new AxiosError("error", "ERR", undefined, undefined, {
         status: 400,

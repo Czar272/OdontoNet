@@ -8,8 +8,11 @@ import { refreshSession } from "../services/api";
 import { getApiErrorMessage } from "../services/apiError";
 import { getCurrentUser, loginRequest, logoutRequest } from "../services/authService";
 import {
+  announceSession,
   clearToken,
+  getSessionUserId,
   getToken,
+  onSessionAnnounced,
   setToken,
   setUnauthorizedHandler,
 } from "../services/session";
@@ -66,6 +69,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => setUnauthorizedHandler(null);
   }, [clearSession]);
 
+  // Otra pestaña cerró la sesión o entró con otra cuenta: esta deja de mostrar
+  // y de guardar datos a nombre de la anterior.
+  useEffect(
+    () =>
+      onSessionAnnounced((userId) => {
+        if (userId === getSessionUserId()) return;
+        setLoggedOutManually(userId === null);
+        clearSession();
+      }),
+    [clearSession],
+  );
+
   // Restaurar la sesión al cargar la aplicación, con la cookie httpOnly.
   useEffect(() => {
     let cancelled = false;
@@ -100,18 +115,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (email: string, password: string, rememberMe = false) => {
     try {
-      const { access_token } = await loginRequest(email, password, rememberMe);
-      setToken(access_token);
+      const { access_token, user_id } = await loginRequest(email, password, rememberMe);
+      setToken(access_token, user_id);
 
       const currentUser = await getCurrentUser();
       setUser(currentUser);
       setStatus("authenticated");
       setLoggedOutManually(false);
+      announceSession(user_id);
 
       toast.success(`Bienvenido, ${currentUser.name}`);
       return true;
     } catch (error) {
       // Sin console.error: el error de Axios incluye el cuerpo con la contraseña.
+      // Si el login funcionó pero falló lo siguiente, no debe quedar sesión abierta.
+      if (getToken()) logoutRequest().catch(() => undefined);
       clearToken();
       toast.error(getApiErrorMessage(error, "No se pudo iniciar sesión."));
       return false;
@@ -119,11 +137,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    setLoggedOutManually(true);
-    clearSession();
+    // JavaScript no puede borrar la cookie: hasta que el servidor confirme, la
+    // sesión sigue abierta, y mostrar el login sería engañoso en un equipo compartido.
     logoutRequest().then(
-      () => toast.success("Sesión cerrada"),
-      () => toast.error("No se pudo confirmar el cierre de sesión con el servidor."),
+      () => {
+        setLoggedOutManually(true);
+        clearSession();
+        announceSession(null);
+        toast.success("Sesión cerrada");
+      },
+      () => toast.error("No se pudo cerrar la sesión. Revisa la conexión e inténtalo de nuevo."),
     );
   }, [clearSession]);
 

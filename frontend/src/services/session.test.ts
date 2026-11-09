@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { clearToken, getToken, setToken } from "./session";
+import { clearToken, getSessionUserId, getToken, setToken } from "./session";
 
 afterEach(() => {
   clearToken();
@@ -10,7 +10,7 @@ afterEach(() => {
 
 describe("session", () => {
   it("guarda el token solo en memoria", () => {
-    setToken("acceso");
+    setToken("acceso", 1);
 
     expect(getToken()).toBe("acceso");
     expect(sessionStorage.length).toBe(0);
@@ -18,18 +18,19 @@ describe("session", () => {
   });
 
   it("un token nuevo reemplaza al anterior", () => {
-    setToken("viejo");
-    setToken("nuevo");
+    setToken("viejo", 1);
+    setToken("nuevo", 1);
 
     expect(getToken()).toBe("nuevo");
   });
 
   it("cerrar sesión borra el token", () => {
-    setToken("acceso");
+    setToken("acceso", 1);
 
     clearToken();
 
     expect(getToken()).toBeNull();
+    expect(getSessionUserId()).toBeNull();
   });
 });
 

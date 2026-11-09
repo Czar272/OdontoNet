@@ -136,6 +136,7 @@ def _session_response(response: Response, issued: IssuedSession) -> dict:
         "access_token": access_token,
         "token_type": "bearer",
         "expires_in": int(token_lifetime().total_seconds()),
+        "user_id": issued.user.id,
     }
 
 

@@ -43,6 +43,8 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     # Segundos de validez del token de acceso; luego se renueva con la cookie.
     expires_in: int
+    # Una pestaña comprueba que la cookie compartida siga siendo de su mismo usuario.
+    user_id: int
 
 
 class UserLogin(BaseModel):

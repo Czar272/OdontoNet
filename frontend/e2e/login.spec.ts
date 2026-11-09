@@ -47,6 +47,18 @@ test.describe("Inicio de sesión", () => {
     await expect(page.getByRole("button", { name: "Iniciar sesión" })).toBeVisible();
   });
 
+  test("cerrar sesión en una pestaña también la cierra en las demás", async ({ page, context }) => {
+    await iniciarSesion(page, USUARIOS.doctorNorte);
+    const otra = await context.newPage();
+    await otra.goto("/dashboard");
+    await expect(otra.getByRole("heading", { level: 1, name: "Inicio" })).toBeVisible();
+
+    await otra.getByRole("button", { name: "Cerrar sesión" }).click();
+
+    await expect(otra.getByRole("button", { name: "Iniciar sesión" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Iniciar sesión" })).toBeVisible();
+  });
+
   test("una contraseña incorrecta muestra el error en español", async ({ page }) => {
     // Un solo fallo por corrida, en una cuenta que ninguna otra prueba usa para iniciar sesión por la interfaz:
     // lejos del límite de 7 fallos por cuenta.

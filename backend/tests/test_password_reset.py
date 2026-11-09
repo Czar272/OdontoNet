@@ -254,7 +254,7 @@ def test_change_password_keeps_current_session_and_closes_others(client, user):
 
     assert response.status_code == 200
     body = response.json()
-    assert set(body) == {"access_token", "token_type", "expires_in"}
+    assert set(body) == {"access_token", "token_type", "expires_in", "user_id"}
     assert client.get("/auth/me", headers=bearer(body["access_token"])).status_code == 200
     assert client.get("/auth/me", headers=bearer(other_session)).status_code == 401
     assert login(client, NEW_PASSWORD).status_code == 200

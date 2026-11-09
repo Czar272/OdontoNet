@@ -1,10 +1,14 @@
 """Sesión con refresh token rotativo en cookie httpOnly (ODON-265)."""
 from datetime import datetime, timedelta, timezone
 
+import threading
+import time
+
 import pytest
 from fastapi.testclient import TestClient
 
 from app.auth.jwt_handler import decode_token
+from app.database.connection import SessionLocal
 from app.main import app
 from app.models import AuthSession
 from app.services import session_service
@@ -222,6 +226,73 @@ def test_deactivating_a_user_revokes_sessions_and_reactivating_does_not_reopen_t
     assert refresh(target).status_code == 401
 
 
+def test_access_token_with_another_users_session_is_rejected(client, account, db):
+    """Un `sid` activo solo vale para el usuario dueño de esa sesión."""
+    from app.auth.jwt_handler import create_access_token
+
+    login(client)
+    family = db.query(AuthSession).one().family_id
+    create_clinic_with_doctor(db, "Clinica Dos", "otro@clinica-dos.com")
+    forged = create_access_token({"sub": "otro@clinica-dos.com", "role": "doctor", "sid": family})
+    assert client.get("/auth/me", headers=bearer(forged)).status_code == 401
+
+
+def run_rotation(token, results):
+    session = SessionLocal()
+    try:
+        results.append(session_service.rotate(session, token) is not None)
+    finally:
+        session.close()
+
+
+def test_revocation_reaches_a_rotation_in_progress(monkeypatch, client, account, db):
+    """Dos conexiones reales: el token que crea la rotación tampoco sobrevive."""
+    login(client)
+    token = client.cookies[COOKIE]
+    user_id = db.query(AuthSession).one().user_id
+    added = threading.Event()
+    original = session_service._add_token
+
+    def slow_add(*args):
+        created = original(*args)
+        args[0].flush()
+        added.set()
+        time.sleep(0.6)
+        return created
+
+    monkeypatch.setattr(session_service, "_add_token", slow_add)
+    results = []
+    thread = threading.Thread(target=run_rotation, args=(token, results))
+    thread.start()
+    assert added.wait(10)
+
+    revoker = SessionLocal()
+    session_service.revoke_user_sessions(revoker, user_id)
+    revoker.commit()
+    revoker.close()
+    thread.join(10)
+
+    db.expire_all()
+    rows = db.query(AuthSession).all()
+    assert results == [True] and len(rows) == 2 and all(row.revoked_at is not None for row in rows)
+
+
+def test_simultaneous_renewals_create_a_single_token(client, account, db):
+    login(client)
+    token = client.cookies[COOKIE]
+    results = []
+    threads = [threading.Thread(target=run_rotation, args=(token, results)) for _ in range(4)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(15)
+
+    assert results == [True] * 4
+    db.expire_all()
+    assert db.query(AuthSession).count() == 2
+    assert db.query(AuthSession).filter(AuthSession.revoked_at.isnot(None)).count() == 0
+
+
 def test_inactive_user_cannot_renew(client, account, db):
     from app.models import User
 
@@ -251,8 +322,8 @@ def test_sessions_stay_within_their_user_and_clinic(db):
     session_service.revoke_user_sessions(db, first_id)
     db.commit()
 
-    assert not session_service.family_is_active(db, issued.family_id)
-    assert session_service.family_is_active(db, other.family_id)
+    assert not session_service.family_is_active(db, issued.family_id, first_id)
+    assert session_service.family_is_active(db, other.family_id, second_id)
     row = db.query(AuthSession).filter(AuthSession.user_id == second_id).one()
     assert row.clinic_id == second_clinic
 

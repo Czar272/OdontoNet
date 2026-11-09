@@ -46,7 +46,7 @@ def test_login_returns_typed_token(client, db):
     response = client.post("/auth/login", json={"email": "token@clinica.com", "password": PASSWORD})
     assert response.status_code == 200
     body = response.json()
-    assert set(body) == {"access_token", "token_type", "expires_in"}
+    assert set(body) == {"access_token", "token_type", "expires_in", "user_id"}
     assert body["token_type"] == "bearer"
 
 

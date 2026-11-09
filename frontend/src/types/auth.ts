@@ -25,6 +25,7 @@ export interface TokenResponse {
   token_type: "bearer";
   /** Segundos de validez del token. */
   expires_in: number;
+  user_id: number;
 }
 
 export interface MessageResponse {

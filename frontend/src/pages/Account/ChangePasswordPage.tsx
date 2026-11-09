@@ -34,11 +34,11 @@ export default function ChangePasswordPage() {
 
     setIsSubmitting(true);
     try {
-      const { access_token } = await changePasswordRequest(
+      const { access_token, user_id } = await changePasswordRequest(
         currentPassword,
         password,
       );
-      setToken(access_token);
+      setToken(access_token, user_id);
       setCurrentPassword("");
       setPassword("");
       setConfirmation("");
