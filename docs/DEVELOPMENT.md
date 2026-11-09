@@ -153,6 +153,7 @@ Cada prueba pertenece al menos a una categoría (marcador de pytest), según el 
 | `periodontal` | Periodontograma manual: modelo y restricciones, validación por pieza y sitio, borradores con revisiones, finalización, anulación, resumen, historial cronológico y reporte PDF |
 | `dashboard` | Panel de inicio y reportes: indicadores, periodo en la zona de la clínica, filtro por doctor, agenda de hoy, series por día/semana/mes, CSV, aislamiento y roles |
 | `backup` | Manifiesto de respaldos: conteos, versión y final de la cadena de auditoría; detecta restauraciones incompletas |
+| `deployment` | Configuración por ambientes, arranque en producción, comprobación de migraciones y alta de la primera clínica |
 | `migrations` | Cadena completa de migraciones (una sola cabeza; subir, bajar a la base vacía y volver a subir; `alembic check`) sobre una base temporal `<base>_test_migrations` |
 
 ```powershell
@@ -184,6 +185,7 @@ Durante el desarrollo y al verificar un ticket basta con las categorías del ár
 | Auditoría (`audit_*`, cualquier operación que registra eventos) | `python -m pytest -m "records or rbac or isolation"` | `npx vitest run src/pages/Audit` |
 | Permisos (`permissions.py` / `permissions.ts`) | `python -m pytest -m "rbac or isolation"` | `npx vitest run src/auth src/config src/routes` |
 | Seed | `python -m pytest -m seed` | — |
+| Configuración y despliegue (`core/settings.py`, `core/startup.py`, `bootstrap_clinic`) | `python -m pytest -m deployment` | — |
 | Migración nueva, modelo compartido, `conftest.py`, `core/errors.py` | `python -m pytest` (completa) | — |
 | Componentes base (`components/basic`), `api.ts`, dependencias | — | `npm test` (completa) |
 
