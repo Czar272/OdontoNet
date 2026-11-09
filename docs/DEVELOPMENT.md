@@ -185,6 +185,8 @@ Durante el desarrollo y al verificar un ticket basta con las categorías del ár
 | Auditoría (`audit_*`, cualquier operación que registra eventos) | `python -m pytest -m "records or rbac or isolation"` | `npx vitest run src/pages/Audit` |
 | Permisos (`permissions.py` / `permissions.ts`) | `python -m pytest -m "rbac or isolation"` | `npx vitest run src/auth src/config src/routes` |
 | Seed | `python -m pytest -m seed` | — |
+| Despliegue (`compose.prod.yml`, `deploy/`, `scripts/deploy/`) | `bash scripts/deploy/smoke.sh` | — |
+| Rutas o esquemas de la API | `python -m scripts.export_openapi` y `python -m pytest -m api` (`docs/openapi.json`, que se usa porque en producción `/docs` está apagado) | — |
 | Configuración y despliegue (`core/settings.py`, `core/startup.py`, `bootstrap_clinic`) | `python -m pytest -m deployment` | — |
 | Migración nueva, modelo compartido, `conftest.py`, `core/errors.py` | `python -m pytest` (completa) | — |
 | Componentes base (`components/basic`), `api.ts`, dependencias | — | `npm test` (completa) |

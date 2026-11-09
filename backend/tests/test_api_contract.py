@@ -18,6 +18,14 @@ def test_openapi_and_docs_respond(client):
     assert spec["info"]["title"] == "OdontoNet API"
 
 
+def test_exported_openapi_is_up_to_date():
+    from scripts.export_openapi import OUTPUT, render
+
+    assert OUTPUT.read_text(encoding="utf-8").replace("\r\n", "\n") == render(), (
+        "docs/openapi.json está desactualizado: corre python -m scripts.export_openapi"
+    )
+
+
 def test_every_success_response_is_typed(client):
     spec = client.get("/openapi.json").json()
     untyped = []
