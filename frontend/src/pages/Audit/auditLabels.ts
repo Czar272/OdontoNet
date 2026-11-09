@@ -29,6 +29,7 @@ export const ACTION_LABELS: Record<string, string> = {
   "user.updated": "Editó un usuario",
   "user.deactivated": "Desactivó un usuario",
   "user.reactivated": "Reactivó un usuario",
+  "clinic.created": "Creó la clínica",
   "clinic.updated": "Editó los datos de la clínica",
   "doctor.created": "Creó un perfil de doctor",
   "doctor.updated": "Editó un perfil de doctor",

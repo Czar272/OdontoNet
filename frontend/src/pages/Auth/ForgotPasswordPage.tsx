@@ -34,9 +34,14 @@ export default function ForgotPasswordPage() {
       description="Te enviaremos un enlace para elegir una contraseña nueva."
     >
       {sentMessage ? (
-        <p role="status" className="text-sm text-gray-700 text-center">
-          {sentMessage}
-        </p>
+        <>
+          <p role="status" className="text-sm text-gray-700 text-center">
+            {sentMessage}
+          </p>
+          <p className="text-sm text-gray-600 text-center">
+            Si no te llega, pide a administración que te asigne una contraseña nueva.
+          </p>
+        </>
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input
