@@ -14,7 +14,7 @@ Con el rol **Recepción** gestionas la agenda, los datos generales de los pacien
 
 ### Por qué recepción no ve la información clínica
 
-Las consultas, los tratamientos, las imágenes y el periodontograma son información de salud del paciente. Solo la consultan quienes lo atienden: doctores y administración. Las notas de una consulta, un plan de tratamiento o una fotografía clínica no hacen falta para organizar la agenda, y limitar quién puede verlas protege la confidencialidad del paciente y a la propia clínica.
+Las consultas, los tratamientos, las imágenes y el periodontograma son información de salud del paciente. Solo la consultan los doctores y la administración de la clínica. Las notas de una consulta, un plan de tratamiento o una fotografía clínica no hacen falta para organizar la agenda, y limitar quién puede verlas protege la confidencialidad del paciente y a la propia clínica.
 
 Por eso, en la ficha del paciente solo aparecen las pestañas **Datos generales** e **Historia médica**. La historia médica sí está disponible en modo de solo lectura, para que conozcas alergias y condiciones importantes al agendar o recibir al paciente.
 
@@ -144,7 +144,7 @@ Archivar saca al paciente del listado de activos, sin borrar nada.
 1. Abre la ficha y pulsa **Archivar paciente**.
 2. Lee el aviso y pulsa **Archivar**.
 
-No se puede archivar un paciente con citas próximas pendientes: primero cancélalas o reprográmalas según corresponda. Un paciente archivado queda en modo de solo lectura y no se le pueden agendar citas.
+No se puede archivar un paciente con citas próximas pendientes: primero cancélalas o espera a que pasen y márcalas como atendidas o no asistidas. Un paciente archivado queda en modo de solo lectura y no se le pueden agendar citas.
 
 Para recuperarlo, en **Pacientes** elige **Archivados**, abre su ficha, pulsa **Reactivar paciente** y confirma con **Reactivar**.
 

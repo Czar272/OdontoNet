@@ -166,7 +166,7 @@ El examen se abre como **Borrador**. Solo quien lo creó o administración puede
 - Indica la **Fecha del examen** y, si quieres, la **Consulta** y unas **Notas generales**.
 - **Sondaje** y **Margen gingival** (en mm) se escriben por sitio. El cursor avanza solo; también puedes moverte con las flechas o con Enter. Un margen negativo indica recesión. El **NIC** se calcula automáticamente (sondaje − margen).
 - **Sangrado**, **Supuración** y **Placa**: toca el círculo del sitio para marcarlo.
-- Toca el número de una pieza para marcarla como ausente.
+- Toca el número de una pieza para marcarla como ausente. **Cuidado:** esto vacía todas sus mediciones, y volver a tocarla no las recupera.
 - **Implante**, **Movilidad**, **Furcación** y **Nota** se registran por pieza. La nota se abre con el icono de lápiz.
 - Los valores fuera de rango se marcan en rojo y hay que corregirlos antes de guardar.
 
@@ -178,7 +178,9 @@ El borrador se guarda solo unos segundos después de cada cambio; junto a los bo
 
 Si se perdió la conexión o se recargó la pestaña, al volver a abrir el examen podrás pulsar **Recuperar cambios** o **Descartar**.
 
-**Llenar con valores de salud** propone valores en los sitios vacíos de las piezas presentes, sin cambiar lo que ya escribiste. Quedan en gris cursiva como predeterminados hasta que los edites, y **Deshacer** los revierte hasta la siguiente edición. La decisión clínica es tuya: revisa y corrige las piezas que lo necesiten.
+**Llenar con valores de salud** propone valores en los sitios vacíos de las piezas presentes que no son implantes, sin cambiar lo que ya escribiste, y movilidad 0 si la eliges. Quedan en gris cursiva como predeterminados hasta que los edites, y **Deshacer** los revierte hasta la siguiente edición.
+
+Son valores **asumidos, no medidos**: cuentan en el resumen, en el PDF y para poder finalizar, aunque el resumen indica cuántos sitios son predeterminados. Con los valores propuestos (2 mm y margen 0), el NIC resultante es de 2 mm, que no significa «sin pérdida de inserción». La decisión clínica es tuya: revisa y corrige las piezas que lo necesiten.
 
 ![Diálogo de llenar con valores de salud](img/doctor-valores-salud.png)
 
@@ -186,7 +188,7 @@ Cuando termines, pulsa **Finalizar** y confirma. Hace falta al menos un sondaje 
 
 ![Confirmación para finalizar el periodontograma](img/doctor-finalizar-periodontograma.png)
 
-Un examen finalizado queda guardado tal como está y ya no se puede modificar. Si encuentras un error, pulsa **Anular**, escribe el **Motivo**, pulsa **Anular periodontograma** y registra otro. Anular no lo borra: queda en el historial como anulado.
+Un examen finalizado queda guardado tal como está y ya no se puede modificar. Si encuentras un error, quien lo registró o administración puede pulsar **Anular**, escribir el **Motivo**, pulsar **Anular periodontograma** y registrar otro. Anular no lo borra: queda en el historial como anulado.
 
 ### Reporte PDF
 
