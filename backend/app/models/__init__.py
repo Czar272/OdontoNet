@@ -6,6 +6,7 @@ from .appointment import Appointment, AppointmentStatusChange
 from .availability import DoctorAvailabilityBlock
 from .password_reset import PasswordResetToken
 from .auth_attempt import AuthAttempt
+from .auth_session import AuthSession
 from .audit_event import AuditEvent
 from .medical_history import PatientMedicalHistory
 from .clinical_visit import ClinicalVisit, ClinicalVisitRevision

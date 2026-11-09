@@ -8,7 +8,7 @@ from app.auth.permissions import CLINICAL_PROFILE_ROLES
 from app.auth.security import hash_password
 from app.models.doctor import Doctor
 from app.models.user import User
-from app.services import audit_service, password_service
+from app.services import audit_service, password_service, session_service
 from app.schemas.user_schema import UserCreate, UserUpdate
 
 
@@ -107,6 +107,9 @@ def set_user_active(db: Session, user: User, active: bool, acting_admin: User) -
 
     if user.is_active is not active:
         user.is_active = active
+        if not active:
+            # Reactivar no reabre las sesiones que tenía (ODON-265).
+            session_service.revoke_user_sessions(db, user.id)
         audit_service.record(
             db, acting_admin, "user.reactivated" if active else "user.deactivated", "user", user.id,
             fields=["is_active"],

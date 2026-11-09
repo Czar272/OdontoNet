@@ -3,7 +3,8 @@ from datetime import datetime, timezone
 
 import pytest
 
-from app.auth.jwt_handler import ACCESS_TOKEN_EXPIRE_MINUTES, REMEMBER_ME_EXPIRE_DAYS, decode_token
+from app.auth.jwt_handler import ACCESS_TOKEN_EXPIRE_MINUTES, decode_token
+from app.core.settings import get_settings
 from app.models import User
 from tests.conftest import PASSWORD, create_clinic_with_doctor
 
@@ -37,12 +38,19 @@ def test_remember_me_false_is_short(client, user):
     assert login(client, remember_me=False).json()["expires_in"] == ACCESS_TOKEN_EXPIRE_MINUTES * 60
 
 
-def test_remember_me_gives_long_session(client, user):
-    body = login(client, remember_me=True).json()
+def test_remember_me_keeps_a_short_access_token_and_a_lasting_cookie(client, user):
+    response = login(client, remember_me=True)
+    body = response.json()
 
-    assert body["expires_in"] == REMEMBER_ME_EXPIRE_DAYS * 24 * 3600
+    assert body["expires_in"] == ACCESS_TOKEN_EXPIRE_MINUTES * 60
     assert abs(lifetime_seconds(body["access_token"]) - body["expires_in"]) < 30
+    cookie = response.headers["set-cookie"]
+    assert abs(int(cookie.split("Max-Age=")[1].split(";")[0]) - get_settings().remember_me_expire_days * 86400) < 30
     assert client.get("/auth/me", headers={"Authorization": f"Bearer {body['access_token']}"}).status_code == 200
+
+
+def test_without_remember_me_the_cookie_ends_with_the_browser(client, user):
+    assert "Max-Age" not in login(client).headers["set-cookie"]
 
 
 def test_remember_me_does_not_bypass_wrong_password(client, user):

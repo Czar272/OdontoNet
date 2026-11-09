@@ -1,9 +1,13 @@
-from fastapi import Depends, HTTPException, status
+from urllib.parse import urlsplit
+
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.database.dependencies import get_db
 from app.auth.jwt_handler import decode_token
+from app.core.settings import get_settings
 from app.models.user import User
+from app.services import session_service
 
 # auto_error=False: la falta de token se responde con 401 (no 403).
 security = HTTPBearer(auto_error=False)
@@ -43,7 +47,28 @@ def get_current_user(
         if not isinstance(issued_at, (int, float)) or issued_at < user.password_changed_at.timestamp():
             raise _unauthorized("Tu contraseña cambió. Inicia sesión de nuevo.")
 
+    # Una sesión cerrada o revocada deja sin valor su token de acceso (ODON-265).
+    session_id = payload.get("sid")
+    if session_id is not None and not session_service.family_is_active(db, str(session_id)):
+        raise _unauthorized("La sesión se cerró. Inicia sesión de nuevo.")
+
     return user
+
+
+def _origin_of(url: str) -> str:
+    parts = urlsplit(url)
+    return f"{parts.scheme}://{parts.netloc}".lower()
+
+
+def require_same_origin(request: Request) -> None:
+    """Las rutas autenticadas solo por cookie exigen un origen conocido (ODON-265).
+
+    Complementa a SameSite=Strict: los navegadores siempre envían Origin en un POST."""
+    settings = get_settings()
+    allowed = {_origin_of(settings.frontend_url)}
+    allowed |= {_origin_of(origin) for origin in settings.cors_origins.split(",") if origin.strip()}
+    if request.headers.get("origin", "").lower() not in allowed:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Origen no permitido.")
 
 
 def get_current_clinic_id(current_user: User = Depends(get_current_user)) -> int:

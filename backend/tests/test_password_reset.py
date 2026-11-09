@@ -261,12 +261,10 @@ def test_change_password_keeps_current_session_and_closes_others(client, user):
     assert login(client, PASSWORD).status_code == 401
 
 
-def test_change_password_keeps_remember_me_lifetime(client, user):
-    token = login(client, PASSWORD, remember_me=True).json()["access_token"]
+def test_change_password_without_remember_me_keeps_a_browser_session_cookie(client, user):
+    token = login(client, PASSWORD).json()["access_token"]
 
-    body = change(client, token, remember_me=True).json()
-
-    assert body["expires_in"] == jwt_handler.REMEMBER_ME_EXPIRE_DAYS * 24 * 3600
+    assert "max-age" not in change(client, token).headers["set-cookie"].lower()
 
 
 def test_change_password_rejects_wrong_current_password(client, user):

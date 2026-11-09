@@ -41,14 +41,14 @@ class UserUpdate(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    # Segundos de validez del token, para que el cliente sepa cuánto dura la sesión.
+    # Segundos de validez del token de acceso; luego se renueva con la cookie.
     expires_in: int
 
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
-    # "Recuérdame": token de larga duración (REMEMBER_ME_EXPIRE_DAYS).
+    # "Recuérdame": sesión de larga duración (REMEMBER_ME_EXPIRE_DAYS).
     remember_me: bool = False
 
 
@@ -68,8 +68,6 @@ class PasswordChange(BaseModel):
     new_password: UserPassword
 
     _common = field_validator("new_password")(check_new_password)
-    # Conserva la duración de la sesión actual en el token nuevo.
-    remember_me: bool = False
 
 
 class MessageResponse(BaseModel):

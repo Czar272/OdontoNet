@@ -20,7 +20,7 @@ from app.auth.security import hash_password, verify_password
 from app.core.settings import get_settings
 from app.models.password_reset import PasswordResetToken
 from app.models.user import User
-from app.services import audit_service
+from app.services import audit_service, session_service
 
 audit_logger = logging.getLogger("odontonet.audit")
 
@@ -54,9 +54,10 @@ def _invalidate_open_tokens(db: Session, user_id: int, now: datetime) -> None:
     ).update({"used_at": now}, synchronize_session=False)
 
 
-def _mark_password_changed(user: User, new_password: str, now: datetime) -> None:
+def _mark_password_changed(db: Session, user: User, new_password: str, now: datetime) -> None:
     user.hashed_password = hash_password(new_password)
     user.password_changed_at = now
+    session_service.revoke_user_sessions(db, user.id)
 
 
 def request_reset(db: Session, email: str) -> Optional[tuple[str, str]]:
@@ -126,7 +127,7 @@ def confirm_reset(db: Session, token: str, new_password: str) -> User:
     if user is None or user.is_active is False:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=INVALID_LINK)
 
-    _mark_password_changed(user, new_password, now)
+    _mark_password_changed(db, user, new_password, now)
     _invalidate_open_tokens(db, user.id, now)
     # El actor es el propio usuario (no hay sesión): su clínica (ODON-222).
     audit_service.record(
@@ -146,7 +147,7 @@ def change_password(db: Session, user: User, current_password: str, new_password
         )
 
     now = _now()
-    _mark_password_changed(user, new_password, now)
+    _mark_password_changed(db, user, new_password, now)
     _invalidate_open_tokens(db, user.id, now)
     audit_service.record(db, user, "auth.password_changed", "user", user.id, fields=["password"])
     db.commit()
@@ -158,5 +159,5 @@ def set_password_by_admin(db: Session, user: User, new_password: str) -> None:
     """Restablecimiento por administración (PATCH /users): cierra las sesiones
     del usuario y anula sus enlaces pendientes. No hace commit."""
     now = _now()
-    _mark_password_changed(user, new_password, now)
+    _mark_password_changed(db, user, new_password, now)
     _invalidate_open_tokens(db, user.id, now)

@@ -59,6 +59,8 @@ except Exception as exc:  # noqa: BLE001
 # Debe definirse antes de importar la app: load_dotenv no sobrescribe variables existentes.
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["APP_ENV"] = "test"
+# TestClient llama a la API sin el prefijo /api que ve el navegador.
+os.environ["SESSION_COOKIE_PATH"] = "/auth"
 os.environ.setdefault("SECRET_KEY", "test-only-secret-key-at-least-32-bytes-long")
 # TestClient usa el host "testserver" (ALLOWED_HOSTS, ODON-263).
 os.environ.setdefault("ALLOWED_HOSTS", "testserver,localhost,127.0.0.1")

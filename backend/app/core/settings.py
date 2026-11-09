@@ -40,8 +40,12 @@ class Settings(BaseModel):
     # Sesión
     secret_key: str = Field(min_length=1)
     algorithm: Literal["HS256", "HS384", "HS512"] = "HS256"
-    access_token_expire_minutes: int = Field(default=60, gt=0)
+    access_token_expire_minutes: int = Field(default=15, gt=0)
+    # Duración máxima de la sesión (ODON-265); renovar no la alarga.
+    session_expire_hours: int = Field(default=12, gt=0)
     remember_me_expire_days: int = Field(default=7, gt=0)
+    # El navegador ve la API bajo /api, en desarrollo y en producción.
+    session_cookie_path: str = "/api/auth"
     bcrypt_rounds: int = Field(default=12, ge=4, le=31)
 
     # Red
