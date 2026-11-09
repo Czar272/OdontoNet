@@ -18,6 +18,8 @@ import {
  */
 export default defineConfig({
   testDir: "./e2e",
+  // Las capturas del manual tienen su propia configuración (playwright.manual.config.ts).
+  testIgnore: "**/manual/**",
   globalSetup: "./e2e/global-setup.ts",
   // Las pruebas comparten base: en serie, para que sean deterministas.
   fullyParallel: false,

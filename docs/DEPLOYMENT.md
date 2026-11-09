@@ -52,7 +52,7 @@ En producción la API reporta todos los problemas juntos y no arranca si:
 - `TRUST_PROXY_HEADERS` no es `true`;
 - `IMAGE_STORAGE_DIR` no es una ruta absoluta.
 
-El correo es opcional. Sin `SMTP_HOST`, la recuperación por correo no llega y administración asigna una contraseña nueva desde Personal.
+El correo es opcional. Sin `SMTP_HOST`, la recuperación por correo no llega y administración asigna una contraseña nueva desde Usuarios.
 
 ## Instalar
 

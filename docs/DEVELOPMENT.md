@@ -259,6 +259,10 @@ npx playwright show-report              # informe y trazas de un fallo
 
 En CI corren solo en pull requests y a mano (decisión del desarrollador: tardan más que las unitarias).
 
+### Manual de usuario (ODON-242)
+
+`docs/manual/` tiene el manual por rol. Si cambia una pantalla, regenera sus capturas con `npm run manual:capturas` (base propia, datos sintéticos). `npm run manual:pdf` escribe los PDF en `docs/manual/pdf/`, que Git ignora.
+
 ## 5. Datos iniciales
 
 Alembic crea las tablas, pero no crea usuarios ni clínicas. Para desarrollo existe un seed sintético versionado, `backend/scripts/seed_dev.py`:

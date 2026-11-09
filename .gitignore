@@ -99,5 +99,8 @@ frontend/playwright-report/
 frontend/blob-report/
 frontend/playwright/.cache/
 
+# PDF generados del manual de usuario (npm run manual:pdf)
+docs/manual/pdf/
+
 # Certificado raíz exportado por el despliegue
 deploy/odontonet-ca.crt
