@@ -152,6 +152,16 @@ jobs:
             frontend/test-results/
           retention-days: 7
 
+  deploy-smoke:
+    # Despliegue real con Docker Compose (ODON-238). Tarda: solo en PR y a mano, como E2E.
+    name: Despliegue (prueba de humo)
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prueba de humo
+        run: bash scripts/deploy/smoke.sh
+
   security:
     # Endurecimiento (ODON-230): dependencias con vulnerabilidades conocidas y
     # secretos en los commits nuevos.
