@@ -17,7 +17,7 @@ Copy-Item .env.example .env
 Copy-Item backend/.env.example backend/.env
 ```
 
-En `.env` de la raíz configura `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` y `POSTGRES_PORT`. En `backend/.env` configura `DATABASE_URL`, `SECRET_KEY` (al menos 32 bytes), `ALGORITHM=HS256`, `ACCESS_TOKEN_EXPIRE_MINUTES` y, opcionalmente, `REMEMBER_ME_EXPIRE_DAYS` (7 por defecto).
+En `.env` de la raíz configura `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` y `POSTGRES_PORT`. En `backend/.env` configura `DATABASE_URL`, `SECRET_KEY` (al menos 32 bytes), `ALGORITHM=HS256`, `ACCESS_TOKEN_EXPIRE_MINUTES` y, opcionalmente, `SESSION_EXPIRE_HOURS` (12) y `REMEMBER_ME_EXPIRE_DAYS` (7).
 
 Recuperación de contraseña (ODON-54): `FRONTEND_URL` (para armar el enlace), `PASSWORD_RESET_EXPIRE_MINUTES` y `PASSWORD_RESET_MAX_PER_HOUR` tienen valores por defecto. Con `SMTP_HOST` vacío no se envía nada: el correo, con el enlace, aparece en la consola de uvicorn (logger `odontonet.email`). Para probar con un servidor real, completa las variables `SMTP_*` de `backend/.env.example`.
 
@@ -229,7 +229,7 @@ npm ci
 npm run dev
 ```
 
-Abrir http://localhost:5173. Por defecto el frontend llama a la API en `http://127.0.0.1:8000`; para otra URL, copia `frontend/.env.example` a `frontend/.env` y ajusta `VITE_API_URL` (requiere reiniciar `npm run dev`).
+Abrir http://localhost:5173 (no `127.0.0.1`: la sesión valida el origen contra `FRONTEND_URL`). El frontend llama a `/api` y Vite lo reenvía al backend en `http://127.0.0.1:8000`, como hará el proxy en producción; si el backend está en otro puerto, copia `frontend/.env.example` a `frontend/.env` y define `VITE_API_PROXY` (requiere reiniciar `npm run dev`).
 
 Para comprobar pruebas, compilación y lint:
 

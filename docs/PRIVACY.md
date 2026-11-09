@@ -26,6 +26,7 @@ El sistema se diseñó con criterios de protección prudentes (mínimo acceso, a
 | Accesos al original de una imagen | `image_access_logs` | Trazabilidad | Administración | Solo ids y fecha |
 | Usuarios del personal: nombre, correo, rol, contraseña (hash bcrypt) | `users` | Acceso al sistema | Administración | La contraseña nunca se guarda ni se devuelve en claro |
 | Enlaces de recuperación de contraseña | `password_reset_tokens` | Recuperar acceso | Nadie (solo el sistema) | Solo el hash del enlace; caducan |
+| Sesiones abiertas: usuario, vencimiento y hash del token | `auth_sessions` | Mantener y revocar sesiones | Nadie (solo el sistema) | Solo el hash del token; se depuran un día después de vencer |
 | Intentos de autenticación | `auth_attempts` | Limitar ataques de fuerza bruta | Nadie (solo el sistema) | Hash del correo e IP; se depuran a diario |
 | Auditoría de cambios y exportaciones | `audit_events` | Saber quién cambió qué | Administración (toda la clínica) y cada doctor (lo suyo) | Solo ids y nombres de campo, sin valores |
 | Respaldos | Repositorios restic (local y nube) | Recuperación ante fallas | Custodios de la clave de cifrado | Cifrados antes de salir del servidor |
@@ -37,7 +38,8 @@ El sistema se diseñó con criterios de protección prudentes (mínimo acceso, a
 - **Aislamiento por clínica:** cada consulta se limita a la clínica del usuario autenticado, y un recurso de otra clínica responde 404. Las claves foráneas compuestas impiden mezclar datos de clínicas.
 - **Roles:** administración, doctor y recepción, según la matriz de `PERMISSIONS.md`, aplicada en el servidor y reflejada en la interfaz. Recepción no accede a consultas, tratamientos, imágenes ni periodontograma.
 - **Sesión:**
-  - token JWT de duración limitada;
+  - token de acceso de 15 minutos, solo en memoria;
+  - sesión en una cookie que JavaScript no puede leer, revocable desde el servidor;
   - cambiar la contraseña cierra las demás sesiones;
   - límite de intentos de inicio de sesión;
   - contraseñas de al menos 10 caracteres y no comunes.
@@ -59,6 +61,7 @@ El sistema se diseñó con criterios de protección prudentes (mínimo acceso, a
 | Expediente clínico (historia, consultas, tratamientos, periodontogramas, imágenes) | Conservar sin borrar mientras no haya un plazo legal; los registros se archivan o anulan, nunca se borran | No se encontró un plazo legal en Guatemala; borrar un expediente es irreversible |
 | Auditoría | Al menos lo mismo que el expediente al que se refiere | Sin ella no se puede reconstruir quién cambió un expediente (decisión ODON-222) |
 | Respaldos | 7 diarios, 4 semanales, 12 mensuales y uno por año | Ver `BACKUPS.md`. Los anuales se conservan hasta que exista un plazo legal |
+| Sesiones | 1 día después de vencer | Dato operativo |
 | Intentos de autenticación | 1 día | Dato operativo; solo sirve para el límite de intentos |
 | Enlaces de recuperación | Hasta que caducan o se usan | Dato operativo |
 | Usuarios dados de baja | Se desactivan, no se borran | La auditoría y el expediente los referencian |

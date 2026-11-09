@@ -31,6 +31,7 @@
 | --- | :---: | :---: | :---: |
 | `POST /auth/login` | público | público | público |
 | `GET /auth/me` | ✅ | ✅ | ✅ |
+| `POST /auth/refresh`, `POST /auth/logout` (por cookie de sesión; solo la propia) | ✅ | ✅ | ✅ |
 | `POST /auth/password-reset/request`, `POST /auth/password-reset/confirm` (recuperación por correo) | público | público | público |
 | `POST /auth/change-password` (contraseña propia) | ✅ | ✅ | ✅ |
 | `GET /clinic` (datos de la propia clínica) | ✅ | ✅ | ✅ |
