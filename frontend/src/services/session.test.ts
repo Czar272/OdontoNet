@@ -1,76 +1,54 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  clearToken,
-  getToken,
-  isRememberedSession,
-  replaceToken,
-  setToken,
-} from "./session";
+import { clearToken, getToken, setToken } from "./session";
 
 afterEach(() => {
+  clearToken();
   sessionStorage.clear();
   localStorage.clear();
 });
 
 describe("session", () => {
-  it("sin Recuérdame guarda el token solo en sessionStorage", () => {
-    setToken("corto");
+  it("guarda el token solo en memoria", () => {
+    setToken("acceso");
 
-    expect(sessionStorage.getItem("token")).toBe("corto");
-    expect(localStorage.getItem("token")).toBeNull();
-    expect(getToken()).toBe("corto");
+    expect(getToken()).toBe("acceso");
+    expect(sessionStorage.length).toBe(0);
+    expect(localStorage.length).toBe(0);
   });
 
-  it("con Recuérdame guarda el token solo en localStorage", () => {
-    setToken("largo", true);
+  it("un token nuevo reemplaza al anterior", () => {
+    setToken("viejo");
+    setToken("nuevo");
 
-    expect(localStorage.getItem("token")).toBe("largo");
-    expect(sessionStorage.getItem("token")).toBeNull();
-    expect(getToken()).toBe("largo");
+    expect(getToken()).toBe("nuevo");
   });
 
-  it("un nuevo login reemplaza el token anterior en ambos almacenamientos", () => {
-    setToken("largo", true);
-    setToken("corto");
-
-    expect(localStorage.getItem("token")).toBeNull();
-    expect(getToken()).toBe("corto");
-  });
-
-  it("cerrar sesión borra ambos", () => {
-    setToken("largo", true);
-    sessionStorage.setItem("token", "otro");
+  it("cerrar sesión borra el token", () => {
+    setToken("acceso");
 
     clearToken();
 
     expect(getToken()).toBeNull();
   });
+});
 
-  it("replaceToken conserva una sesión con Recuérdame en localStorage", () => {
-    setToken("largo", true);
+describe("tokens de versiones anteriores", () => {
+  it("se eliminan del navegador al cargar la aplicación", async () => {
+    const { vi } = await import("vitest");
+    sessionStorage.setItem("token", "viejo-corto");
+    localStorage.setItem("token", "viejo-largo");
 
-    expect(isRememberedSession()).toBe(true);
-    replaceToken("nuevo-largo");
+    vi.resetModules();
+    await import("./session");
 
-    expect(localStorage.getItem("token")).toBe("nuevo-largo");
     expect(sessionStorage.getItem("token")).toBeNull();
-  });
-
-  it("replaceToken conserva una sesión corta en sessionStorage", () => {
-    setToken("corto");
-
-    expect(isRememberedSession()).toBe(false);
-    replaceToken("nuevo-corto");
-
-    expect(sessionStorage.getItem("token")).toBe("nuevo-corto");
     expect(localStorage.getItem("token")).toBeNull();
   });
 });
 
 describe("respaldos clínicos de la pestaña", () => {
-  it("se borran al cerrar sesión (clearToken), sin tocar otras claves", async () => {
-    const { clearToken } = await import("./session");
+  it("se borran al cerrar sesión (clearToken), sin tocar otras claves", () => {
     sessionStorage.setItem("odontonet:periodontal-draft:7", "{}");
     sessionStorage.setItem("otra-clave", "x");
     clearToken();

@@ -60,11 +60,11 @@ export default defineConfig({
       stderr: "pipe",
     },
     {
-      // Frontend en 5174 apuntando al backend E2E.
+      // Frontend en 5174, que reenvía /api al backend E2E.
       command: `npx vite --host 127.0.0.1 --port ${WEB_PORT} --strictPort`,
       cwd: FRONTEND_DIR,
       url: WEB_URL,
-      env: { VITE_API_URL: API_URL },
+      env: { VITE_API_PROXY: API_URL },
       reuseExistingServer: false,
       timeout: 120_000,
       stdout: "ignore",

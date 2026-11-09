@@ -21,6 +21,32 @@ test.describe("Inicio de sesión", () => {
     }
   });
 
+  test("la sesión sobrevive a una recarga sin dejar tokens legibles y cerrarla la revoca", async ({
+    page,
+    context,
+  }) => {
+    await iniciarSesion(page, USUARIOS.doctorNorte);
+
+    const almacenado = await page.evaluate(() => ({
+      local: localStorage.getItem("token"),
+      sesion: sessionStorage.getItem("token"),
+    }));
+    expect(almacenado).toEqual({ local: null, sesion: null });
+    const [cookie] = (await context.cookies()).filter((c) => c.name === "odontonet_session");
+    expect(cookie).toMatchObject({ httpOnly: true, sameSite: "Strict", path: "/api/auth" });
+
+    await page.reload();
+    await expect(page.getByRole("heading", { level: 1, name: "Inicio" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Cerrar sesión" }).click();
+    await expect(page.getByRole("button", { name: "Iniciar sesión" })).toBeVisible();
+
+    // La cookie copiada antes de cerrar ya no sirve.
+    await context.addCookies([cookie]);
+    await page.goto("/dashboard");
+    await expect(page.getByRole("button", { name: "Iniciar sesión" })).toBeVisible();
+  });
+
   test("una contraseña incorrecta muestra el error en español", async ({ page }) => {
     // Un solo fallo por corrida, en una cuenta que ninguna otra prueba usa para iniciar sesión por la interfaz:
     // lejos del límite de 7 fallos por cuenta.

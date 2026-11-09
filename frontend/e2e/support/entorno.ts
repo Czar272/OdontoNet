@@ -89,6 +89,7 @@ export function entornoBackend(): Record<string, string> {
     APP_ENV: "development",
     ALLOWED_HOSTS: "127.0.0.1,localhost",
     CORS_ORIGINS: WEB_URL,
+    FRONTEND_URL: WEB_URL,
     IMAGE_STORAGE_DIR,
     // Hash rápido: solo afecta a los usuarios ficticios de esta base.
     BCRYPT_ROUNDS: "4",

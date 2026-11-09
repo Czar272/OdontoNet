@@ -7,7 +7,7 @@ import Input from "../../components/basic/Input";
 import PageHeader from "../../components/basic/PageHeader";
 import { getApiErrorMessage } from "../../services/apiError";
 import { changePasswordRequest } from "../../services/authService";
-import { isRememberedSession, replaceToken } from "../../services/session";
+import { setToken } from "../../services/session";
 import {
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
@@ -37,9 +37,8 @@ export default function ChangePasswordPage() {
       const { access_token } = await changePasswordRequest(
         currentPassword,
         password,
-        isRememberedSession(),
       );
-      replaceToken(access_token);
+      setToken(access_token);
       setCurrentPassword("");
       setPassword("");
       setConfirmation("");

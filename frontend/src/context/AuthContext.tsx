@@ -4,8 +4,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import toast from "react-hot-toast";
 
+import { refreshSession } from "../services/api";
 import { getApiErrorMessage } from "../services/apiError";
-import { getCurrentUser, loginRequest } from "../services/authService";
+import { getCurrentUser, loginRequest, logoutRequest } from "../services/authService";
 import {
   clearToken,
   getToken,
@@ -15,7 +16,7 @@ import {
 import type { CurrentUser } from "../types/auth";
 
 /**
- * loading: hay token y se está verificando con /auth/me (evita parpadeos).
+ * loading: se está comprobando si hay una sesión (evita parpadeos).
  * authenticated: sesión válida y usuario cargado.
  * unauthenticated: sin sesión.
  */
@@ -40,9 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loggedOutManually, setLoggedOutManually] = useState(false);
-  const [status, setStatus] = useState<AuthStatus>(() =>
-    getToken() ? "loading" : "unauthenticated",
-  );
+  const [status, setStatus] = useState<AuthStatus>("loading");
 
   const clearSession = useCallback(() => {
     clearToken();
@@ -67,14 +66,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => setUnauthorizedHandler(null);
   }, [clearSession]);
 
-  // Restaurar la sesión al cargar la aplicación.
+  // Restaurar la sesión al cargar la aplicación, con la cookie httpOnly.
   useEffect(() => {
-    if (!getToken()) return;
-
     let cancelled = false;
 
-    getCurrentUser()
-      .then((currentUser) => {
+    refreshSession()
+      .then(async (token) => {
+        if (!token) {
+          if (!cancelled) setStatus("unauthenticated");
+          return;
+        }
+        const currentUser = await getCurrentUser();
         if (cancelled) return;
         setUser(currentUser);
         setStatus("authenticated");
@@ -82,7 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .catch((error: unknown) => {
         if (cancelled) return;
         // Un 401 ya lo gestiona el interceptor. Otros errores (API caída):
-        // se conserva el token para reintentar al recargar.
+        // la cookie se conserva para reintentar al recargar.
         if (!(axios.isAxiosError(error) && error.response?.status === 401)) {
           toast.error("No se pudo conectar con el servidor.", {
             id: "server-unavailable",
@@ -99,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (email: string, password: string, rememberMe = false) => {
     try {
       const { access_token } = await loginRequest(email, password, rememberMe);
-      setToken(access_token, rememberMe);
+      setToken(access_token);
 
       const currentUser = await getCurrentUser();
       setUser(currentUser);
@@ -119,7 +121,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(() => {
     setLoggedOutManually(true);
     clearSession();
-    toast.success("Sesión cerrada");
+    logoutRequest().then(
+      () => toast.success("Sesión cerrada"),
+      () => toast.error("No se pudo confirmar el cierre de sesión con el servidor."),
+    );
   }, [clearSession]);
 
   const refreshUser = useCallback(async () => {

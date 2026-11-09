@@ -1,12 +1,14 @@
 /**
- * Almacenamiento del token y aviso de sesión inválida.
+ * Token de acceso y aviso de sesión inválida (ODON-265).
  *
- * Decisión vigente (ODON-52, ajustada en ODON-255):
- * - Sin "Recuérdame": token corto en sessionStorage; se pierde al cerrar el navegador.
- * - Con "Recuérdame": token largo en localStorage; sobrevive al cierre del navegador.
- * Sin refresh token todavía (ODON-230). Ver "Sesión" en docs/ARCHITECTURE.md.
+ * El token de acceso vive solo en memoria: un script no lo encuentra en el
+ * almacenamiento del navegador y se pierde al recargar. La sesión se recupera
+ * con el refresh token, en una cookie httpOnly que JavaScript no puede leer.
+ * Ver "Sesión y tokens" en docs/ARCHITECTURE.md.
  */
-const TOKEN_KEY = "token";
+const LEGACY_TOKEN_KEY = "token";
+
+let accessToken: string | null = null;
 
 function safe<T>(action: () => T, fallback: T): T {
   try {
@@ -17,34 +19,18 @@ function safe<T>(action: () => T, fallback: T): T {
   }
 }
 
+// Las versiones anteriores guardaban el token en el navegador: no debe quedar ahí.
+safe(() => {
+  sessionStorage.removeItem(LEGACY_TOKEN_KEY);
+  localStorage.removeItem(LEGACY_TOKEN_KEY);
+}, undefined);
+
 export function getToken(): string | null {
-  return safe(
-    () => sessionStorage.getItem(TOKEN_KEY) ?? localStorage.getItem(TOKEN_KEY),
-    null,
-  );
+  return accessToken;
 }
 
-export function setToken(token: string, remember = false): void {
-  clearToken();
-  safe(
-    () => (remember ? localStorage : sessionStorage).setItem(TOKEN_KEY, token),
-    undefined,
-  );
-}
-
-/** true si la sesión actual usa "Recuérdame" (token en localStorage). */
-export function isRememberedSession(): boolean {
-  return safe(
-    () =>
-      sessionStorage.getItem(TOKEN_KEY) === null &&
-      localStorage.getItem(TOKEN_KEY) !== null,
-    false,
-  );
-}
-
-/** Sustituye el token conservando dónde se guarda (p. ej. tras cambiar la contraseña). */
-export function replaceToken(token: string): void {
-  setToken(token, isRememberedSession());
+export function setToken(token: string): void {
+  accessToken = token;
 }
 
 /** Prefijo de los respaldos locales con datos clínicos (p. ej. periodontograma). */
@@ -60,10 +46,7 @@ export function clearSessionDrafts(): void {
 }
 
 export function clearToken(): void {
-  safe(() => {
-    sessionStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(TOKEN_KEY);
-  }, undefined);
+  accessToken = null;
   // Al cerrar sesión (voluntaria o por 401) no quedan datos clínicos en la pestaña.
   clearSessionDrafts();
 }

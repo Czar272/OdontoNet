@@ -50,16 +50,21 @@ export async function confirmPasswordReset(
   return response.data;
 }
 
+/** Cierra la sesión en el servidor: revoca la cookie y el token de acceso. */
+export async function logoutRequest(): Promise<MessageResponse> {
+  const response = await api.post<MessageResponse>("/auth/logout");
+
+  return response.data;
+}
+
 /** Cambia la contraseña propia; devuelve un token nuevo para seguir en sesión. */
 export async function changePasswordRequest(
   currentPassword: string,
   newPassword: string,
-  rememberMe: boolean,
 ): Promise<TokenResponse> {
   const response = await api.post<TokenResponse>("/auth/change-password", {
     current_password: currentPassword,
     new_password: newPassword,
-    remember_me: rememberMe,
   });
 
   return response.data;

@@ -33,16 +33,16 @@ afterEach(() => {
 });
 
 describe("ChangePasswordPage", () => {
-  it("cambia la contraseña y guarda el token nuevo en el mismo almacenamiento", async () => {
-    setToken("token-viejo", true);
+  it("cambia la contraseña y guarda el token nuevo en memoria", async () => {
+    setToken("token-viejo");
     renderWithAuth(<ChangePasswordPage />, "doctor");
 
     fill("Actual-123", "Nueva-Clave-456");
 
     await vi.waitFor(() => expect(toast.success).toHaveBeenCalled());
-    expect(changePasswordRequest).toHaveBeenCalledWith("Actual-123", "Nueva-Clave-456", true);
+    expect(changePasswordRequest).toHaveBeenCalledWith("Actual-123", "Nueva-Clave-456");
     expect(getToken()).toBe("token-nuevo");
-    expect(localStorage.getItem("token")).toBe("token-nuevo");
+    expect(localStorage.getItem("token")).toBeNull();
     expect(screen.getByLabelText("Contraseña actual")).toHaveValue("");
   });
 
