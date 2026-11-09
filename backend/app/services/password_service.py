@@ -9,7 +9,6 @@
 """
 import hashlib
 import logging
-import os
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -18,6 +17,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.auth.security import hash_password, verify_password
+from app.core.settings import get_settings
 from app.models.password_reset import PasswordResetToken
 from app.models.user import User
 from app.services import audit_service
@@ -28,15 +28,15 @@ INVALID_LINK = "El enlace no es válido o ya expiró. Solicita uno nuevo."
 
 
 def reset_expire_minutes() -> int:
-    return int(os.getenv("PASSWORD_RESET_EXPIRE_MINUTES", "30"))
+    return get_settings().password_reset_expire_minutes
 
 
 def reset_max_per_hour() -> int:
-    return int(os.getenv("PASSWORD_RESET_MAX_PER_HOUR", "3"))
+    return get_settings().password_reset_max_per_hour
 
 
 def frontend_url() -> str:
-    return os.getenv("FRONTEND_URL", "http://localhost:5173").rstrip("/")
+    return get_settings().frontend_url.rstrip("/")
 
 
 def _now() -> datetime:

@@ -1,5 +1,5 @@
 import logging
-import os
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,6 +25,9 @@ from app.api.treatment_routes import router as treatment_router
 from app.api.user_routes import router as user_router
 from app.core.allowed_hosts import AllowedHostsMiddleware, parse_allowed_hosts
 from app.core.errors import register_exception_handlers
+from app.core.settings import ensure_safe_environment, get_settings
+from app.core.startup import ensure_schema_current
+from app.database.connection import engine
 from app.database.dependencies import get_db
 
 # Loggers propios (odontonet.api, odontonet.audit): nivel INFO a la consola,
@@ -36,7 +39,26 @@ if not _app_logger.handlers:
     _app_logger.addHandler(_handler)
     _app_logger.setLevel(logging.INFO)
 
+# Producción con valores de ejemplo o inseguros: no arranca (ODON-234).
+settings = get_settings()
+ensure_safe_environment(settings)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    if settings.is_production:
+        ensure_schema_current(engine)
+    yield
+
+
+# La documentación interactiva describe toda la API: solo fuera de producción.
+_docs_urls = (
+    {"docs_url": None, "redoc_url": None, "openapi_url": None} if settings.is_production else {}
+)
+
 app = FastAPI(
+    lifespan=lifespan,
+    **_docs_urls,
     title="OdontoNet API",
     version="0.1.0",
     description=(
@@ -75,10 +97,10 @@ def cors_origins(raw: str) -> list[str]:
     return origins
 
 
-origins = cors_origins(os.getenv("CORS_ORIGINS", "http://localhost:5173"))
+origins = cors_origins(settings.cors_origins)
 
 # Solo se atienden peticiones dirigidas a los hosts de ALLOWED_HOSTS (ODON-263).
-allowed_hosts = parse_allowed_hosts(os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1"))
+allowed_hosts = parse_allowed_hosts(settings.allowed_hosts)
 app.add_middleware(AllowedHostsMiddleware, allowed_hosts=allowed_hosts)
 
 # Cabeceras de seguridad en todas las respuestas (ODON-230). La documentación

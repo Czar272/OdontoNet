@@ -1,4 +1,3 @@
-import os
 
 from sqlalchemy import (
     CheckConstraint,
@@ -16,6 +15,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
+from app.core.settings import get_settings
 from app.database.connection import Base
 from app.models.treatment import TOOTH_CHECK
 
@@ -41,7 +41,7 @@ VIEW_CHECK = _in("view", IMAGE_VIEWS)
 
 def image_max_bytes() -> int:
     """Tamaño máximo por imagen; IMAGE_MAX_MB, 10 MB por defecto."""
-    return int(float(os.getenv("IMAGE_MAX_MB", "10")) * 1024 * 1024)
+    return int(get_settings().image_max_mb * 1024 * 1024)
 
 
 class PatientImage(Base):

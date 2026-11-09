@@ -58,6 +58,7 @@ except Exception as exc:  # noqa: BLE001
 
 # Debe definirse antes de importar la app: load_dotenv no sobrescribe variables existentes.
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+os.environ["APP_ENV"] = "test"
 os.environ.setdefault("SECRET_KEY", "test-only-secret-key-at-least-32-bytes-long")
 # TestClient usa el host "testserver" (ALLOWED_HOSTS, ODON-263).
 os.environ.setdefault("ALLOWED_HOSTS", "testserver,localhost,127.0.0.1")
@@ -78,7 +79,7 @@ from app.services.image_storage import LocalImageStorage, get_image_storage  # n
 
 PASSWORD = "Test-Password-123"
 
-TEST_CATEGORIES = {"auth", "patients", "doctors", "users", "api", "seed", "isolation", "rbac", "appointments", "records", "images", "periodontal", "dashboard", "migrations", "backup"}
+TEST_CATEGORIES = {"auth", "patients", "doctors", "users", "api", "seed", "isolation", "rbac", "appointments", "records", "images", "periodontal", "dashboard", "migrations", "backup", "deployment"}
 
 
 def pytest_collection_modifyitems(config, items):

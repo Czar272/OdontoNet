@@ -15,7 +15,6 @@ excederse por unas pocas; es aceptable para frenar ataques de fuerza bruta.
 import hashlib
 import logging
 import math
-import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -24,6 +23,7 @@ from fastapi import HTTPException, Request, status
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
+from app.core.settings import get_settings
 from app.models.auth_attempt import AuthAttempt
 
 audit_logger = logging.getLogger("odontonet.audit")
@@ -40,28 +40,24 @@ class Limit:
     lock: timedelta
 
 
-def _env_int(name: str, default: int) -> int:
-    return int(os.getenv(name, str(default)))
-
-
 def login_limit() -> Limit:
-    window = timedelta(minutes=_env_int("LOGIN_WINDOW_MINUTES", 15))
+    settings = get_settings()
     return Limit(
         kind="login",
-        per_account=_env_int("LOGIN_MAX_FAILURES_PER_ACCOUNT", 7),
-        per_ip=_env_int("LOGIN_MAX_FAILURES_PER_IP", 30),
-        window=window,
-        lock=timedelta(minutes=_env_int("LOGIN_LOCK_MINUTES", 15)),
+        per_account=settings.login_max_failures_per_account,
+        per_ip=settings.login_max_failures_per_ip,
+        window=timedelta(minutes=settings.login_window_minutes),
+        lock=timedelta(minutes=settings.login_lock_minutes),
     )
 
 
 def reset_request_limit() -> Limit:
-    return Limit("password_reset", None, _env_int("PASSWORD_RESET_MAX_PER_IP", 10),
+    return Limit("password_reset", None, get_settings().password_reset_max_per_ip,
                  timedelta(minutes=15), timedelta(minutes=15))
 
 
 def reset_confirm_limit() -> Limit:
-    return Limit("password_reset_confirm", None, _env_int("PASSWORD_RESET_CONFIRM_MAX_FAILURES_PER_IP", 30),
+    return Limit("password_reset_confirm", None, get_settings().password_reset_confirm_max_failures_per_ip,
                  timedelta(minutes=15), timedelta(minutes=15))
 
 
@@ -74,7 +70,7 @@ def client_ip(request: Request) -> str:
     (un único proxy de confianza delante de la API, ODON-12) se usa la última
     entrada de X-Forwarded-For: la que agrega ese proxy. Las anteriores las
     controla el cliente y servirían para evadir el límite."""
-    if os.getenv("TRUST_PROXY_HEADERS", "false").lower() == "true":
+    if get_settings().trust_proxy_headers:
         entries = [entry.strip() for entry in request.headers.get("x-forwarded-for", "").split(",") if entry.strip()]
         if entries:
             return entries[-1][:45]

@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 
+from app.core.settings import get_settings
+
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_STORAGE_DIR = BACKEND_DIR / "storage" / "images"
 
@@ -118,4 +120,4 @@ class LocalImageStorage(ImageStorage):
 @lru_cache
 def get_image_storage() -> ImageStorage:
     """Dependencia de FastAPI. IMAGE_STORAGE_DIR define la carpeta raíz."""
-    return LocalImageStorage(Path(os.getenv("IMAGE_STORAGE_DIR") or DEFAULT_STORAGE_DIR))
+    return LocalImageStorage(Path(get_settings().image_storage_dir or DEFAULT_STORAGE_DIR))
