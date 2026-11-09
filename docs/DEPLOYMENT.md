@@ -14,7 +14,7 @@ Guía para instalar OdontoNet en una clínica. Cada clínica tiene su propia ins
 
 ## Configuración
 
-Copia `backend/.env.production.example` a `backend/.env.production` (Git lo ignora) y reemplaza los valores. Los secretos solo viven en ese archivo.
+Copia `backend/.env.production.example` a `backend/.env.production` (Git lo ignora) y reemplaza los valores. Los secretos solo viven en ese archivo. La aplicación no lo lee por su nombre: Docker Compose carga sus variables en el contenedor de la API, y los comandos de administración corren dentro de ese contenedor.
 
 En producción la API reporta todos los problemas juntos y no arranca si:
 - `SECRET_KEY` o `DATABASE_URL` conservan un valor de ejemplo o de pruebas, o la base es `*_test`;

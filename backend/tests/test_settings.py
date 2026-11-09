@@ -6,9 +6,17 @@ import sys
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 
+from app import main
 from app.core import startup
-from app.core.settings import Settings, ensure_safe_environment, environment_problems, get_settings
+from app.core.settings import (
+    Settings,
+    ensure_safe_environment,
+    environment_problems,
+    get_database_url,
+    get_settings,
+)
 from app.database.connection import SessionLocal, engine
 from app.models import AuditEvent, Clinic, User
 from app.services import email_service
@@ -112,6 +120,31 @@ def test_boolean_variables(monkeypatch, raw, expected):
     assert get_settings().smtp_starttls is expected
 
 
+@pytest.mark.parametrize(("raw", "expected"), [("true", True), ("TRUE", True), ("1", False), ("yes", False), ("sí", False)])
+def test_trusting_the_proxy_requires_an_explicit_true(monkeypatch, raw, expected):
+    monkeypatch.setenv("TRUST_PROXY_HEADERS", raw)
+    assert get_settings().trust_proxy_headers is expected
+
+
+def test_text_values_are_kept_literally(monkeypatch):
+    monkeypatch.setenv("SMTP_PASSWORD", " con espacios ")
+    assert get_settings().smtp_password == " con espacios "
+
+
+def test_zero_disables_password_recovery_requests(monkeypatch):
+    monkeypatch.setenv("PASSWORD_RESET_MAX_PER_HOUR", "0")
+    assert get_settings().password_reset_max_per_hour == 0
+
+
+def test_database_tools_only_need_the_database_url(monkeypatch):
+    monkeypatch.setenv("SMTP_STARTTLS", "valor-invalido")
+    monkeypatch.delenv("SECRET_KEY")
+    assert get_database_url() == os.environ["DATABASE_URL"]
+    monkeypatch.setenv("DATABASE_URL", " ")
+    with pytest.raises(RuntimeError, match="DATABASE_URL"):
+        get_database_url()
+
+
 # --- Arranque real del módulo, en un proceso aparte ------------------------------
 
 
@@ -155,6 +188,26 @@ def test_schema_check_stops_when_database_is_behind(monkeypatch):
     monkeypatch.setattr(startup, "expected_revision", lambda: "revision_futura")
     with pytest.raises(RuntimeError, match="revision_futura"):
         startup.ensure_schema_current(engine)
+
+
+def test_production_startup_checks_the_schema(monkeypatch):
+    def outdated(_engine):
+        raise RuntimeError("base desactualizada")
+
+    monkeypatch.setattr(main, "settings", production())
+    monkeypatch.setattr(main, "ensure_schema_current", outdated)
+    with pytest.raises(RuntimeError, match="base desactualizada"):
+        with TestClient(main.app):
+            pass
+
+
+def test_other_environments_do_not_check_the_schema(monkeypatch):
+    def unexpected(_engine):
+        raise AssertionError("no debe comprobarse fuera de producción")
+
+    monkeypatch.setattr(main, "ensure_schema_current", unexpected)
+    with TestClient(main.app):
+        pass
 
 
 # --- Correo opcional ----------------------------------------------------------------

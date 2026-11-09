@@ -52,7 +52,8 @@ class Settings(BaseModel):
 
     # Recuperación de contraseña y límite de intentos
     password_reset_expire_minutes: int = Field(default=30, gt=0)
-    password_reset_max_per_hour: int = Field(default=3, gt=0)
+    # 0 desactiva las solicitudes de recuperación.
+    password_reset_max_per_hour: int = Field(default=3, ge=0)
     login_max_failures_per_account: int = Field(default=7, gt=0)
     login_max_failures_per_ip: int = Field(default=30, gt=0)
     login_window_minutes: int = Field(default=15, gt=0)
@@ -72,7 +73,13 @@ class Settings(BaseModel):
     image_storage_dir: str = ""
     image_max_mb: float = Field(default=10, gt=0)
 
-    @field_validator("trust_proxy_headers", "smtp_starttls", mode="before")
+    @field_validator("trust_proxy_headers", mode="before")
+    @classmethod
+    def _trust_proxy_only_when_explicit(cls, value):
+        """Solo "true": confiar por error en X-Forwarded-For deja evadir el límite por IP."""
+        return value.strip().lower() == "true" if isinstance(value, str) else value
+
+    @field_validator("smtp_starttls", mode="before")
     @classmethod
     def _accept_spanish_yes(cls, value):
         if isinstance(value, str) and value.strip().lower() in ("si", "sí"):
@@ -102,8 +109,18 @@ def _from_environment() -> dict[str, str]:
         raw = os.environ.get(variable)
         if raw is None or (raw.strip() == "" and field.annotation is not str):
             continue
-        values[variable] = raw.strip()
+        # El texto se conserva literal: una contraseña puede tener espacios.
+        values[variable] = raw if field.annotation is str else raw.strip()
     return values
+
+
+def get_database_url() -> str:
+    """Solo la conexión: migraciones y respaldos no deben depender del resto de
+    la configuración, ni fallar por una errata ajena a la base."""
+    url = os.environ.get("DATABASE_URL", "").strip()
+    if not url:
+        raise RuntimeError("DATABASE_URL no está configurada. Revisa backend/.env")
+    return url
 
 
 def get_settings() -> Settings:
