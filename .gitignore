@@ -8,6 +8,7 @@
 .env.*
 !.env.example
 !**/.env.example
+!/.env.production.example
 *.pem
 *.key
 *.p12
@@ -97,3 +98,6 @@ frontend/test-results/
 frontend/playwright-report/
 frontend/blob-report/
 frontend/playwright/.cache/
+
+# Certificado raíz exportado por el despliegue
+deploy/odontonet-ca.crt

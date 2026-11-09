@@ -1,0 +1,62 @@
+# Proxy de OdontoNet (ODON-238): HTTPS con CA propia, sin internet.
+{
+	admin off
+	local_certs
+	skip_install_trust
+}
+
+{$ODONTONET_DOMAIN} {
+	tls internal
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+
+	# Nunca se registra la query string: las búsquedas llevan nombres de pacientes.
+	log {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request>uri regexp "\?.*$" ""
+				request>headers>Referer delete
+			}
+		}
+	}
+
+	handle_path /api/* {
+		# Un poco más que IMAGE_MAX_MB, por el formato multipart.
+		request_body {
+			max_size 11MB
+		}
+		# Caddy reescribe X-Forwarded-For con la IP real del cliente.
+		reverse_proxy api:8000
+	}
+
+	handle {
+		root * /srv
+		encode zstd gzip
+		try_files {path} /index.html
+		file_server
+
+		header {
+			Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+			X-Content-Type-Options nosniff
+			X-Frame-Options DENY
+			Referrer-Policy no-referrer
+			Permissions-Policy "camera=(), microphone=(), geolocation=()"
+			Cross-Origin-Opener-Policy same-origin
+		}
+
+		@assets path /assets/*
+		@other not path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		header @other Cache-Control "no-cache"
+	}
+}
+
+# Solo para el healthcheck del contenedor: este puerto no se publica.
+:8081 {
+	respond "ok" 200
+}
