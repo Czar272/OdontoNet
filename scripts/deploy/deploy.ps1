@@ -4,8 +4,8 @@ Instala o actualiza OdontoNet en el equipo de la clínica (ODON-238).
 
 .DESCRIPTION
 1. Comprueba la configuración y construye las imágenes.
-2. Respalda la base antes de migrar. Si el respaldo falla, se detiene sin tocar nada.
-3. Aplica las migraciones con la API detenida.
+2. Detiene la aplicación y respalda la base. Si el respaldo falla, se detiene sin migrar.
+3. Aplica las migraciones.
 4. Levanta la aplicación y espera a que esté sana.
 5. Exporta el certificado raíz para instalarlo en los equipos de la clínica.
 
@@ -69,7 +69,7 @@ if (-not $composeImages -or $composeImages -ne $backendImages) {
     throw "ODONTONET_IMAGE_DIR (.env) e IMAGE_STORAGE_DIR (backend\.env) deben ser la misma carpeta: los respaldos leen esa ruta."
 }
 if (-not $FirstInstall -and -not $BackupConfig) {
-    throw "Para actualizar indica -BackupConfig: las migraciones se aplican solo con un respaldo previo. En una instalación nueva usa -FirstInstall."
+    throw "Para actualizar indica -BackupConfig: las migraciones se aplican solo con un respaldo previo. -FirstInstall es solo para una instalación con la base vacía."
 }
 if (-not (Test-Path $composeImages)) { New-Item -ItemType Directory -Path $composeImages | Out-Null }
 
@@ -79,14 +79,23 @@ Invoke-Compose build
 Write-Step "Levantando la base de datos"
 Invoke-Compose up -d --wait db
 
-if (-not $FirstInstall) {
+# La aplicación se detiene antes del respaldo: lo que se registre después no se perdería al restaurar.
+Write-Step "Deteniendo la aplicación"
+Invoke-Compose stop api proxy
+
+if ($FirstInstall) {
+    $user = Read-EnvValue $rootEnv "POSTGRES_USER"
+    $database = Read-EnvValue $rootEnv "POSTGRES_DB"
+    $existing = (& docker compose -f $ComposeFile --project-directory $Root exec -T db psql -U $user -d $database -tAc "SELECT to_regclass('public.alembic_version')")
+    if ($existing) { throw "-FirstInstall es solo para una base vacía, y esta ya tiene datos. Usa -BackupConfig." }
+}
+else {
     Write-Step "Respaldando antes de migrar"
     & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root "scripts\backup\backup.ps1") -Config $BackupConfig -Tag pre-migracion
-    if ($LASTEXITCODE -ne 0) { throw "El respaldo falló: no se aplicó ningún cambio." }
+    if ($LASTEXITCODE -ne 0) { throw "El respaldo falló: no se migró nada y la aplicación quedó detenida. Corrige el problema y vuelve a ejecutar este script." }
 }
 
-Write-Step "Deteniendo la API y aplicando las migraciones"
-Invoke-Compose stop api proxy
+Write-Step "Aplicando las migraciones"
 Invoke-Compose run --rm -T api alembic upgrade head
 
 Write-Step "Levantando la aplicación"

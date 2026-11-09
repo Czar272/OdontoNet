@@ -64,8 +64,8 @@ Ninguna fuente oficial fija números, así que se usa una práctica estándar, d
 Al terminar borra lo temporal.
 
 **Restauración real**, tras una falla. Es una operación manual y deliberada:
-1. Detén el backend.
-2. Restaura con restic en una carpeta de trabajo: `restic -r <repo> --password-file <archivo> restore latest:/C/…/odontonet-backup-staging --target <carpeta>` y lo mismo para la carpeta de imágenes. `restic snapshots` lista los respaldos disponibles. Restaura cada carpeta con la sintaxis `snapshot:/ruta`: restaurar la ruta absoluta completa copia también los permisos de carpetas como `C:\Users`.
+1. Detén la aplicación: `docker compose -f compose.prod.yml stop api proxy`.
+2. Restaura con restic en una carpeta de trabajo: `restic -r <repo> --password-file <archivo> restore latest:/C/…/odontonet-backup-staging --target <carpeta>` y lo mismo para la carpeta de imágenes. `restic snapshots` lista los respaldos disponibles (con `--tag pre-migracion`, los previos a una actualización); usa su id en lugar de `latest` para restaurar uno concreto. Restaura cada carpeta con la sintaxis `snapshot:/ruta`: restaurar la ruta absoluta completa copia también los permisos de carpetas como `C:\Users`.
 3. Recrea la base vacía dentro del contenedor y carga el volcado (usuario y base de `POSTGRES_USER` y `POSTGRES_DB` del `.env` de la raíz): `docker exec odontonet-db dropdb -U <usuario> <base>`, `docker exec odontonet-db createdb -U <usuario> <base>`, `docker cp odontonet.dump odontonet-db:/tmp/r.dump`, `docker exec odontonet-db pg_restore -U <usuario> -d <base> --no-owner /tmp/r.dump` y `docker exec odontonet-db rm /tmp/r.dump`.
 4. Copia las imágenes a `IMAGE_STORAGE_DIR`.
 5. Corre `python -m scripts.backup_manifest compare <manifest.json>`, `verify_images` y `verify_audit` antes de volver a abrir el sistema.

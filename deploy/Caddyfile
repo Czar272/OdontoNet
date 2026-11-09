@@ -3,6 +3,19 @@
 	admin off
 	local_certs
 	skip_install_trust
+
+	# Errores del proxy (p. ej. API caída): tampoco guardan la query string.
+	log default {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				uri regexp "\?.*$" ""
+				request>uri regexp "\?.*$" ""
+				request>headers>Referer delete
+			}
+		}
+	}
 }
 
 {$ODONTONET_DOMAIN} {
@@ -30,7 +43,8 @@
 		request_body {
 			max_size 11MB
 		}
-		# Caddy reescribe X-Forwarded-For con la IP real del cliente.
+		# Caddy reescribe X-Forwarded-For con la IP que ve; Docker Desktop puede
+		# ocultar la del cliente (ver DEPLOYMENT.md, «Comprobar la IP de los clientes»).
 		reverse_proxy api:8000
 	}
 

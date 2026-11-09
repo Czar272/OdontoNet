@@ -210,6 +210,10 @@ def test_other_environments_do_not_check_the_schema(monkeypatch):
         pass
 
 
+def test_database_errors_never_carry_query_values():
+    assert engine.hide_parameters is True
+
+
 # --- Correo opcional ----------------------------------------------------------------
 
 

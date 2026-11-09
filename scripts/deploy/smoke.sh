@@ -132,6 +132,11 @@ LOGS=$(compose logs api proxy 2>&1)
 check "los logs no guardan búsquedas" "$(printf '%s' "$LOGS" | grep -c NombreReservado || true)" "0"
 contains "el proxy registra las peticiones" "$LOGS" "/api/patients"
 
+compose stop api >/dev/null 2>&1
+check "con la API caída, el proxy responde 502" "$(code "$BASE/api/patients/?q=NombreDuranteFalla")" "502"
+sleep 1
+check "los errores del proxy tampoco guardan búsquedas" "$(compose logs proxy 2>&1 | grep -c NombreDuranteFalla || true)" "0"
+
 if [ "$FAILURES" -ne 0 ]; then
   echo "Prueba de humo: $FAILURES fallas"
   exit 1

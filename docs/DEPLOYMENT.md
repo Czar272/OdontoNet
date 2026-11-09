@@ -29,7 +29,8 @@ HTTPS funciona sin internet con una CA propia de Caddy. Por eso hay que instalar
 - Windows con Docker Desktop, configurado para iniciar con la sesión. Los contenedores y las tareas de respaldo necesitan esa sesión abierta.
 - Python 3.11 para las herramientas de respaldo.
 - IP fija para el equipo servidor, asignada en el router.
-- Una carpeta propia para la instalación: no uses la copia de desarrollo. En un equipo con la base de desarrollo en marcha, detenla antes con `docker compose stop` (usan el mismo contenedor y puerto).
+- Una carpeta propia para la instalación (`git clone https://github.com/Czar272/OdontoNet`): no uses la copia de desarrollo. En un equipo con la base de desarrollo, quítala antes con `docker compose down`, **sin `-v`** para conservar sus datos: usan el mismo nombre de contenedor y puerto.
+- Internet solo para instalar y actualizar (imágenes base y dependencias). Una vez instalado, el sistema funciona sin él.
 
 ## Configuración
 
@@ -55,20 +56,21 @@ El correo es opcional. Sin `SMTP_HOST`, la recuperación por correo no llega y a
 
 ## Instalar
 
-1. Configura los respaldos (`BACKUPS.md`).
-2. Con los archivos listos:
+1. Con los archivos listos:
 
    ```powershell
    powershell -ExecutionPolicy Bypass -File scripts\deploy\deploy.ps1 -FirstInstall
    ```
 
-3. Crea la primera clínica. El comando pide la contraseña (10 caracteres o más, no común) y lo registra en la auditoría. Si ya hay una clínica, no cambia nada.
+2. Crea la primera clínica. El comando pide la contraseña (10 caracteres o más, no común) y lo registra en la auditoría. Si ya hay una clínica, no cambia nada.
 
    ```powershell
    docker compose -f compose.prod.yml exec api python -m scripts.bootstrap_clinic --clinic-name "Nombre de la clínica" --admin-name "Nombre" --admin-email correo@ejemplo.com
    ```
 
+3. Configura los respaldos (`BACKUPS.md`, «Puesta en marcha»). Van después de crear la clínica: el primer respaldo necesita la base ya migrada.
 4. Permite los puertos 80 y 443 en el firewall de Windows, solo para la red privada.
+5. **Comprueba la IP de los clientes.** Inicia sesión desde otro equipo y revisa `remote_ip` en `docker compose -f compose.prod.yml logs proxy`. Si aparece una IP interna de Docker en lugar de la del equipo, Docker Desktop la está ocultando y toda la clínica cuenta como una sola IP para el límite de intentos: sube `LOGIN_MAX_FAILURES_PER_IP` en `backend/.env` para que unos pocos errores no bloqueen a todos. El límite de 7 fallos por cuenta sigue funcionando.
 
 ## Conectar cada equipo de la clínica
 
@@ -85,7 +87,14 @@ git pull
 powershell -ExecutionPolicy Bypass -File scripts\deploy\deploy.ps1 -BackupConfig $env:USERPROFILE\.odontonet\backup.env
 ```
 
-La API nunca migra sola: en producción, si la base no está en la última migración del código, no arranca. `deploy.ps1` respalda, detiene la API, migra y la levanta de nuevo, y se detiene si el respaldo falla. Para volver atrás tras una migración fallida, restaura el respaldo `pre-migracion` (`BACKUPS.md`).
+La API nunca migra sola: en producción, si la base no está en la última migración del código, no arranca. `deploy.ps1` detiene la aplicación, respalda, migra y la levanta de nuevo, y se detiene si el respaldo falla.
+
+**Volver atrás tras una migración fallida:** la versión anterior del código no arranca con una base migrada, ni la nueva con la anterior, así que hay que revertir ambas.
+
+1. Vuelve al commit anterior: `git checkout <commit>`.
+2. Reconstruye sin levantar: `docker compose -f compose.prod.yml build`.
+3. Restaura la base y las imágenes con la restauración real de `BACKUPS.md`, eligiendo el respaldo con `restic snapshots --tag pre-migracion`.
+4. Levanta la aplicación: `docker compose -f compose.prod.yml up -d`.
 
 ## Operación
 
