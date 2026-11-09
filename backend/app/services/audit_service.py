@@ -5,6 +5,7 @@ si la operación falla y se revierte, el evento también. Un bloqueo de
 transacción por clínica (pg_advisory_xact_lock) ordena las escrituras para que
 la cadena de hashes no se bifurque con peticiones simultáneas.
 """
+
 import base64
 import hashlib
 import json
@@ -33,10 +34,20 @@ def _utc_iso(value: datetime) -> str:
 def compute_hash(event: AuditEvent) -> str:
     """SHA-256 del contenido del evento y del hash anterior (JSON canónico)."""
     content = [
-        event.clinic_id, event.actor_user_id, event.actor_role, event.action, event.entity_type,
-        event.entity_id, event.patient_id, event.fields, _utc_iso(event.occurred_at), event.prev_hash,
+        event.clinic_id,
+        event.actor_user_id,
+        event.actor_role,
+        event.action,
+        event.entity_type,
+        event.entity_id,
+        event.patient_id,
+        event.fields,
+        _utc_iso(event.occurred_at),
+        event.prev_hash,
     ]
-    payload = json.dumps(content, separators=(",", ":"), ensure_ascii=False, sort_keys=True)
+    payload = json.dumps(
+        content, separators=(",", ":"), ensure_ascii=False, sort_keys=True
+    )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
@@ -62,9 +73,15 @@ def record(
     # Primero se escriben los cambios pendientes (bloquean sus filas) y al final
     # se toma el bloqueo de la clínica: siempre en ese orden, sin interbloqueos.
     db.flush()
-    db.execute(text("SELECT pg_advisory_xact_lock(:ns, :clinic)"), {"ns": _LOCK_NAMESPACE, "clinic": clinic})
+    db.execute(
+        text("SELECT pg_advisory_xact_lock(:ns, :clinic)"),
+        {"ns": _LOCK_NAMESPACE, "clinic": clinic},
+    )
     prev_hash = db.execute(
-        select(AuditEvent.hash).where(AuditEvent.clinic_id == clinic).order_by(AuditEvent.id.desc()).limit(1)
+        select(AuditEvent.hash)
+        .where(AuditEvent.clinic_id == clinic)
+        .order_by(AuditEvent.id.desc())
+        .limit(1)
     ).scalar()
     event = AuditEvent(
         clinic_id=clinic,
@@ -95,7 +112,9 @@ def verify_chain(db: Session, clinic_id: int) -> list[str]:
     problems = []
     previous = None
     for event in db.execute(
-        select(AuditEvent).where(AuditEvent.clinic_id == clinic_id).order_by(AuditEvent.id)
+        select(AuditEvent)
+        .where(AuditEvent.clinic_id == clinic_id)
+        .order_by(AuditEvent.id)
     ).scalars():
         if event.prev_hash != previous:
             problems.append(f"evento {event.id}: no enlaza con el anterior")
@@ -107,6 +126,7 @@ def verify_chain(db: Session, clinic_id: int) -> list[str]:
 
 # --- Consulta -------------------------------------------------------------------
 
+
 def _encode_cursor(event_id: int) -> str:
     return base64.urlsafe_b64encode(str(event_id).encode()).decode()
 
@@ -115,7 +135,9 @@ def _decode_cursor(cursor: str) -> int:
     try:
         return int(base64.urlsafe_b64decode(cursor.encode()).decode())
     except (ValueError, UnicodeDecodeError):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Cursor inválido.")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Cursor inválido."
+        )
 
 
 def list_events(
@@ -156,7 +178,11 @@ def list_events(
         {
             "id": event.id,
             "occurred_at": event.occurred_at,
-            "actor": {"id": event.actor_user_id, "name": name, "role": event.actor_role},
+            "actor": {
+                "id": event.actor_user_id,
+                "name": name,
+                "role": event.actor_role,
+            },
             "action": event.action,
             "entity_type": event.entity_type,
             "entity_id": event.entity_id,
@@ -170,7 +196,11 @@ def list_events(
 
 
 def actions_in_use(db: Session, clinic_id: int) -> list[str]:
-    return list(db.execute(
-        select(AuditEvent.action).where(AuditEvent.clinic_id == clinic_id).group_by(AuditEvent.action)
-        .order_by(func.min(AuditEvent.action))
-    ).scalars())
+    return list(
+        db.execute(
+            select(AuditEvent.action)
+            .where(AuditEvent.clinic_id == clinic_id)
+            .group_by(AuditEvent.action)
+            .order_by(func.min(AuditEvent.action))
+        ).scalars()
+    )
