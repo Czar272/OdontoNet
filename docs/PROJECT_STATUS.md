@@ -2,7 +2,7 @@
 
 > Documento de continuidad técnica. Jira es la fuente de verdad de los estados de los tickets y Git es la fuente de verdad del código.
 
-**Última actualización:** 2026-11-11 — ODON-13 (IA periodontal) planificada el 2026-11-09 e iniciada: contrato v1 del servicio de IA en `AI_INTEGRATION.md` (ODON-250, en revisión). ODON-12: queda ODON-246 (aceptación con un dentista). ODON-11 sigue a la espera de la revisión legal y ética (ODON-218/220).
+**Última actualización:** 2026-11-11 — ODON-250 (contrato v1 del servicio de IA, `AI_INTEGRATION.md`) y ODON-247 (guion de aceptación, `UAT.md`) Done. ODON-12: quedan ODON-246 (ejecutar la aceptación con la clínica) y ODON-276 (paso de la instalación de prueba a la definitiva). ODON-11 sigue a la espera de la revisión legal y ética (ODON-218/220).
 
 ## Alcance
 
@@ -54,10 +54,10 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 - **ODON-8 Imágenes clínicas — Done (2026-11-07):** definida el 2026-11-03 (comentarios en la épica y en ODON-178). ODON-166 (almacenamiento privado), ODON-170 (subida y consentimiento), ODON-174 (galería, miniaturas e historial) y ODON-178 (origen, vista y fecha de toma; archivo inmutable con revisiones de metadatos; anulación con motivo; registro de accesos al original). La retención se difiere a CAL03 (ODON-218/221).
 - **ODON-9 Periodontograma manual — Done (2026-11-07):** definida el 2026-11-07 (comentario en la épica; referencia funcional periodontalchart-online.com con estilo propio). ODON-182 (modelo), ODON-186 (editor), ODON-190 (guardado y recuperación), ODON-194 (historial y comparación), ODON-198 (PDF) y ODON-262 (PGR-ENH01, llenado con valores de salud con origen predeterminado). Pendiente con dentistas: margen por defecto del llenado y fuente clínica de los umbrales.
 - **ODON-10 Dashboard y reportes — Done (2026-11-07):** definida el 2026-11-07 (comentario en la épica). ODON-202 (panel de inicio: indicadores, filtro por doctor, agenda de hoy; `patients.created_at`) y ODON-206 (reportes de citas y pacientes por día, semana o mes; CSV solo administración).
-- **ODON-12 Despliegue y entrega — En curso:** Done el 2026-11-09: ODON-234 (configuración por ambientes), ODON-265 (sesión segura), ODON-238 (despliegue con Docker Compose y HTTPS local) y ODON-242 (manual por rol, `docs/manual/`). Pendiente: ODON-246 (aceptación) y la instalación en una clínica.
+- **ODON-12 Despliegue y entrega — En curso:** Done el 2026-11-09: ODON-234 (configuración por ambientes), ODON-265 (sesión segura), ODON-238 (despliegue con Docker Compose y HTTPS local) y ODON-242 (manual por rol, `docs/manual/`). Done el 2026-11-11: ODON-247 (guion de aceptación, `UAT.md`). Pendiente: ODON-246 (aceptación: ODON-248 ejecución y ODON-249 acta), ODON-276 (paso de la instalación de prueba a la definitiva) y la instalación en una clínica.
 - **ODON-4 Personal y doctores — Done:** ODON-78, 82, 86, 90 y 94.
 - **ODON-11 Calidad, privacidad y seguridad — En curso:** ODON-254 (categorías de pruebas backend), ODON-256 (pruebas rápidas y CI) y ODON-259 (pytest más rápido y guía por área) Done. Done el 2026-11-08: ODON-210 (cobertura mínima y cadena de migraciones), ODON-214 (E2E con Playwright), ODON-222 (auditoría), ODON-226 (respaldos cifrados y ensayo de restauración), ODON-230 (endurecimiento), ODON-263 (dependencias) y ODON-264 (Pydantic v2). ODON-218 (privacidad) sigue en Testing: su subtarea ODON-220 depende de la revisión legal y ética.
-- **ODON-13 IA periodontal (posterior al MVP) — En curso:** planificada el 2026-11-09 (comentario en la épica): asistencia con revisión obligatoria; primero presencia o ausencia de piezas FDI con YOLO11s-seg (comparado con RF-DETR Seg); solo datos públicos hasta el dictamen de ética. Historias ODON-250 (contrato, `AI_INTEGRATION.md`) y ODON-266 a 275.
+- **ODON-13 IA periodontal (posterior al MVP) — En curso:** planificada el 2026-11-09 (comentario en la épica): asistencia con revisión obligatoria; primero presencia o ausencia de piezas FDI con YOLO11s-seg (comparado con RF-DETR Seg); solo datos públicos hasta el dictamen de ética. ODON-250 (contrato v1, `AI_INTEGRATION.md`) Done el 2026-11-11; siguen ODON-266 (viabilidad y datos públicos) a 275.
 
 ## Próximo paso
 
