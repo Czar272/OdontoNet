@@ -24,6 +24,7 @@ El sistema se diseñó con criterios de protección prudentes (mínimo acceso, a
 | Fotografías intraorales y sus metadatos | `patient_images`, `patient_image_revisions`, carpeta privada `IMAGE_STORAGE_DIR` | Expediente; posible investigación | Administración y doctores | Dato de salud. Recodificadas sin metadatos EXIF |
 | Consentimiento para fotografías y uso en investigación (`research_use`) | `patient_photo_consents` (versionado) | Base para tomar y usar fotos | Administración y doctores | Sin consentimiento vigente no se pueden subir fotos |
 | Accesos al original de una imagen | `image_access_logs` | Trazabilidad | Administración | Solo ids y fecha |
+| Análisis de IA y sugerencias (previsto, ODON-13) | `ai_analyses`, `ai_analysis_images`, `ai_suggestions` | Asistencia al periodontograma; evaluación de tesis solo con `research_use` y dictamen de ética | Administración y doctores | Dato de salud: detecciones con coordenadas normalizadas, sin píxeles. Ver `AI_INTEGRATION.md` |
 | Usuarios del personal: nombre, correo, rol, contraseña (hash bcrypt) | `users` | Acceso al sistema | Administración | La contraseña nunca se guarda ni se devuelve en claro |
 | Enlaces de recuperación de contraseña | `password_reset_tokens` | Recuperar acceso | Nadie (solo el sistema) | Solo el hash del enlace; caducan |
 | Sesiones abiertas: usuario, vencimiento y hash del token | `auth_sessions` | Mantener y revocar sesiones | Nadie (solo el sistema) | Solo el hash del token; se depuran un día después de vencer |
@@ -52,6 +53,7 @@ El sistema se diseñó con criterios de protección prudentes (mínimo acceso, a
 - Para subir fotos hace falta un consentimiento vigente y versionado (`granted`), con fecha de firma y quien lo registró.
 - El uso en investigación es una autorización **separada** (`research_use`); no se deduce del consentimiento clínico.
 - Cada imagen registra su origen (cámara intraoral, teléfono, cámara, externa), la vista y la fecha de toma.
+- **IA (previsto, ODON-13, `AI_INTEGRATION.md`):** pedir un análisis exige el mismo consentimiento vigente que subir una foto. La API envía al servicio de IA de la propia clínica (red interna, sin internet) una copia reducida de cada foto y su vista, sin identificadores del paciente; el servicio no guarda imágenes y cada lectura del original queda en `image_access_logs`. Usar estos registros para medir el modelo requiere `research_use` y el dictamen de ética.
 - **Pendiente** (decisión del comité de ética): el texto del consentimiento que firma el paciente, cómo se revoca el uso en investigación y qué pasa con imágenes ya usadas en un conjunto de datos.
 
 ## 5. Retención (propuesta, pendiente de criterio legal)
