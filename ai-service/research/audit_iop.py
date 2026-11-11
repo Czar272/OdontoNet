@@ -1,7 +1,7 @@
 """Auditoría de IOP-Compass (ODON-266): qué trae el dataset, sin copiar imágenes.
 
 Uso (desde ai-service/):
-    .venv/Scripts/python -m research.audit_iop --root ../../IOP-Compass/<carpeta> --out results/auditoria-iop.json
+    .venv/Scripts/python -m research.audit_iop --root ../../Datasets_Odontonet/IOP-Compass/IOP-Compass --out results/auditoria-iop.json
 
 El resultado solo contiene conteos e ids públicos de paciente del dataset.
 """
@@ -9,11 +9,54 @@ El resultado solo contiene conteos e ids públicos de paciente del dataset.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from collections import Counter, defaultdict
 from pathlib import Path
 
 from research.iop_dataset import FDI_PERMANENT, THIRD_MOLARS, VIEW_TOKENS, discover
+
+
+def annotations_fingerprint(root: Path) -> str:
+    """Huella de la versión de las anotaciones, reproducible tras volver a descargar el dataset.
+
+    SHA-256 de la secuencia, ordenada por ruta relativa POSIX (UTF-8), de:
+    ruta relativa en UTF-8 + byte 0x00 + SHA-256 (32 bytes) del contenido del JSON.
+    """
+    digest = hashlib.sha256()
+    for path in sorted(root.rglob("*.json"), key=lambda p: p.relative_to(root).as_posix()):
+        digest.update(path.relative_to(root).as_posix().encode("utf-8") + b"\x00")
+        digest.update(hashlib.sha256(path.read_bytes()).digest())
+    return digest.hexdigest()
+
+
+def label_consistency(records) -> dict:
+    """Comprobación geométrica de las etiquetas FDI, independiente del entrenamiento.
+
+    En la vista frontal la pieza 11 (derecha del paciente) debe quedar a la izquierda de la 21 en
+    la imagen, y la 11 por encima de la 41. Mide en qué proporción de fotos se cumple.
+    """
+    from statistics import mean
+
+    left_right = above_below = n_lr = n_ab = 0
+    for r in records:
+        if r.view != "frontal":
+            continue
+        cx = {}
+        for t in r.teeth:
+            if t.fdi in (11, 21, 41) and t.contours:
+                pts = max(t.contours, key=len)
+                cx[t.fdi] = (mean(p[0] for p in pts), mean(p[1] for p in pts))
+        if 11 in cx and 21 in cx:
+            n_lr += 1
+            left_right += cx[11][0] < cx[21][0]
+        if 11 in cx and 41 in cx:
+            n_ab += 1
+            above_below += cx[11][1] < cx[41][1]
+    return {
+        "frontal_11_left_of_21_in_image": {"photos": n_lr, "share": round(left_right / n_lr, 4) if n_lr else None},
+        "frontal_11_above_41": {"photos": n_ab, "share": round(above_below / n_ab, 4) if n_ab else None},
+    }
 
 
 def audit(root: Path) -> dict:
@@ -28,6 +71,7 @@ def audit(root: Path) -> dict:
     multi_contour = 0
     no_contour = 0
     present_by_patient: dict[str, set[int]] = defaultdict(set)
+    quadrants_by_view: dict[str, Counter] = defaultdict(Counter)
     for r in records:
         if r.image is None:
             missing_image[r.view] += 1
@@ -45,6 +89,7 @@ def audit(root: Path) -> dict:
                 unlabeled[t.raw_label or "<vacío>"] += 1
             else:
                 fdi_counts[t.fdi] += 1
+                quadrants_by_view[r.view][t.fdi // 10] += 1
                 present_by_patient[r.patient_id].add(t.fdi)
     teeth_per_patient = [len(present_by_patient[p]) for p in patients]
     absent_positions = sum(32 - n for n in teeth_per_patient)
@@ -68,6 +113,11 @@ def audit(root: Path) -> dict:
         },
         "positions_not_visible_in_any_view": absent_positions,
         "view_tokens": VIEW_TOKENS,
+        "quadrant_share_by_view": {
+            v: {str(q): round(c[q] / sum(c.values()), 3) for q in (1, 2, 3, 4)} for v, c in quadrants_by_view.items()
+        },
+        "label_consistency": label_consistency(records),
+        "annotations_sha256": annotations_fingerprint(root),
     }
 
 

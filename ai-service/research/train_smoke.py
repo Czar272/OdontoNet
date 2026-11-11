@@ -4,8 +4,10 @@ No busca un buen modelo: mide VRAM máxima y tiempo por época con precisión
 mixta y lote pequeño. El entrenamiento real es ODON-267.
 
 Uso (desde ai-service/):
-    .venv/Scripts/python -m research.train_smoke --model yolo11s-seg --data ../../IOP-Compass-yolo/data.yaml --epochs 2 --batch 8
-    .venv/Scripts/python -m research.train_smoke --model rfdetr-seg-small --data ../../IOP-Compass-coco --epochs 1 --batch 2
+    .venv/Scripts/python -m research.train_smoke --model yolo11s-seg --data ../../Datasets_Odontonet/IOP-Compass-yolo/data.yaml --epochs 3 --batch 8
+    PYTHONUTF8=1 .venv/Scripts/python -m research.train_smoke --model rfdetr-seg-small --data ../../Datasets_Odontonet/IOP-Compass-yolo --epochs 1 --batch 2
+
+RF-DETR lee el mismo formato YOLO-seg que Ultralytics: ambos usan los mismos archivos y la misma partición.
 """
 
 from __future__ import annotations
@@ -30,8 +32,17 @@ def train_yolo(data: Path, epochs: int, batch: int, imgsz: int, fraction: float)
         fliplr=0.0,  # el espejo cambia el cuadrante: la etiqueta FDI sería falsa
         fraction=fraction, project=str(RUNS_DIR), name="smoke-yolo11s-seg", exist_ok=True, plots=False, verbose=False,
     )
+    import csv
+
     metrics = getattr(model.trainer, "metrics", {}) or {}
-    return {k: round(float(v), 4) for k, v in metrics.items() if "mAP50" in k}
+    final = {k: round(float(v), 4) for k, v in metrics.items() if "mAP50" in k}
+    per_epoch = []
+    csv_path = Path(model.trainer.save_dir) / "results.csv"
+    if csv_path.exists():
+        for row in csv.DictReader(csv_path.open(encoding="utf-8")):
+            row = {k.strip(): v for k, v in row.items()}
+            per_epoch.append({k: round(float(row[k]), 4) for k in row if k == "epoch" or "mAP50" in k})
+    return {"final": final, "per_epoch": per_epoch}
 
 
 def train_rfdetr(model_name: str, data: Path, epochs: int, batch: int) -> dict:
