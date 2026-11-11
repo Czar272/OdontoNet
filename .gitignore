@@ -77,6 +77,9 @@ storage/
 # Datasets y pesos de IA
 ai-service/datasets/
 ai-service/weights/
+ai-service/runs/
+ai-service/results/raw/
+*.onnx
 ai-service/checkpoints/
 *.pt
 *.pth

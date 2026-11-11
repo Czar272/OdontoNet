@@ -1,0 +1,27 @@
+# Entorno de investigación de ODON-266/267 (no es el backend clínico).
+# Versiones publicadas al menos 14 días antes del 2026-11-11.
+# Instalar con: python -m pip install -r requirements-research.txt
+--extra-index-url https://download.pytorch.org/whl/cu130
+torch==2.14.1+cu130
+torchvision==0.29.1+cu130
+ultralytics==8.4.191
+rfdetr==1.11.2
+onnx==1.23.2
+onnxruntime==1.31.1
+numpy==2.5.4
+opencv-python-headless==4.14.0.94
+psutil==7.2.2
+pycocotools==2.0.11
+pytest==8.3.5
+# Extra rfdetr[train] (aprobado el 2026-11-11), solo para entrenar RF-DETR:
+peft==0.21.2
+pytorch-lightning==2.6.6
+torchmetrics==1.8.2
+hotcoco==1.0.1
+faster-coco-eval==1.8.0
+ultrafast-pycocotools==0.1.14
+vernier==0.5.4
+scipy==1.18.1
+simplejpeg==1.9.0
+torch-hungarian==0.1.0rc0
+roboflow==1.7.3
