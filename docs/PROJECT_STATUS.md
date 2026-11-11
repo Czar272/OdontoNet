@@ -63,7 +63,7 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 
 1. Prueba del sistema con dos dentistas: recoger mejoras y comentarios y convertirlos en historias.
 2. Obtener la revisión legal y ética de `PRIVACY.md` para terminar ODON-218/220 y cerrar ODON-11. Antes de usar datos reales: programar los respaldos en el servidor y ensayar la nube (`BACKUPS.md`).
-   Después, la prueba de aceptación ODON-246 con un dentista, solo con datos sintéticos hasta completar ODON-220.
+   Después, la prueba de aceptación ODON-246 con un dentista, solo con datos sintéticos hasta completar ODON-220: guion, criterios y acta en `UAT.md` (ODON-247).
 3. El alta de clínicas por `superadmin` se planifica aparte según el modelo de roles aprobado.
 4. ODON-258 (ausencias de doctores) queda para después del MVP.
 

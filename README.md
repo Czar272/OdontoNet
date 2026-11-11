@@ -96,6 +96,7 @@ Instrucciones detalladas y solución de problemas en [Desarrollo](docs/DEVELOPME
 - [Estado técnico y Jira](docs/PROJECT_STATUS.md)
 - [Respaldos y restauración](docs/BACKUPS.md)
 - [Privacidad y protección de datos (borrador)](docs/PRIVACY.md)
+- [Prueba de aceptación del MVP (UAT)](docs/UAT.md)
 - [Integración del servicio de IA (contrato v1)](docs/AI_INTEGRATION.md)
 
 ## Planificación
