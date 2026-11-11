@@ -1,0 +1,184 @@
+{
+  "zip": "COde-Dataset.zip",
+  "files": {
+    "photographs": 49938,
+    "radiographs": 8056,
+    "other": [
+      "complete_dataset.csv",
+      "test_cls.json",
+      "test_diagnostic.json",
+      "train.json",
+      "train-cls.json",
+      "train-diagnostic.json"
+    ]
+  },
+  "photo_resolution_sample": {
+    "448x298": 303,
+    "298x448": 124,
+    "448x252": 67,
+    "448x336": 39,
+    "336x448": 20,
+    "335x448": 19,
+    "448x335": 9,
+    "448x339": 1
+  },
+  "photo_exif_tags_in_sample": {},
+  "photos_with_gps_in_sample": 0,
+  "radiograph_resolution_sample": {
+    "(448, 211)": 36,
+    "(415, 448)": 23,
+    "(416, 448)": 18,
+    "(447, 357)": 11,
+    "(427, 448)": 11
+  },
+  "checkups": 8775,
+  "patients": 4800,
+  "checkups_per_patient": {
+    "min": 1,
+    "p50": 1,
+    "max": 11,
+    "mean": 1.8
+  },
+  "age": {
+    "min": 5.0,
+    "p50": 31.0,
+    "max": 90.0,
+    "mean": 33.3
+  },
+  "gender": {
+    "": 2197,
+    "Male": 2632,
+    "Female": 3946
+  },
+  "checkup_years": {
+    "2016": 2,
+    "2017": 3,
+    "2018": 85,
+    "2019": 267,
+    "2020": 464,
+    "2021": 659,
+    "2022": 851,
+    "2023": 2229,
+    "2024": 4106,
+    "2025": 109
+  },
+  "photos_per_checkup": {
+    "min": 0,
+    "p50": 6,
+    "max": 26,
+    "mean": 5.7
+  },
+  "radiographs_per_checkup": {
+    "min": 0,
+    "p50": 0,
+    "max": 12,
+    "mean": 0.9
+  },
+  "split_checkups": {
+    "train": 8175,
+    "test": 600
+  },
+  "patients_in_train_and_test": 245,
+  "top_anomalies": {
+    "gingivitis": 1987,
+    "class ii malocclusion": 1825,
+    "dental crowding": 1234,
+    "tooth structure loss": 1042,
+    "dental caries": 955,
+    "convex profile": 746,
+    "mandibular skeletal asymmetry": 524,
+    "periodontitis": 480,
+    "class iii malocclusion": 462,
+    "pulpitis": 443,
+    "deep overbite": 426,
+    "class i malocclusion": 359,
+    "tooth loss": 309,
+    "dental fluorosis": 294,
+    "deep overjet": 282,
+    "periapical periodontitis": 229,
+    "high-angle mandible": 218,
+    "tooth mobility": 199,
+    "pigment deposition": 116,
+    "wedge-shaped defect": 104,
+    "incisor protrusion": 94,
+    "anterior crossbite": 92,
+    "retained primary tooth": 82,
+    "impacted tooth": 64,
+    "subgingival calculus": 62
+  },
+  "distinct_anomalies": 117,
+  "checkups_mentioning": {
+    "pieza_ausente": 258,
+    "sondaje": 1467,
+    "bolsa": 789,
+    "sangrado": 1025,
+    "recesion": 305,
+    "movilidad": 658,
+    "furcacion": 21,
+    "placa": 285,
+    "calculo": 2011,
+    "implante": 155,
+    "periodontitis": 641,
+    "gingivitis": 1582
+  },
+  "checkups_with_probing_or_pocket_in_mm": 134,
+  "json_files": {
+    "test_cls.json": {
+      "entries": 1793,
+      "keys": ["images", "messages"]
+    },
+    "test_diagnostic.json": {
+      "entries": 1799,
+      "keys": ["images", "messages"]
+    },
+    "train.json": {
+      "entries": 24497,
+      "keys": ["images", "messages"]
+    },
+    "train-cls.json": {
+      "entries": 14696,
+      "keys": ["images", "messages"]
+    },
+    "train-diagnostic.json": {
+      "entries": 9801,
+      "keys": ["images", "messages"]
+    }
+  },
+  "columns": [
+    "id",
+    "checkup_id",
+    "patient_id",
+    "gender",
+    "age",
+    "checkup_time",
+    "photographs",
+    "radiographs",
+    "patient_record",
+    "chief_complaint",
+    "present_illness",
+    "past_medical_record",
+    "examination",
+    "radiographs_examination",
+    "diagnosis",
+    "treatment_plan",
+    "treatment_recommendations",
+    "management",
+    "medical_instructions",
+    "remarks",
+    "anomalies_en",
+    "patient_record_cn",
+    "chief_complaint_cn",
+    "present_illness_cn",
+    "past_medical_record_cn",
+    "examination_cn",
+    "radiographs_examination_cn",
+    "diagnosis_cn",
+    "treatment_plan_cn",
+    "treatment_recommendations_cn",
+    "management_cn",
+    "medical_instructions_cn",
+    "remarks_cn",
+    "anomalies_cn",
+    "split"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "model": "rfdetr-seg-small",
+  "backend": "torch",
+  "imgsz": 384,
+  "weights_file": "rf-detr-seg-small.pt",
+  "runs": 50,
+  "warmup": 5,
+  "load_seconds": 12.86,
+  "p50_s": 0.286,
+  "p95_s": 0.306,
+  "max_s": 0.323,
+  "mean_detections": 0,
+  "rss_peak_mb": 1182,
+  "rss_model_mb": 959,
+  "threads_limit": null,
+  "torch_threads": 10,
+  "cuda_visible": true,
+  "images": "sintéticas 2048x1536",
+  "machine": {
+    "cpu": "12th Gen Intel(R) Core(TM) i7-12650H",
+    "physical_cores": 10,
+    "logical_cores": 16,
+    "ram_gb": 15.7,
+    "os": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.7"
+  },
+  "threshold_p95_s": 10.0,
+  "meets_threshold": true
+}

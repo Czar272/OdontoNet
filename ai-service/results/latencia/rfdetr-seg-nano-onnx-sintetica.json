@@ -1,0 +1,29 @@
+{
+  "model": "rfdetr-seg-nano",
+  "backend": "onnx",
+  "imgsz": 312,
+  "weights_file": "rf-detr-seg-nano.pt",
+  "runs": 50,
+  "warmup": 5,
+  "load_seconds": 14.21,
+  "p50_s": 0.165,
+  "p95_s": 0.175,
+  "max_s": 0.208,
+  "mean_detections": 0,
+  "rss_peak_mb": 1266,
+  "rss_model_mb": 1042,
+  "threads_limit": null,
+  "torch_threads": 10,
+  "cuda_visible": true,
+  "images": "sintéticas 2048x1536",
+  "machine": {
+    "cpu": "12th Gen Intel(R) Core(TM) i7-12650H",
+    "physical_cores": 10,
+    "logical_cores": 16,
+    "ram_gb": 15.7,
+    "os": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.7"
+  },
+  "threshold_p95_s": 10.0,
+  "meets_threshold": true
+}

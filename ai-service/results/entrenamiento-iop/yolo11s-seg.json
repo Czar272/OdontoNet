@@ -1,0 +1,46 @@
+{
+  "model": "yolo11s-seg",
+  "epochs": 3,
+  "batch": 8,
+  "imgsz": 640,
+  "grad_accum_steps": 1,
+  "fraction": 1.0,
+  "amp": true,
+  "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU",
+  "gpu_total_mb": 6140,
+  "peak_allocated_mb": 2763,
+  "peak_reserved_mb": 3098,
+  "seconds_total": 366,
+  "seconds_per_epoch": 122,
+  "metrics_smoke_only": {
+    "final": {
+      "metrics/mAP50(B)": 0.913,
+      "metrics/mAP50-95(B)": 0.8555,
+      "metrics/mAP50(M)": 0.9114,
+      "metrics/mAP50-95(M)": 0.825
+    },
+    "per_epoch": [
+      {
+        "epoch": 1.0,
+        "metrics/mAP50(B)": 0.8279,
+        "metrics/mAP50-95(B)": 0.7638,
+        "metrics/mAP50(M)": 0.8271,
+        "metrics/mAP50-95(M)": 0.7479
+      },
+      {
+        "epoch": 2.0,
+        "metrics/mAP50(B)": 0.8874,
+        "metrics/mAP50-95(B)": 0.8252,
+        "metrics/mAP50(M)": 0.8862,
+        "metrics/mAP50-95(M)": 0.7993
+      },
+      {
+        "epoch": 3.0,
+        "metrics/mAP50(B)": 0.9129,
+        "metrics/mAP50-95(B)": 0.8555,
+        "metrics/mAP50(M)": 0.9113,
+        "metrics/mAP50-95(M)": 0.8248
+      }
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "model": "rfdetr-seg-small",
+  "epochs": 1,
+  "batch": 2,
+  "imgsz": 384,
+  "grad_accum_steps": 4,
+  "fraction": 1.0,
+  "amp": true,
+  "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU",
+  "gpu_total_mb": 6140,
+  "peak_allocated_mb": 3317,
+  "peak_reserved_mb": 4214,
+  "seconds_total": 1039,
+  "seconds_per_epoch": 1039,
+  "metrics_smoke_only": {
+    "val/mAP_50": 0.8047,
+    "val/mAP_50_95": 0.7405,
+    "val/segm_mAP_50": 0.8039,
+    "val/segm_mAP_50_95": 0.7273
+  }
+}

@@ -267,7 +267,7 @@ Códigos de `error_code` (la interfaz muestra el mensaje en español):
 | Código | Causa | Mensaje |
 | --- | --- | --- |
 | `service_unavailable` | No hay conexión con el servicio o responde `503`. | «El servicio de análisis no está disponible. Puede llenar el periodontograma a mano.» |
-| `timeout` | Sin respuesta en `AI_SERVICE_TIMEOUT_SECONDS` (120 s por defecto, a confirmar con las mediciones en CPU de ODON-266). | «El análisis tardó demasiado. Intente con menos fotos.» |
+| `timeout` | Sin respuesta en `AI_SERVICE_TIMEOUT_SECONDS` (120 s por defecto; ODON-266 midió en CPU un p95 por foto inferior a 1 s, así que 5 fotos quedan muy por debajo, ver `ai-service/docs/viabilidad.md`). | «El análisis tardó demasiado. Intente con menos fotos.» |
 | `invalid_image` | El servicio respondió `413` o `415`, o un original no se pudo leer del almacenamiento. | «Alguna foto no se pudo analizar.» |
 | `contract_mismatch` | La respuesta no valida contra el esquema o trae otra `contract_version`. | «El servicio de análisis no es compatible con esta versión de OdontoNet.» |
 | `service_error` | El servicio respondió `500`, `400` o `401`: es un error de configuración, no del usuario. | «El análisis falló. Avise a administración.» |
@@ -307,7 +307,7 @@ El objetivo es medir si la sugerencia ayuda, sin afirmar capacidad diagnóstica.
 - **Métricas de la pregunta 2:** sensibilidad y especificidad para «no visible» frente a «ausente», con intervalos de confianza del 95 % calculados con **bootstrap por paciente**: las 32 posiciones de un paciente no son independientes, y un intervalo que las trate como tales saldría demasiado estrecho. Se reportan por vista y por grupo de piezas (anteriores, premolares, molares y terceros molares aparte), además de la proporción de `uncertain`.
 - **Prueba bloqueada:** el conjunto de prueba no se mira hasta congelar el modelo, el umbral de operación y los criterios. Se evalúa **una vez**, y cualquier evaluación posterior se reporta como exploratoria.
 - **Curva de aprendizaje:** se entrena con fracciones crecientes de los datos públicos y locales para sostener, o descartar, la hipótesis de que más datos mejoran el resultado. La hipótesis no se extiende al sondaje, que no es observable en la foto.
-- **Tiempos:** se mide la latencia por análisis en un equipo equivalente al de la clínica, sin GPU. Si no hay acceso a uno, se usa una laptop con la GPU desactivada y se declara como aproximación.
+- **Tiempos:** se mide la latencia por análisis (hasta 5 fotos) en un equipo equivalente al de la clínica, sin GPU. ODON-266 midió la latencia por foto; la del análisis completo se mide con el servicio de ODON-269. Si no hay acceso a uno, se usa una laptop con la GPU desactivada y se declara como aproximación.
 - **Datos de pacientes en la evaluación:** solo entran pacientes con autorización de uso en investigación (`research_use`) y con el dictamen de ética aprobado. Los registros de `ai_*` de los demás pacientes son parte de su expediente y no se usan para medir.
 
 ### 7.3 Lo que no se afirma

@@ -1,0 +1,16 @@
+{
+  "model": "rfdetr-seg-small",
+  "epochs": 1,
+  "batch": 2,
+  "imgsz": 384,
+  "fraction": 1.0,
+  "amp": true,
+  "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU",
+  "gpu_total_mb": 6140,
+  "peak_allocated_mb": 3182,
+  "peak_reserved_mb": 3822,
+  "seconds_total": 244,
+  "seconds_per_epoch": 244,
+  "metrics_smoke_only": {},
+  "grad_accum_steps": 4
+}

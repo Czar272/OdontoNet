@@ -182,6 +182,7 @@ Durante el desarrollo y al verificar un ticket basta con las categorías del ár
 | Agenda y citas | `python -m pytest -m "appointments or doctors"` | `npx vitest run src/pages/Agenda src/components/appointments` |
 | Clínica | `python -m pytest -m isolation` | `npx vitest run src/pages/Clinic` |
 | Respaldos (`backup_manifest`, `scripts/backup/`) | `python -m pytest -m backup` y un ensayo con `restore-check.ps1` (ver `BACKUPS.md`) | — |
+| Investigación de IA (`ai-service/research/`, `ai-service/tests/`) | En `ai-service/`, con su propio entorno: `.venv\Scripts\python -m pytest` (ver `ai-service/README.md`; no corre en CI porque necesita el entorno de investigación) | — |
 | Auditoría (`audit_*`, cualquier operación que registra eventos) | `python -m pytest -m "records or rbac or isolation"` | `npx vitest run src/pages/Audit` |
 | Permisos (`permissions.py` / `permissions.ts`) | `python -m pytest -m "rbac or isolation"` | `npx vitest run src/auth src/config src/routes` |
 | Seed | `python -m pytest -m seed` | — |

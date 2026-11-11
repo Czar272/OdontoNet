@@ -1,0 +1,20 @@
+{
+  "model": "yolo11s-seg",
+  "epochs": 2,
+  "batch": 8,
+  "imgsz": 640,
+  "fraction": 1.0,
+  "amp": true,
+  "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU",
+  "gpu_total_mb": 6140,
+  "peak_allocated_mb": 2762,
+  "peak_reserved_mb": 3264,
+  "seconds_total": 89,
+  "seconds_per_epoch": 44,
+  "metrics_smoke_only": {
+    "metrics/mAP50(B)": 0.0153,
+    "metrics/mAP50-95(B)": 0.0124,
+    "metrics/mAP50(M)": 0.0145,
+    "metrics/mAP50-95(M)": 0.0108
+  }
+}

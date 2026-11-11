@@ -1,0 +1,114 @@
+{
+  "root_name": "IOP-Compass",
+  "patients": 1000,
+  "annotated_views": {
+    "frontal": 1000,
+    "left_lateral": 1000,
+    "right_lateral": 1000,
+    "upper_occlusal": 1000,
+    "lower_occlusal": 1000
+  },
+  "missing_image_by_view": {},
+  "missing_annotation_by_view": {},
+  "instances_by_view": {
+    "frontal": 26078,
+    "left_lateral": 17887,
+    "right_lateral": 17487,
+    "upper_occlusal": 13587,
+    "lower_occlusal": 13562
+  },
+  "instances_by_fdi": {
+    "11": 3963,
+    "12": 3574,
+    "13": 3153,
+    "14": 2808,
+    "15": 2829,
+    "16": 2889,
+    "17": 2452,
+    "18": 199,
+    "21": 3926,
+    "22": 3455,
+    "23": 3076,
+    "24": 2811,
+    "25": 2808,
+    "26": 2906,
+    "27": 2417,
+    "28": 207,
+    "31": 3847,
+    "32": 3712,
+    "33": 3574,
+    "34": 2759,
+    "35": 2815,
+    "36": 2891,
+    "37": 2631,
+    "38": 280,
+    "41": 3858,
+    "42": 3743,
+    "43": 3638,
+    "44": 2797,
+    "45": 2785,
+    "46": 2884,
+    "47": 2633,
+    "48": 281
+  },
+  "unlabeled_or_non_permanent_labels": {},
+  "instances_without_polygon": 0,
+  "instances_with_several_polygons": 33,
+  "patients_with_any_third_molar_visible": 360,
+  "teeth_visible_per_patient": {
+    "min": 24,
+    "max": 32,
+    "mean": 28.48
+  },
+  "positions_not_visible_in_any_view": 3523,
+  "view_tokens": {
+    "Center": "frontal",
+    "Left": "left_lateral",
+    "Right": "right_lateral",
+    "Upper": "upper_occlusal",
+    "Down": "lower_occlusal"
+  },
+  "quadrant_share_by_view": {
+    "frontal": {
+      "1": 0.246,
+      "2": 0.245,
+      "3": 0.254,
+      "4": 0.255
+    },
+    "left_lateral": {
+      "1": 0.115,
+      "2": 0.368,
+      "3": 0.373,
+      "4": 0.144
+    },
+    "right_lateral": {
+      "1": 0.377,
+      "2": 0.105,
+      "3": 0.14,
+      "4": 0.378
+    },
+    "upper_occlusal": {
+      "1": 0.498,
+      "2": 0.499,
+      "3": 0.001,
+      "4": 0.001
+    },
+    "lower_occlusal": {
+      "1": 0.001,
+      "2": 0.002,
+      "3": 0.498,
+      "4": 0.499
+    }
+  },
+  "label_consistency": {
+    "frontal_11_left_of_21_in_image": {
+      "photos": 968,
+      "share": 1.0
+    },
+    "frontal_11_above_41": {
+      "photos": 967,
+      "share": 1.0
+    }
+  },
+  "annotations_sha256": "02f7fccac31095ee6816cafe75664a61d8bd61af90dfc46d0aa374e12d80ca1d"
+}

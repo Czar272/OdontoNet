@@ -1,0 +1,41 @@
+{
+  "model": "yolo11s-seg",
+  "backend": "onnx",
+  "imgsz": 640,
+  "weights_file": "yolo11s-seg.onnx",
+  "runs": 50,
+  "warmup": 5,
+  "load_seconds": 9.5,
+  "p50_s": 0.654,
+  "p95_s": 0.751,
+  "max_s": 0.762,
+  "mean_detections": 1.0,
+  "rss_peak_mb": 1190,
+  "rss_model_mb": 518,
+  "threads_limit": 2,
+  "cpu_affinity": [
+    0,
+    2
+  ],
+  "torch_threads": 2,
+  "torch_threads_max_seen": 2,
+  "peak_working_set_mb": 1222,
+  "cuda_visible": false,
+  "images": "20 fotos reales reducidas a 2048 px",
+  "machine": {
+    "cpu": "12th Gen Intel(R) Core(TM) i7-12650H",
+    "physical_cores": 10,
+    "logical_cores": 16,
+    "ram_gb": 15.7,
+    "os": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.7",
+    "power": {
+      "on_ac_power": false,
+      "battery_percent": 26,
+      "power_plan": "Equilibrado",
+      "note": "registrado después de medir (2026-11-11), comprobado con Win32_Battery y powercfg"
+    }
+  },
+  "threshold_p95_s": 10.0,
+  "meets_threshold": true
+}
