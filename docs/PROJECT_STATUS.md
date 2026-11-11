@@ -2,7 +2,7 @@
 
 > Documento de continuidad técnica. Jira es la fuente de verdad de los estados de los tickets y Git es la fuente de verdad del código.
 
-**Última actualización:** 2026-11-09 — ODON-12 (despliegue): ODON-234, 265, 238 y 242 Done. Queda ODON-246 (aceptación con un dentista). ODON-11 sigue a la espera de la revisión legal y ética (ODON-218/220).
+**Última actualización:** 2026-11-11 — ODON-13 (IA periodontal) planificada el 2026-11-09 e iniciada: contrato v1 del servicio de IA en `AI_INTEGRATION.md` (ODON-250, en revisión). ODON-12: queda ODON-246 (aceptación con un dentista). ODON-11 sigue a la espera de la revisión legal y ética (ODON-218/220).
 
 ## Alcance
 
@@ -57,6 +57,7 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 - **ODON-12 Despliegue y entrega — En curso:** Done el 2026-11-09: ODON-234 (configuración por ambientes), ODON-265 (sesión segura), ODON-238 (despliegue con Docker Compose y HTTPS local) y ODON-242 (manual por rol, `docs/manual/`). Pendiente: ODON-246 (aceptación) y la instalación en una clínica.
 - **ODON-4 Personal y doctores — Done:** ODON-78, 82, 86, 90 y 94.
 - **ODON-11 Calidad, privacidad y seguridad — En curso:** ODON-254 (categorías de pruebas backend), ODON-256 (pruebas rápidas y CI) y ODON-259 (pytest más rápido y guía por área) Done. Done el 2026-11-08: ODON-210 (cobertura mínima y cadena de migraciones), ODON-214 (E2E con Playwright), ODON-222 (auditoría), ODON-226 (respaldos cifrados y ensayo de restauración), ODON-230 (endurecimiento), ODON-263 (dependencias) y ODON-264 (Pydantic v2). ODON-218 (privacidad) sigue en Testing: su subtarea ODON-220 depende de la revisión legal y ética.
+- **ODON-13 IA periodontal (posterior al MVP) — En curso:** planificada el 2026-11-09 (comentario en la épica): asistencia con revisión obligatoria; primero presencia o ausencia de piezas FDI con YOLO11s-seg (comparado con RF-DETR Seg); solo datos públicos hasta el dictamen de ética. Historias ODON-250 (contrato, `AI_INTEGRATION.md`) y ODON-266 a 275.
 
 ## Próximo paso
 
