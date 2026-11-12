@@ -289,7 +289,7 @@ Códigos de `error_code` (la interfaz muestra el mensaje en español):
 
 ## 7. Plan de evaluación clínica
 
-El objetivo es medir si la sugerencia ayuda, sin afirmar capacidad diagnóstica. **Los criterios de éxito numéricos se fijan con el asesor y quedan registrados aquí antes de abrir el conjunto de prueba.** Mientras no estén fijados, esta sección no contiene cifras de aceptación.
+El objetivo es medir si la sugerencia ayuda, sin afirmar capacidad diagnóstica. **Los criterios de éxito numéricos se fijan y quedan registrados aquí antes de abrir el conjunto de prueba** (§7.3 para la pregunta 1; los de las preguntas 2 y 3 quedan pendientes hasta ODON-272).
 
 ### 7.1 Preguntas
 
@@ -310,7 +310,21 @@ El objetivo es medir si la sugerencia ayuda, sin afirmar capacidad diagnóstica.
 - **Tiempos:** se mide la latencia por análisis (hasta 5 fotos) en un equipo equivalente al de la clínica, sin GPU. ODON-266 midió la latencia por foto; la del análisis completo se mide con el servicio de ODON-269. Si no hay acceso a uno, se usa una laptop con la GPU desactivada y se declara como aproximación.
 - **Datos de pacientes en la evaluación:** solo entran pacientes con autorización de uso en investigación (`research_use`) y con el dictamen de ética aprobado. Los registros de `ai_*` de los demás pacientes son parte de su expediente y no se usan para medir.
 
-### 7.3 Lo que no se afirma
+### 7.3 Criterio de la pregunta 1 (fijado el 2026-11-12, antes de evaluar)
+
+Decisión del desarrollador para ODON-267, registrada antes de usar el conjunto de prueba de IOP-Compass.
+
+- **Medida:** presencia por pieza y paciente. Una pieza cuenta como «visible» si el modelo la detecta en al menos una de las 5 vistas. La referencia es la anotación de IOP-Compass: visible si está anotada en alguna vista. La clase de interés es **«no visible»**.
+- **Población del criterio principal:** las 28 piezas 11–47, **sin terceros molares**. Los terceros molares se informan aparte: en ese conjunto la mayoría no son visibles (320 de 400 posiciones de prueba), una situación distinta.
+- **Umbral de operación:** se elige **solo con validación** (200 pacientes) y queda congelado, junto con los pesos, antes de evaluar en prueba.
+- **Criterio (modelo principal, YOLO11s-seg, conjunto de prueba de 100 pacientes):** **sensibilidad de «no visible» ≥ 0,80 y especificidad ≥ 0,95**, como estimaciones puntuales, informadas con IC 95 % por bootstrap por paciente.
+- **Por qué pesa más la especificidad:** un «no visible» falso, si el doctor lo acepta, vacía las mediciones de una pieza presente. Uno que se escapa deja la tarea al doctor, como sin IA.
+- **Precisión esperada:** el conjunto de prueba tiene 30 posiciones no visibles sin terceros molares, de 2800. La sensibilidad tendrá un intervalo amplio, de unos ±15 puntos, y así se informa.
+- **Descriptivo, sin umbral:** mAP de máscara y exactitud de numeración por vista; terceros molares; diferencia entre RF-DETR Seg Small y YOLO11s-seg con IC por bootstrap pareado, sin hipótesis de superioridad; curva de aprendizaje de YOLO.
+- **Si no se cumple:** se informa como resultado. No se cambia el modelo, el umbral ni el criterio mirando el conjunto de prueba.
+- **Alcance:** mide la visibilidad en fotos públicas frente a una anotación, no la ausencia clínica (pregunta 2).
+
+### 7.4 Lo que no se afirma
 
 - Que el sistema detecte enfermedad periodontal o la clasifique.
 - Que «no visible» equivalga a «ausente»: esa equivalencia la decide el profesional.
