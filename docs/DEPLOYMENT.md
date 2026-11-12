@@ -96,6 +96,126 @@ La API nunca migra sola: en producción, si la base no está en la última migra
 3. Restaura la base y las imágenes con la restauración real de `BACKUPS.md`, eligiendo el respaldo con `restic snapshots --tag pre-migracion`.
 4. Levanta la aplicación: `docker compose -f compose.prod.yml up -d`.
 
+## Pasar de la instalación de prueba a la definitiva
+
+Después de la prueba de aceptación (`UAT.md`), y antes de registrar el primer paciente real, se retiran los datos ficticios y se instala desde cero en el mismo servidor (ODON-276). Es una operación deliberada, que borra datos. **Ensáyala antes en un equipo de prueba** y hazla con el acta de la UAT firmada, en un momento en que nadie use el sistema.
+
+Qué se conserva y qué no:
+
+| Elemento | Qué pasa | Por qué |
+| --- | --- | --- |
+| Base de datos (volumen `odontonet-prod_postgres_data`) | Se borra | Solo tiene datos ficticios |
+| Carpeta de imágenes (`ODONTONET_IMAGE_DIR`) | Se vacía | Solo tiene fotos de tipodonto |
+| Tareas programadas de respaldo | Se quitan y se vuelven a crear | Apuntan al repositorio de la UAT |
+| Repositorio restic de la UAT y su contraseña | Se archivan o se borran (decide el responsable), **nunca se reutilizan** | Los respaldos reales no deben mezclarse con datos ficticios |
+| CA de Caddy (volúmenes `odontonet-prod_caddy_data` y `odontonet-prod_caddy_config`) | **Se conservan** | Así no hay que reinstalar el certificado en cada equipo. Si se prefiere regenerarla, se borran también en el paso 4 y se repite P2 de la UAT en cada equipo |
+| `.env` y `backend/.env` | Se conservan | Revisa que no queden valores de la prueba, como el nombre o el correo de la clínica ficticia |
+
+**0. Apartar la configuración de respaldos de la UAT**, para que la definitiva no la sobrescriba. Mueve el `backup.env` y el archivo de contraseña que usó la UAT (sus rutas reales están en ese `backup.env`) a una carpeta propia:
+
+```powershell
+$uat = "$env:USERPROFILE\.odontonet\uat"
+New-Item -ItemType Directory -Force $uat
+Get-Content "$env:USERPROFILE\.odontonet\backup.env" | Select-String 'REPO|PASSWORD_FILE'   # anota las rutas de la UAT
+Move-Item "$env:USERPROFILE\.odontonet\backup.env" "$uat\backup-uat.env"
+Move-Item "$env:USERPROFILE\.odontonet\restic-password.txt" "$uat\restic-password-uat.txt"
+```
+
+Edita `$uat\backup-uat.env` para que `ODONTONET_BACKUP_PASSWORD_FILE` apunte a la nueva ruta de la contraseña. Si la UAT usó otros nombres, muévelos igual: lo importante es que en `%USERPROFILE%\.odontonet\` no quede ningún archivo de la UAT.
+
+**1. Respaldo final de la UAT (opcional).** Si el responsable quiere conservar evidencia de la prueba:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\backup\backup.ps1 -Config $env:USERPROFILE\.odontonet\uat\backup-uat.env
+```
+
+Rotula el disco o la carpeta del repositorio como «UAT, datos ficticios», y no lo conectes como repositorio de la instalación definitiva.
+
+**2. Quitar las tareas programadas de la UAT:**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\backup\register-tasks.ps1 -Remove
+```
+
+**3. Detener la aplicación, sin borrar volúmenes.** No uses `down -v`: borraría también la CA.
+
+```powershell
+docker compose -f compose.prod.yml down
+```
+
+**4. Borrar solo el volumen de la base.** Lista los volúmenes y confirma el nombre exacto antes de borrar:
+
+```powershell
+docker volume ls --filter name=odontonet-prod_
+docker volume rm odontonet-prod_postgres_data
+```
+
+Solo si se decidió **regenerar la CA**: `docker volume rm odontonet-prod_caddy_data odontonet-prod_caddy_config`. `deploy.ps1` exportará un `deploy\odontonet-ca.crt` nuevo en el paso 8, y habrá que instalarlo en cada equipo en el paso 11.
+
+**5. Vaciar la carpeta de imágenes.** Primero muestra la ruta y compárala con `IMAGE_STORAGE_DIR` de `backend/.env`. Tiene que ser la carpeta de imágenes, nunca la del repositorio de respaldos:
+
+```powershell
+$dir = (Select-String -Path .env -Pattern '^ODONTONET_IMAGE_DIR=(.+)$').Matches[0].Groups[1].Value.Trim()
+$dir; Test-Path -LiteralPath $dir
+Select-String -Path backend\.env -Pattern '^IMAGE_STORAGE_DIR='
+```
+
+Si la ruta es la correcta, vacíala:
+
+```powershell
+Get-ChildItem -LiteralPath $dir -Force | Remove-Item -Recurse -Force
+```
+
+**6. Repositorio de la UAT.** Según lo que decida el responsable:
+- **Archivarlo:** déjalo en su disco rotulado, junto con la carpeta `%USERPROFILE%\.odontonet\uat` (su configuración y su contraseña). Sin la contraseña no se puede leer.
+- **Borrarlo:** borra su carpeta de repositorio y `%USERPROFILE%\.odontonet\uat`. En la nube, la UAT no debería haber usado un bucket; si lo usó, bórralo desde la consola del proveedor, porque el servidor no tiene permiso de borrado.
+
+**7. Configurar los respaldos reales.** Sigue solo los **pasos 1 a 5** de «Puesta en marcha» de `BACKUPS.md`, con una contraseña nueva, un `backup.env` nuevo y repositorios nuevos: el local en el disco definitivo y, si se usa, la nube. El primer respaldo y las tareas van en el paso 10, cuando la base ya exista. Ninguna ruta de repositorio puede coincidir con la de la UAT.
+
+**8. Instalar y crear la clínica real:**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\deploy\deploy.ps1 -FirstInstall
+docker compose -f compose.prod.yml exec api python -m scripts.bootstrap_clinic --clinic-name "Nombre real" --admin-name "Nombre" --admin-email correo@clinica
+```
+
+`-FirstInstall` se niega a seguir si la base tiene datos: es una segunda protección por si el paso 4 no se hizo.
+
+**9. Comprobar que la instalación quedó limpia**, antes de crear personal o pacientes:
+
+```powershell
+docker compose -f compose.prod.yml exec api python -m scripts.verify_fresh_install
+```
+
+Tiene que terminar con «Instalación limpia»: una clínica, un usuario, solo la auditoría del alta, cero filas en el resto de tablas y la carpeta de imágenes vacía. Si encuentra algo, no sigas: vuelve al paso 3.
+
+**10. Primer respaldo, tareas y ensayo** (P4 de la UAT):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\backup\backup.ps1 -Config $env:USERPROFILE\.odontonet\backup.env -Init
+powershell -ExecutionPolicy Bypass -File scripts\backup\register-tasks.ps1 -Config $env:USERPROFILE\.odontonet\backup.env -At 21:00
+powershell -ExecutionPolicy Bypass -File scripts\backup\restore-check.ps1 -Config $env:USERPROFILE\.odontonet\backup.env
+```
+
+Después, **comprueba que no queda nada de la UAT en los respaldos**:
+
+```powershell
+restic -r <repositorio local definitivo> --password-file <contraseña definitiva> snapshots
+Get-ScheduledTask -TaskName "OdontoNet*" | Select-Object -ExpandProperty Actions | Select-Object Arguments
+```
+
+- `snapshots` debe mostrar solo los respaldos de hoy (el del paso 10), ninguno anterior. Si usas la nube, repítelo con su repositorio.
+- Los argumentos de las dos tareas deben nombrar el `backup.env` definitivo, no el de `uat\`.
+
+**11. Comprobar desde cada equipo (P2 de la UAT).** Abre `https://odontonet.internal`: sin advertencia si se conservó la CA, y tras reinstalar el certificado si se regeneró.
+
+**12. Registrar el paso** en el acta de la UAT (§7) o junto a ella:
+- la fecha;
+- el commit instalado;
+- la salida del paso 9;
+- la salida de `snapshots` y de las tareas del paso 10;
+- qué se hizo con el repositorio de la UAT.
+
 ## Operación
 
 ```powershell

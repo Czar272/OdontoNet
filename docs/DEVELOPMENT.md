@@ -117,6 +117,8 @@ python -m scripts.verify_images
 
 El script solo lee. Termina en `0` si base y carpeta coinciden; si no, lista por clave e id (sin datos del paciente) los registros sin archivo, los archivos alterados (SHA-256 distinto), los archivos sin registro y los ajenos (p. ej. temporales de una escritura interrumpida). Las pruebas usan una carpeta temporal y nunca tocan `IMAGE_STORAGE_DIR`.
 
+`python -m scripts.verify_fresh_install` (ODON-276) comprueba, también en modo de solo lectura, que una instalación recién creada con `bootstrap_clinic` solo tiene la clínica y la administración y la carpeta de imágenes vacía. Se usa al pasar de la instalación de prueba a la definitiva (`DEPLOYMENT.md`); en desarrollo, con datos del seed, siempre reportará filas de más.
+
 ### Pruebas automatizadas del backend
 
 Las pruebas usan una base PostgreSQL separada cuyo nombre **debe terminar en `_test`**: vacían sus tablas antes de cada prueba y aplican las migraciones con Alembic. Nunca apuntes `TEST_DATABASE_URL` a la base de desarrollo.
@@ -188,7 +190,7 @@ Durante el desarrollo y al verificar un ticket basta con las categorías del ár
 | Seed | `python -m pytest -m seed` | — |
 | Despliegue (`compose.prod.yml`, `deploy/`, `scripts/deploy/`) | `bash scripts/deploy/smoke.sh` | — |
 | Rutas o esquemas de la API | `python -m scripts.export_openapi` y `python -m pytest -m api` (`docs/openapi.json`, que se usa porque en producción `/docs` está apagado) | — |
-| Configuración y despliegue (`core/settings.py`, `core/startup.py`, `bootstrap_clinic`) | `python -m pytest -m deployment` | — |
+| Configuración y despliegue (`core/settings.py`, `core/startup.py`, `bootstrap_clinic`, `verify_fresh_install`) | `python -m pytest -m deployment` | — |
 | Migración nueva, modelo compartido, `conftest.py`, `core/errors.py` | `python -m pytest` (completa) | — |
 | Componentes base (`components/basic`), `api.ts`, dependencias | — | `npm test` (completa) |
 
