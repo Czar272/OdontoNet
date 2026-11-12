@@ -42,6 +42,7 @@ import PerioSummary, { PerioLegend } from "./PerioSummary";
 import {
   SITES,
   chartFromExam,
+  countUnreviewedDefaults,
   emptyFurcation,
   emptySite,
   DEFAULT_HEALTHY,
@@ -51,6 +52,7 @@ import {
   summarize,
   toContent,
   today,
+  unreviewedMessage,
   type HealthyValues,
 } from "./periodontalChart";
 
@@ -123,6 +125,7 @@ export default function PeriodontalEditor({ exam, isArchived, onDirtyChange }: P
   const visits = allVisits.filter((visit) => !visit.voided_at || visit.id === exam.clinical_visit?.id);
 
   const summary = useMemo(() => summarize(chart), [chart]);
+  const unreviewed = useMemo(() => countUnreviewedDefaults(chart), [chart]);
   const hasProbing = summary.measured_sites > 0 || chart.some((tooth) =>
     SITES.some((site) => tooth.sites[site].probing_depth !== null));
   const errors = useMemo(() => chartErrors(chart), [chart]);
@@ -569,8 +572,9 @@ export default function PeriodontalEditor({ exam, isArchived, onDirtyChange }: P
             Llena solo los sitios vacíos de las piezas presentes (no implantes) con los valores elegidos; no cambia lo
             que ya escribiste. Quedan en gris cursiva como predeterminados hasta que edites el sitio. Referencia: salud
             periodontal según el World Workshop 2017 (sondaje de 3 mm o menos y sangrado en menos del 10 % de los
-            sitios, sin pérdida de inserción ni ósea). La decisión clínica es tuya: revisa y corrige las piezas que lo
-            necesiten.
+            sitios, sin pérdida de inserción ni ósea). La propuesta inicial es sondaje 2 mm y margen +2 mm (encía 2 mm
+            por encima de la UAC), que da NIC 0; es un valor asumido, no medido, pendiente de confirmar con los
+            odontólogos que usan el sistema. La decisión clínica es tuya: revisa y corrige las piezas que lo necesiten.
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
@@ -592,11 +596,13 @@ export default function PeriodontalEditor({ exam, isArchived, onDirtyChange }: P
           </div>
           <p role="note" className={clsx(
             "rounded-lg p-2 text-sm",
-            healthy.probingDepth - healthy.gingivalMargin > 0 ? "bg-amber-50 text-amber-900" : "bg-teal-50 text-teal-900",
+            healthy.probingDepth - healthy.gingivalMargin !== 0 ? "bg-amber-50 text-amber-900" : "bg-teal-50 text-teal-900",
           )}>
             NIC resultante en cada sitio llenado: {healthy.probingDepth - healthy.gingivalMargin} mm (sondaje − margen).
             {healthy.probingDepth - healthy.gingivalMargin > 0 &&
-              " Con el margen en la UAC (0) el NIC no es 0: si la encía está sana y coronal a la UAC, usa un margen positivo igual al sondaje."}
+              " El NIC no es 0: si la encía está sana y coronal a la UAC, usa un margen positivo igual al sondaje."}
+            {healthy.probingDepth - healthy.gingivalMargin < 0 &&
+              " Un NIC negativo no corresponde a una medición de inserción posible: revisa los valores."}
           </p>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={healthy.mobility}
@@ -613,7 +619,19 @@ export default function PeriodontalEditor({ exam, isArchived, onDirtyChange }: P
       <ConfirmDialog
         isOpen={confirmFinalize}
         title="Finalizar periodontograma"
-        message="Al finalizarlo queda guardado tal como está y ya no se puede modificar. Si después encuentras un error, tendrás que anularlo y registrar otro."
+        message={
+          <>
+            {(unreviewed.sites > 0 || unreviewed.mobility > 0) && (
+              <p role="alert" className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+                {unreviewedMessage(unreviewed)}
+              </p>
+            )}
+            <p>
+              Al finalizarlo queda guardado tal como está y ya no se puede modificar. Si después encuentras un error,
+              tendrás que anularlo y registrar otro.
+            </p>
+          </>
+        }
         confirmLabel="Finalizar"
         isPending={finalize.isPending}
         onConfirm={() => finalize.mutate()}

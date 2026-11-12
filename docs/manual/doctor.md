@@ -180,7 +180,7 @@ Si se perdió la conexión o se recargó la pestaña, al volver a abrir el exame
 
 **Llenar con valores de salud** propone valores en los sitios vacíos de las piezas presentes que no son implantes, sin cambiar lo que ya escribiste, y movilidad 0 si la eliges. Quedan en gris cursiva como predeterminados hasta que los edites, y **Deshacer** los revierte hasta la siguiente edición.
 
-Son valores **asumidos, no medidos**: cuentan en el resumen, en el PDF y para poder finalizar, aunque el resumen indica cuántos sitios son predeterminados. Con los valores propuestos (2 mm y margen 0), el NIC resultante es de 2 mm, que no significa «sin pérdida de inserción». La decisión clínica es tuya: revisa y corrige las piezas que lo necesiten.
+Son valores **asumidos, no medidos**: cuentan en el resumen, en el PDF y para poder finalizar, aunque el resumen indica cuántos sitios son predeterminados. La propuesta inicial es sondaje 2 mm y margen +2 mm (encía 2 mm por encima de la UAC), que da NIC 0. Es provisional, pendiente de confirmar con los odontólogos que usan el sistema. Si eliges otros, el diálogo te muestra el NIC que resulta y te avisa si no es 0. Al pulsar **Finalizar**, el sistema te avisa cuántos sitios y movilidades siguen con valores predeterminados sin revisar; puedes finalizar igual. La decisión clínica es tuya: revisa y corrige las piezas que lo necesiten.
 
 ![Diálogo de llenar con valores de salud](img/doctor-valores-salud.png)
 

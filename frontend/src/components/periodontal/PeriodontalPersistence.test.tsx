@@ -389,7 +389,7 @@ describe("llenado con valores de salud (ODON-262)", () => {
     const [, , body] = vi.mocked(service.updatePeriodontalExam).mock.calls.at(-1)!;
     const t11 = body.teeth.find((t) => t.tooth === 11)!;
     expect(t11.sites.b).toMatchObject({ probing_depth: 4, source: "manual" });
-    expect(t11.sites.mb).toMatchObject({ probing_depth: 2, gingival_margin: 0, source: "default" });
+    expect(t11.sites.mb).toMatchObject({ probing_depth: 2, gingival_margin: 2, source: "default" });
   });
 
   it("no aparece en un examen de solo lectura", async () => {
@@ -411,9 +411,12 @@ describe("llenado: revisión de ODON-262", () => {
   it("muestra el NIC que resulta de los valores elegidos", async () => {
     await openExam();
     const form = await fill();
-    expect(within(form).getByRole("note")).toHaveTextContent("NIC resultante en cada sitio llenado: 2 mm");
-    fireEvent.change(within(form).getByLabelText("Margen gingival (mm)"), { target: { value: "2" } });
+    // ODON-277: la propuesta inicial (2 y +2) no inventa pérdida de inserción.
     expect(within(form).getByRole("note")).toHaveTextContent("NIC resultante en cada sitio llenado: 0 mm");
+    expect(within(form).getByText(/margen \+2 mm/)).toBeInTheDocument();
+    fireEvent.change(within(form).getByLabelText("Margen gingival (mm)"), { target: { value: "0" } });
+    expect(within(form).getByRole("note")).toHaveTextContent("NIC resultante en cada sitio llenado: 2 mm");
+    expect(within(form).getByRole("note")).toHaveTextContent(/usa un margen positivo/);
   });
 
   it("deshacer deja de estar disponible tras la siguiente edición y no borra lo escrito", async () => {
@@ -455,3 +458,28 @@ describe("llenado: revisión de ODON-262", () => {
   });
 });
 
+describe("aviso al finalizar con predeterminados (ODON-277)", () => {
+  it.each(["doctor", "admin"] as const)("%s ve cuántos valores asumidos quedan y puede finalizar igual", async (role) => {
+    await openExam(role);
+    fireEvent.click(screen.getByRole("button", { name: "Llenar con valores de salud" }));
+    fireEvent.click(within(await screen.findByRole("form", { name: "Llenar con valores de salud" }))
+      .getByRole("button", { name: "Llenar sitios vacíos" }));
+    fireEvent.change(screen.getByLabelText("Sondaje 11 vestibular (predeterminado)"), { target: { value: "3" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Finalizar" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(
+      "191 sitios y la movilidad de 32 piezas tienen un valor predeterminado sin revisar");
+    expect(within(dialog).getByText(/ya no se puede modificar/i)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Finalizar" }));
+    await waitFor(() => expect(service.finalizePeriodontalExam).toHaveBeenCalled());
+  });
+
+  it("sin predeterminados no muestra el aviso", async () => {
+    await openExam();
+    fireEvent.change(screen.getByLabelText("Sondaje 11 vestibular"), { target: { value: "3" } });
+    fireEvent.click(screen.getByRole("button", { name: "Finalizar" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).queryByRole("alert")).not.toBeInTheDocument();
+  });
+});

@@ -750,3 +750,34 @@ def test_deep_default_value_is_never_printed_as_measured(setup, client):
     content = client.get(url(setup, f"/{exam['id']}/report.pdf"), headers=setup["headers"]["author"]).content
     assert b"Helvetica-BoldOblique" in content
 
+
+# --- Valores de salud sin pérdida de inserción ficticia (ODON-277) ----------------
+
+
+def test_proposed_healthy_values_have_no_attachment_loss(setup, client):
+    """Sondaje 2 y margen +2 (encía coronal a la UAC) dan NIC 0; el valor anterior, margen 0, daba 2 mm."""
+    body = create(client, setup, teeth=healthy_teeth((11, 12), pd=2, gm=2)).json()
+    assert {site["attachment_level"] for t in (11, 12) for site in tooth(body, t)["sites"].values()} == {0}
+    assert body["summary"]["mean_attachment_level"] == 0
+    old = create(client, setup, teeth=healthy_teeth((11,), pd=2, gm=0)).json()
+    assert old["summary"]["mean_attachment_level"] == 2
+
+
+@pytest.mark.parametrize(("role", "status"), [("author", 200), ("admin", 200), ("colleague", 403), ("receptionist", 403)])
+def test_unreviewed_defaults_do_not_block_finalizing_and_stay_counted(setup, client, role, status):
+    exam = create(client, setup, teeth=healthy_teeth((11, 12), pd=2, gm=2)).json()
+    response = client.post(url(setup, f"/{exam['id']}/finalize"), json={"base_revision": 1},
+                           headers=setup["headers"][role])
+    assert response.status_code == status, response.text
+    if status == 200:
+        body = response.json()
+        assert body["status"] == "final"
+        assert body["summary"]["default_sites"] == 12  # quedan marcados como asumidos
+        assert tooth(body, 11)["sites"]["b"]["source"] == "default"
+
+
+def test_other_clinic_cannot_finalize_an_exam_with_defaults(setup, client):
+    exam = create(client, setup, teeth=healthy_teeth((11,), pd=2, gm=2)).json()
+    response = client.post(url(setup, f"/{exam['id']}/finalize"), json={"base_revision": 1},
+                           headers=setup["headers"]["other_admin"])
+    assert response.status_code == 404

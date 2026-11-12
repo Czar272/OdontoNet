@@ -2,13 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import {
   CEJ_Y,
+  DEFAULT_HEALTHY,
   MM,
   PERMANENT_TEETH,
   apicalOf,
   attachmentLevel,
+  countUnreviewedDefaults,
   displaySites,
   emptyChart,
   fillHealthy,
+  unreviewedMessage,
   marginY,
   round,
   pocketY,
@@ -171,3 +174,38 @@ describe("valores de salud (ODON-262)", () => {
   });
 });
 
+describe("valores por defecto y aviso al finalizar (ODON-277)", () => {
+  it("la propuesta inicial no inventa pérdida de inserción (NIC 0)", () => {
+    expect(DEFAULT_HEALTHY.probingDepth - DEFAULT_HEALTHY.gingivalMargin).toBe(0);
+  });
+
+  it("cuenta los sitios y movilidades predeterminados sin revisar de las piezas presentes", () => {
+    const chart = emptyChart();
+    chart.find((t) => t.tooth === 18)!.missing = true;
+    const { chart: filled } = fillHealthy(chart, DEFAULT_HEALTHY);
+    expect(countUnreviewedDefaults(filled)).toEqual({ sites: 31 * 6, mobility: 31 });
+    const t11 = filled.find((t) => t.tooth === 11)!;
+    t11.sites.b = { ...t11.sites.b, probing_depth: 3, source: "manual" };
+    t11.mobility = 1;
+    t11.source = "manual";
+    expect(countUnreviewedDefaults(filled)).toEqual({ sites: 31 * 6 - 1, mobility: 30 });
+    expect(countUnreviewedDefaults(emptyChart())).toEqual({ sites: 0, mobility: 0 });
+  });
+
+  it("redacta el aviso en singular y plural", () => {
+    expect(unreviewedMessage({ sites: 0, mobility: 0 })).toBe("");
+    expect(unreviewedMessage({ sites: 1, mobility: 0 })).toMatch(/^Atención: 1 sitio tiene un valor predeterminado/);
+    expect(unreviewedMessage({ sites: 3, mobility: 1 })).toMatch(/3 sitios y la movilidad de 1 pieza tienen/);
+    expect(unreviewedMessage({ sites: 0, mobility: 2 })).toMatch(/la movilidad de 2 piezas tiene/);
+    expect(unreviewedMessage({ sites: 2, mobility: 0 })).toMatch(/2 sitios tienen/);
+    expect(unreviewedMessage({ sites: 2, mobility: 0 })).not.toMatch(/resumen/);
+  });
+
+  it("cuenta también los sitios copiados sin sondaje, que el resumen no incluye", () => {
+    const chart = emptyChart();
+    const t11 = chart.find((t) => t.tooth === 11)!;
+    t11.sites.b = { ...t11.sites.b, bleeding: true, source: "default" }; // copia de solo indicadores
+    expect(countUnreviewedDefaults(chart)).toEqual({ sites: 1, mobility: 0 });
+    expect(summarize(chart).default_sites).toBe(0); // el resumen solo cuenta sitios con sondaje
+  });
+});

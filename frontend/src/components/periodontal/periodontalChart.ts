@@ -382,9 +382,42 @@ export interface HealthyValues {
   mobility: boolean;
 }
 
-export const DEFAULT_HEALTHY: HealthyValues = { probingDepth: 2, gingivalMargin: 0, mobility: true };
+/**
+ * Propuesta inicial del llenado con valores de salud (ODON-277, provisional hasta que la confirme
+ * un odontólogo): sondaje 2 y margen +2. Con la convención del sistema (margen con signo respecto a
+ * la UAC, NIC = sondaje − margen) da NIC 0: encía coronal a la UAC, sin pérdida de inserción. El
+ * valor anterior (margen 0) daba NIC 2 mm ficticio en cada sitio llenado.
+ */
+export const DEFAULT_HEALTHY: HealthyValues = { probingDepth: 2, gingivalMargin: 2, mobility: true };
 export const HEALTHY_PROBING_OPTIONS = [1, 2, 3];
 export const HEALTHY_MARGIN_OPTIONS = [0, 1, 2, 3];
+
+/**
+ * Valores predeterminados que el profesional todavía no revisó (ODON-277): sitios con origen
+ * `default` de piezas presentes y piezas cuya movilidad sigue siendo la predeterminada.
+ */
+export function countUnreviewedDefaults(chart: ToothData[]): { sites: number; mobility: number } {
+  let sites = 0;
+  let mobility = 0;
+  for (const tooth of chart) {
+    if (tooth.missing) continue;
+    for (const site of SITES) if (tooth.sites[site].source === "default") sites += 1;
+    if (tooth.source === "default" && tooth.mobility !== null) mobility += 1;
+  }
+  return { sites, mobility };
+}
+
+/** Aviso para confirmar la finalización con valores predeterminados sin revisar (no la bloquea). */
+export function unreviewedMessage({ sites, mobility }: { sites: number; mobility: number }): string {
+  const parts = [];
+  if (sites > 0) parts.push(sites === 1 ? "1 sitio" : `${sites} sitios`);
+  if (mobility > 0) parts.push(mobility === 1 ? "la movilidad de 1 pieza" : `la movilidad de ${mobility} piezas`);
+  if (!parts.length) return "";
+  // El sujeto es plural si hay varios sitios, o sitios y movilidad juntos; «la movilidad de N piezas» es singular.
+  const plural = sites > 1 || (sites > 0 && mobility > 0);
+  return `Atención: ${parts.join(" y ")} ${plural ? "tienen" : "tiene"} un valor predeterminado sin revisar. `
+    + "Se guardarán como valores asumidos, no medidos; el editor y el PDF los muestran en gris cursiva.";
+}
 
 /**
  * Llena con valores de salud solo los sitios vacíos de piezas presentes y no
