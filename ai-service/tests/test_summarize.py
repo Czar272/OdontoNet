@@ -31,13 +31,14 @@ def test_exploratory_reports_are_ignored(tmp_path):
 
 def test_learning_curve_groups_by_fraction_with_mean_and_sd(tmp_path):
     for seed, m in ((0, 0.80), (1, 0.84)):
-        _write(tmp_path, _report(f"yolo11s-seg-f25-s{seed}", 0.7, 0.96, m))
-    _write(tmp_path, _report("yolo11s-seg-f100-s0", 0.9, 0.97, 0.92))
+        _write(tmp_path, _report(f"yolo11s-seg-f25-s{seed}-e30", 0.7, 0.96, m))
+    _write(tmp_path, _report("yolo11s-seg-f100-s0-e30", 0.9, 0.97, 0.92))
+    _write(tmp_path, _report("yolo11s-seg-f100-s0", 0.9, 0.97, 0.99))  # modelo principal (89 épocas): no entra en la curva
     _write(tmp_path, _report("rfdetr-seg-small-f100-s0", 0.85, 0.96, 0.88))
     curve = learning_curve(load_reports(tmp_path))
     assert [r["fraction_percent"] for r in curve] == [25, 100]
     assert curve[0]["seeds"] == 2 and curve[0]["mask_map50"]["mean"] == 0.82
-    assert curve[1]["mask_map50"]["sd"] is None  # una sola semilla
+    assert curve[1]["mask_map50"] == {"mean": 0.92, "sd": None, "n": 1}  # una sola semilla, sin el modelo principal
 
 
 def test_comparison_pairs_same_seed(tmp_path):

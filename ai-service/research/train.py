@@ -101,6 +101,8 @@ def main() -> None:
     if args.epochs:
         cfg["epochs"] = args.epochs
     name = f"{args.model}-f{int(args.fraction * 100)}-s{args.seed}"
+    if args.epochs:  # presupuesto distinto del predeterminado: va en el nombre (curva a 30 épocas, ODON-267)
+        name += f"-e{args.epochs}"
     if args.model.startswith("rfdetr") and args.fraction < 1.0:
         raise SystemExit("RF-DETR solo se entrena al 100 % (decisión de ODON-267)")
     data_yaml, patients = subset_yaml(args.data, args.fraction, args.seed)

@@ -1,0 +1,236 @@
+{
+  "reports": [
+    "yolo11s-seg-f100-s0",
+    "yolo11s-seg-f100-s0-e30",
+    "yolo11s-seg-f25-s0-e30",
+    "yolo11s-seg-f50-s0-e30"
+  ],
+  "criterion": {
+    "threshold": 0.927,
+    "presence": {
+      "tp": 27,
+      "fn": 3,
+      "tn": 2668,
+      "fp": 102,
+      "sensitivity_not_visible": 0.9,
+      "specificity": 0.9631768953068592,
+      "sensitivity_ci95": [
+        0.8,
+        1.0
+      ],
+      "specificity_ci95": [
+        0.9500362056480811,
+        0.9743682310469314
+      ]
+    },
+    "third_molars": {
+      "tp": 319,
+      "fn": 1,
+      "tn": 33,
+      "fp": 47,
+      "sensitivity_not_visible": 0.996875,
+      "specificity": 0.4125,
+      "sensitivity_ci95": [
+        0.98989898989899,
+        1.0
+      ],
+      "specificity_ci95": [
+        0.2835820895522388,
+        0.5252525252525253
+      ]
+    },
+    "met": true,
+    "mask_by_view": {
+      "frontal": {
+        "mask_map50_95": 0.7786,
+        "mask_map50": 0.9211,
+        "images": 100
+      },
+      "right_lateral": {
+        "mask_map50_95": 0.6041,
+        "mask_map50": 0.7032,
+        "images": 100
+      },
+      "left_lateral": {
+        "mask_map50_95": 0.7292,
+        "mask_map50": 0.8526,
+        "images": 100
+      },
+      "upper_occlusal": {
+        "mask_map50_95": 0.835,
+        "mask_map50": 0.8768,
+        "images": 100
+      },
+      "lower_occlusal": {
+        "mask_map50_95": 0.8638,
+        "mask_map50": 0.899,
+        "images": 100
+      },
+      "all": {
+        "mask_map50_95": 0.8182,
+        "mask_map50": 0.9192,
+        "images": 500
+      }
+    },
+    "numbering_by_view": {
+      "frontal": {
+        "found": 1663,
+        "correct_number": 1645,
+        "annotated": 2615,
+        "numbering_accuracy": 0.9892,
+        "detection_rate": 0.6359
+      },
+      "all": {
+        "found": 6780,
+        "correct_number": 6644,
+        "annotated": 8910,
+        "numbering_accuracy": 0.9799,
+        "detection_rate": 0.7609
+      },
+      "left_lateral": {
+        "found": 1319,
+        "correct_number": 1274,
+        "annotated": 1808,
+        "numbering_accuracy": 0.9659,
+        "detection_rate": 0.7295
+      },
+      "lower_occlusal": {
+        "found": 1239,
+        "correct_number": 1223,
+        "annotated": 1343,
+        "numbering_accuracy": 0.9871,
+        "detection_rate": 0.9226
+      },
+      "right_lateral": {
+        "found": 1267,
+        "correct_number": 1224,
+        "annotated": 1781,
+        "numbering_accuracy": 0.9661,
+        "detection_rate": 0.7114
+      },
+      "upper_occlusal": {
+        "found": 1292,
+        "correct_number": 1278,
+        "annotated": 1363,
+        "numbering_accuracy": 0.9892,
+        "detection_rate": 0.9479
+      }
+    }
+  },
+  "learning_curve": [
+    {
+      "fraction_percent": 25,
+      "seeds": 1,
+      "mask_map50": {
+        "mean": 0.8858,
+        "sd": null,
+        "n": 1
+      },
+      "numbering_accuracy": {
+        "mean": 0.9771,
+        "sd": null,
+        "n": 1
+      },
+      "sensitivity_not_visible": {
+        "mean": 0.8,
+        "sd": null,
+        "n": 1
+      },
+      "specificity": {
+        "mean": 0.9596,
+        "sd": null,
+        "n": 1
+      }
+    },
+    {
+      "fraction_percent": 50,
+      "seeds": 1,
+      "mask_map50": {
+        "mean": 0.9126,
+        "sd": null,
+        "n": 1
+      },
+      "numbering_accuracy": {
+        "mean": 0.9803,
+        "sd": null,
+        "n": 1
+      },
+      "sensitivity_not_visible": {
+        "mean": 0.9,
+        "sd": null,
+        "n": 1
+      },
+      "specificity": {
+        "mean": 0.9469,
+        "sd": null,
+        "n": 1
+      }
+    },
+    {
+      "fraction_percent": 100,
+      "seeds": 1,
+      "mask_map50": {
+        "mean": 0.9235,
+        "sd": null,
+        "n": 1
+      },
+      "numbering_accuracy": {
+        "mean": 0.9855,
+        "sd": null,
+        "n": 1
+      },
+      "sensitivity_not_visible": {
+        "mean": 0.8667,
+        "sd": null,
+        "n": 1
+      },
+      "specificity": {
+        "mean": 0.9531,
+        "sd": null,
+        "n": 1
+      }
+    }
+  ],
+  "comparison": {
+    "per_model": {
+      "yolo11s-seg": {
+        "seeds": 1,
+        "mask_map50": {
+          "mean": 0.9192,
+          "sd": null,
+          "n": 1
+        },
+        "sensitivity_not_visible": {
+          "mean": 0.9,
+          "sd": null,
+          "n": 1
+        },
+        "specificity": {
+          "mean": 0.9632,
+          "sd": null,
+          "n": 1
+        }
+      },
+      "rfdetr-seg-small": {
+        "seeds": 0,
+        "mask_map50": {
+          "mean": null,
+          "sd": null,
+          "n": 0
+        },
+        "sensitivity_not_visible": {
+          "mean": null,
+          "sd": null,
+          "n": 0
+        },
+        "specificity": {
+          "mean": null,
+          "sd": null,
+          "n": 0
+        }
+      }
+    },
+    "paired_by_seed": [],
+    "note": "Descriptiva: sin hipótesis de superioridad."
+  }
+}

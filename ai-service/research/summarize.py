@@ -22,7 +22,8 @@ from research.experiment import Counts, paired_bootstrap_diff
 
 AI_DIR = Path(__file__).resolve().parent.parent
 PRIMARY = "yolo11s-seg-f100-s0"
-NAME = re.compile(r"^(?P<model>.+)-f(?P<fraction>\d+)-s(?P<seed>\d+)$")
+NAME = re.compile(r"^(?P<model>.+?)-f(?P<fraction>\d+)-s(?P<seed>\d+)(?:-e(?P<epochs>\d+))?$")
+CURVE_EPOCHS = 30  # la curva usa el mismo presupuesto de épocas en todas las fracciones
 MAIN = "main_11_47_without_third_molars"
 
 
@@ -44,11 +45,11 @@ def _mean_sd(values: list[float]) -> dict:
             "n": len(values)}
 
 
-def learning_curve(reports: dict[str, dict], model: str = "yolo11s-seg") -> list[dict]:
+def learning_curve(reports: dict[str, dict], model: str = "yolo11s-seg", epochs: int = CURVE_EPOCHS) -> list[dict]:
     by_fraction: dict[int, list[dict]] = defaultdict(list)
     for name, rep in reports.items():
         m = NAME.match(name)
-        if m and m["model"] == model:
+        if m and m["model"] == model and m["epochs"] is not None and int(m["epochs"]) == epochs:
             by_fraction[int(m["fraction"])].append(rep)
     rows = []
     for fraction in sorted(by_fraction):
@@ -120,7 +121,7 @@ def markdown(summary: dict) -> str:
         ]
     else:
         lines += ["Pendiente: falta la evaluación de prueba del modelo principal.", ""]
-    lines += ["## Curva de aprendizaje de YOLO11s-seg (prueba, media ± DE entre semillas)", "",
+    lines += [f"## Curva de aprendizaje de YOLO11s-seg ({CURVE_EPOCHS} épocas por corrida; prueba, media ± DE entre semillas)", "",
               "| % de pacientes | Semillas | mAP50 de máscara | Numeración | Sensibilidad «no visible» | Especificidad |",
               "| --- | --- | --- | --- | --- | --- |"]
     for row in summary["learning_curve"]:
@@ -158,6 +159,9 @@ def main() -> None:
     summary = summarize(args.evaluations)
     (args.out / "resumen-odon267.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
     (args.out / "resumen-odon267.md").write_text(markdown(summary), encoding="utf-8")
+    import sys
+
+    sys.stdout.reconfigure(encoding="utf-8")  # la consola de Windows (cp1252) no tiene «≥»
     print(markdown(summary))
 
 
