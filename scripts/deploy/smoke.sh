@@ -98,6 +98,9 @@ echo "Migrando y creando la primera clínica"
 compose run --rm -T api alembic upgrade head
 compose run --rm -T -e BOOTSTRAP_ADMIN_PASSWORD="$ADMIN_PASSWORD" api \
   python -m scripts.bootstrap_clinic --clinic-name "Clínica Humo" --admin-name "Administración" --admin-email admin@humo.example.com
+# Paso 9 del paso de la UAT a la instalación definitiva (DEPLOYMENT.md, ODON-276): el script viaja en la imagen.
+contains "la instalación recién creada está limpia" \
+  "$(compose run --rm -T api python -m scripts.verify_fresh_install 2>&1)" "Instalación limpia"
 compose up -d --wait
 
 echo "Comprobando"

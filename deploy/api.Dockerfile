@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/app ./app
 COPY backend/alembic ./alembic
 COPY backend/alembic.ini ./
-COPY backend/scripts/bootstrap_clinic.py backend/scripts/verify_images.py backend/scripts/verify_audit.py ./scripts/
+COPY backend/scripts/bootstrap_clinic.py backend/scripts/verify_images.py backend/scripts/verify_audit.py backend/scripts/verify_fresh_install.py ./scripts/
 
 RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin odontonet \
     && mkdir -p /data/images \
