@@ -1,6 +1,8 @@
 # Integración del servicio de IA — contrato v1
 
-> Estado: **contrato definido, sin implementar** (ODON-250, épica ODON-13). Lo implementan ODON-269 (microservicio), ODON-270 (backend) y ODON-271 (interfaz). Cualquier cambio a este documento que rompa compatibilidad sube la versión del contrato.
+> Estado (2026-11-12): contrato v1 definido (ODON-250).
+> - **Microservicio implementado y probado** (§3, ODON-269: `ai-service/service/`).
+> - **Backend (§4–6, ODON-270) e interfaz de revisión (ODON-271): diseñados y revisados de forma independiente, sin implementar** (punto de cierre del proyecto del 2026-11-12). Cualquier cambio a este documento que rompa compatibilidad sube la versión del contrato.
 
 ## 1. Alcance y límites
 
@@ -320,7 +322,11 @@ Decisión del desarrollador para ODON-267, registrada antes de usar el conjunto 
 - **Criterio (modelo principal, YOLO11s-seg, conjunto de prueba de 100 pacientes):** **sensibilidad de «no visible» ≥ 0,80 y especificidad ≥ 0,95**, como estimaciones puntuales, informadas con IC 95 % por bootstrap por paciente.
 - **Por qué pesa más la especificidad:** un «no visible» falso, si el doctor lo acepta, vacía las mediciones de una pieza presente. Uno que se escapa deja la tarea al doctor, como sin IA.
 - **Precisión esperada:** el conjunto de prueba tiene 30 posiciones no visibles sin terceros molares, de 2800. La sensibilidad tendrá un intervalo amplio, de unos ±15 puntos, y así se informa.
-- **Descriptivo, sin umbral:** mAP de máscara y exactitud de numeración por vista; terceros molares; diferencia entre RF-DETR Seg Small y YOLO11s-seg con IC por bootstrap pareado, sin hipótesis de superioridad; curva de aprendizaje de YOLO.
+- **Descriptivo, sin umbral:** mAP de máscara y exactitud de numeración por vista; terceros molares; curva de aprendizaje de YOLO.
+- **Cambios de alcance del 2026-11-12, registrados antes de ver resultados de la curva** (para cerrar el proyecto en el día):
+  - **Curva de aprendizaje reducida:** 25, 50 y 100 % de los pacientes de entrenamiento × semillas 0 y 1, todas con 30 épocas, para que sean comparables entre sí. El modelo principal ya estaba en meseta hacia la época 25 (mAP50-95 de máscara en validación 0,863 frente a 0,873 de la mejor época). Cada corrida congela su umbral en su propia validación y se evalúa una vez en prueba.
+  - **Comparación con RF-DETR Seg Small, a trabajo futuro:** completa costaría unas 40 h de GPU. La viabilidad ya medida en ODON-266 (entrena en una GPU de 6 GB y llega a mAP50 de máscara 0,80 tras una época) queda como antecedente.
+- **Comportamiento del servicio a partir de los resultados** (ODON-269): los terceros molares nunca se sugieren como «no visible», porque su especificidad en prueba fue 0,41.
 - **Si no se cumple:** se informa como resultado. No se cambia el modelo, el umbral ni el criterio mirando el conjunto de prueba.
 - **Alcance:** mide la visibilidad en fotos públicas frente a una anotación, no la ausencia clínica (pregunta 2).
 
@@ -339,6 +345,7 @@ Decisión del desarrollador para ODON-267, registrada antes de usar el conjunto 
 | `AI_SERVICE_TOKEN` | backend y ai-service | Secreto compartido. En producción, la API no arranca si la URL está definida y el secreto falta o es de ejemplo (como con el resto de secretos, decisión 22). |
 | `AI_SERVICE_TIMEOUT_SECONDS` | backend | Tiempo límite por análisis (120 por defecto). |
 | `AI_MODEL_PATH` | ai-service | Archivo de pesos, que se monta como volumen de solo lectura y no se versiona en Git. |
+| `AI_MODEL_META` | ai-service | `meta.json` junto a los pesos (ODON-269): versión, SHA-256 que deben tener los pesos, umbral congelado en validación, margen de `uncertain`, cobertura por vista y piezas que nunca son `absent`. Lo genera `research/export_model.py`. |
 
 ## 9. Compatibilidad y versiones
 

@@ -1,0 +1,14 @@
+{
+  "photos_per_analysis": 5,
+  "runs": 10,
+  "threads_limit": null,
+  "p50_s": 0.81,
+  "p95_s": 0.95,
+  "max_s": 0.95,
+  "timeout_s": 120,
+  "last_status_counts": {
+    "present": 28,
+    "absent": 0,
+    "uncertain": 4
+  }
+}
