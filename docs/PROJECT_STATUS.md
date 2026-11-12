@@ -2,7 +2,7 @@
 
 > Documento de continuidad técnica. Jira es la fuente de verdad de los estados de los tickets y Git es la fuente de verdad del código.
 
-**Última actualización:** 2026-11-11 — ODON-266 (viabilidad técnica y datos públicos de la IA) en Testing: inferencia en CPU viable, entrenamiento en GPU de 6 GB comprobado e IOP-Compass auditado (`ai-service/docs/viabilidad.md`). ODON-250 y ODON-247 Done. ODON-12: quedan ODON-246 (aceptación con la clínica) y ODON-276 (paso de la instalación de prueba a la definitiva).
+**Última actualización:** 2026-11-12 — ODON-266 (viabilidad técnica y datos públicos de la IA) Done: inferencia en CPU viable (peor p95 de 1,11 s por foto frente a 10 s), entrenamiento comprobado en una GPU de 6 GB e IOP-Compass auditado (`ai-service/docs/viabilidad.md`). Siguiente en ODON-13: ODON-267 (modelo de tesis). ODON-12: quedan ODON-246 (aceptación con la clínica) y ODON-276.
 
 ## Alcance
 
@@ -57,7 +57,7 @@ Sistema de gestión odontológica multi-clínica, con colaboración entre usuari
 - **ODON-12 Despliegue y entrega — En curso:** Done el 2026-11-09: ODON-234 (configuración por ambientes), ODON-265 (sesión segura), ODON-238 (despliegue con Docker Compose y HTTPS local) y ODON-242 (manual por rol, `docs/manual/`). Done el 2026-11-11: ODON-247 (guion de aceptación, `UAT.md`). Pendiente: ODON-246 (aceptación: ODON-248 ejecución y ODON-249 acta), ODON-276 (paso de la instalación de prueba a la definitiva) y la instalación en una clínica.
 - **ODON-4 Personal y doctores — Done:** ODON-78, 82, 86, 90 y 94.
 - **ODON-11 Calidad, privacidad y seguridad — En curso:** ODON-254 (categorías de pruebas backend), ODON-256 (pruebas rápidas y CI) y ODON-259 (pytest más rápido y guía por área) Done. Done el 2026-11-08: ODON-210 (cobertura mínima y cadena de migraciones), ODON-214 (E2E con Playwright), ODON-222 (auditoría), ODON-226 (respaldos cifrados y ensayo de restauración), ODON-230 (endurecimiento), ODON-263 (dependencias) y ODON-264 (Pydantic v2). ODON-218 (privacidad) sigue en Testing: su subtarea ODON-220 depende de la revisión legal y ética.
-- **ODON-13 IA periodontal (posterior al MVP) — En curso:** planificada el 2026-11-09 (comentario en la épica): asistencia con revisión obligatoria; primero presencia o ausencia de piezas FDI con YOLO11s-seg (comparado con RF-DETR Seg); solo datos públicos hasta el dictamen de ética. ODON-250 (contrato v1, `AI_INTEGRATION.md`) Done el 2026-11-11; ODON-266 (viabilidad, `ai-service/docs/viabilidad.md`) en Testing; siguen ODON-267 (modelo de tesis; estrategia de cómputo local + nube con datos públicos en su comentario) a 275.
+- **ODON-13 IA periodontal (posterior al MVP) — En curso:** planificada el 2026-11-09 (comentario en la épica): asistencia con revisión obligatoria; primero presencia o ausencia de piezas FDI con YOLO11s-seg (comparado con RF-DETR Seg); solo datos públicos hasta el dictamen de ética. ODON-250 (contrato v1, `AI_INTEGRATION.md`) Done el 2026-11-11; ODON-266 (viabilidad, `ai-service/docs/viabilidad.md`) Done el 2026-11-12; siguen ODON-267 (modelo de tesis; estrategia de cómputo local + nube con datos públicos en su comentario) a 275.
 
 ## Próximo paso
 
