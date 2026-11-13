@@ -124,7 +124,22 @@ Nota de trazabilidad: la prueba del punto de 100 % con semilla 0 pudo calcularse
 - **Medido:** 3 fracciones × 2 semillas a 30 épocas. Se planeó con 4 fracciones × 5 repeticiones; se redujo el 2026-11-12, antes de ver la curva, por tiempo de cómputo. La primera ejecución se cortó por falta de RAM y la semilla 1 se completó por la tarde.
 - **Proyectado, con su base:** no se afirma que más pacientes mejoren el criterio de presencia. Con 30 posiciones no visibles en prueba, un falso «no visible» mueve la sensibilidad 0,033, y el punto de operación varía entre semillas; para distinguir tendencias haría falta un conjunto de prueba con más piezas ausentes, no solo más semillas.
 
-**Comparación con RF-DETR Seg Small:** trabajo futuro, por cómputo (unas 40 h de GPU). No se afirma cuál de los dos es mejor.
+**Anexo exploratorio: RF-DETR Seg Small (medido el 2026-11-13).** La comparación planeada pasó a trabajo futuro el 2026-11-12, antes de ver resultados; esta corrida se agregó después, como descriptiva.
+- **Entrenamiento:** 100 % de los pacientes, semilla 0, 384 px, lote 2 con acumulación de 4. Se planearon 20 épocas; se detuvo tras **10** (≈ 5,8 h de GPU) porque cada época tardaba ~34 min con su validación. No convergió: la métrica de validación mejoró en todas las épocas (0,72 → 0,865).
+- **Checkpoint:** `checkpoint_best_ema.pth` de la época 9, elegido por la métrica de validación de RF-DETR sobre la EMA (*effective mAP*). Registro: `results/entrenamiento/rfdetr-seg-small-f100-s0-e10.json`.
+- **Evaluación:** el mismo `research/evaluate.py`, misma partición; umbral congelado en validación con la misma regla que YOLO (0,858) y prueba evaluada una vez.
+- Nota técnica: LR constante (1e-4) durante estas épocas y sin calentamiento; no se afirma que equivalga a una corrida planeada de 10 épocas.
+
+| Modelo (prueba, 100 pacientes) | Épocas | mAP50 máscara | Numeración | Sensibilidad «no visible» (IC 95 %) | Especificidad (IC 95 %) | Especif. terceros molares (IC 95 %) |
+| --- | --- | --- | --- | --- | --- | --- |
+| YOLO11s-seg (`f100-s0-e30`) | 30 | 0,92 | 0,99 | 0,87 (0,74–1,00) | 0,953 (0,938–0,967) | 0,50 (0,36–0,62) |
+| RF-DETR Seg Small (`f100-s0-e10`) | 10 de 20 | 0,94 | 0,99 | 0,93 (0,83–1,00) | 0,955 (0,936–0,971) | 0,39 (0,28–0,48) |
+
+mAP50 por vista, RF-DETR frente a YOLO: frontal 0,93/0,93, lateral derecha 0,72/0,71, lateral izquierda 0,87/0,86, oclusal superior 0,95/0,88, oclusal inferior 0,98/0,93. RF-DETR también cumple el criterio de §7.3 en esta corrida.
+
+Diferencia pareada por paciente (RF-DETR − YOLO): sensibilidad +0,067 (IC 95 % 0,00–0,19), especificidad +0,001 (−0,01–0,01), mAP50 +0,019. **Lectura:** los IC de sensibilidad y especificidad incluyen el 0; con 1 semilla, épocas distintas y un entrenamiento sin converger, **no se afirma cuál modelo es mejor**. La lateral derecha queda baja también en RF-DETR (0,72), lo que apunta a las fotos o la anotación más que a un modelo concreto (hipótesis, no comprobada).
+
+**Comparación planeada con RF-DETR** (3 semillas, 50 épocas): sigue como trabajo futuro, por cómputo (unas 40 h de GPU).
 
 ## 8. Consideraciones éticas
 

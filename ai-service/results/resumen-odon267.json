@@ -1,5 +1,6 @@
 {
   "reports": [
+    "rfdetr-seg-small-f100-s0-e10",
     "yolo11s-seg-f100-s0",
     "yolo11s-seg-f100-s0-e30",
     "yolo11s-seg-f100-s1-e30",
@@ -195,7 +196,58 @@
     }
   ],
   "comparison": {
-    "pairs": [],
+    "pairs": [
+      {
+        "seed": 0,
+        "yolo": {
+          "name": "yolo11s-seg-f100-s0-e30",
+          "epochs": 30,
+          "mask_map50": 0.9235,
+          "sensitivity_not_visible": 0.8666666666666667,
+          "sensitivity_ci95": [
+            0.7352941176470589,
+            1.0
+          ],
+          "specificity": 0.9530685920577617,
+          "specificity_ci95": [
+            0.938177874186551,
+            0.9672072072072072
+          ],
+          "third_molars_specificity": 0.5
+        },
+        "rfdetr": {
+          "name": "rfdetr-seg-small-f100-s0-e10",
+          "epochs": 10,
+          "mask_map50": 0.9422,
+          "sensitivity_not_visible": 0.9333333333333333,
+          "sensitivity_ci95": [
+            0.8333333333333334,
+            1.0
+          ],
+          "specificity": 0.9545126353790614,
+          "specificity_ci95": [
+            0.9362162162162162,
+            0.9708423326133909
+          ],
+          "third_molars_specificity": 0.3875
+        },
+        "sensitivity_diff": {
+          "difference": 0.06666666666666665,
+          "ci95": [
+            0.0,
+            0.19354838709677413
+          ]
+        },
+        "specificity_diff": {
+          "difference": 0.0014440433212996595,
+          "ci95": [
+            -0.007246376811594235,
+            0.010476878612716733
+          ]
+        },
+        "mask_map50_diff": 0.0187
+      }
+    ],
     "note": "Exploratoria, añadida después del cambio de alcance: sin hipótesis de superioridad."
   }
 }

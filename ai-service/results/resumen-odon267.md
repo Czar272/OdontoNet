@@ -19,4 +19,11 @@ Modelo `yolo11s-seg-f100-s0`, prueba, piezas 11–47 sin terceros molares, umbra
 
 ## Anexo exploratorio: RF-DETR Seg Small frente a YOLO11s-seg (100 %, prueba)
 
-Sin corrida de RF-DETR evaluada: la comparación es trabajo futuro (decisión del 2026-11-12).
+Añadido después de pasar la comparación planeada a trabajo futuro: 1 semilla y épocas distintas; descriptivo, sin afirmar cuál modelo es mejor.
+
+| Modelo | Épocas | mAP50 de máscara | Sensibilidad «no visible» (IC 95 %) | Especificidad (IC 95 %) | Especificidad terceros molares |
+| --- | --- | --- | --- | --- | --- |
+| `yolo11s-seg-f100-s0-e30` | 30 | 0,92 | 0,87 (0,74–1,00) | 0,953 (0,94–0,97) | 0,50 |
+| `rfdetr-seg-small-f100-s0-e10` | 10 | 0,94 | 0,93 (0,83–1,00) | 0,955 (0,94–0,97) | 0,39 |
+
+Semilla 0, RF-DETR − YOLO (pareado por paciente): sensibilidad 0,067 (IC 95 % 0,00–0,19), especificidad 0,001 (IC 95 % -0,01–0,01), mAP50 0,019.

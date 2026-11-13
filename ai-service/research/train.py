@@ -77,10 +77,16 @@ def train_rfdetr(name: str, data_dir: Path, seed: int, cfg: dict) -> Path:
 
     model = rfdetr.RFDETRSegSmall(pretrain_weights=str(WEIGHTS_DIR / "rf-detr-seg-small.pt"))
     out = RUNS_DIR / name
+    # Si una corrida anterior se cortó (luz, reinicio), sigue desde su último estado completo
+    # (pesos, optimizador y programación del LR) en vez de empezar de cero.
+    last = out / "last.ckpt"
+    resume = {"resume": str(last)} if last.exists() else {}
+    if resume:
+        print(f"reanudando desde {last}", flush=True)
     model.train(
         dataset_dir=str(data_dir), epochs=cfg["epochs"], batch_size=cfg["batch"], grad_accum_steps=max(1, 8 // cfg["batch"]),
         output_dir=str(out), seed=seed, aug_config={}, early_stopping=True, early_stopping_patience=cfg["patience"],
-        tensorboard=False, progress_bar=None, num_workers=2,
+        tensorboard=False, progress_bar=None, num_workers=2, **resume,
     )
     return out / "checkpoint_best_total.pth"
 
