@@ -13,13 +13,10 @@ Modelo `yolo11s-seg-f100-s0`, prueba, piezas 11–47 sin terceros molares, umbra
 
 | % de pacientes | Semillas | mAP50 de máscara | Numeración | Sensibilidad «no visible» | Especificidad |
 | --- | --- | --- | --- | --- | --- |
-| 25 | 1 | 0,89 ± — | 0,98 ± — | 0,80 ± — | 0,96 ± — |
-| 50 | 1 | 0,91 ± — | 0,98 ± — | 0,90 ± — | 0,95 ± — |
-| 100 | 1 | 0,92 ± — | 0,99 ± — | 0,87 ± — | 0,95 ± — |
+| 25 | 2 | 0,89 ± 0,00 | 0,98 ± 0,00 | 0,80 ± 0,00 | 0,96 ± 0,00 |
+| 50 | 2 | 0,91 ± 0,00 | 0,98 ± 0,00 | 0,90 ± 0,00 | 0,95 ± 0,00 |
+| 100 | 2 | 0,93 ± 0,00 | 0,98 ± 0,01 | 0,83 ± 0,05 | 0,97 ± 0,02 |
 
-## YOLO11s-seg frente a RF-DETR Seg Small (100 %, prueba)
+## Anexo exploratorio: RF-DETR Seg Small frente a YOLO11s-seg (100 %, prueba)
 
-| Modelo | Semillas | mAP50 de máscara | Sensibilidad «no visible» | Especificidad |
-| --- | --- | --- | --- | --- |
-| yolo11s-seg | 1 | 0,92 ± — | 0,90 ± — | 0,96 ± — |
-| rfdetr-seg-small | 0 | — ± — | — ± — | — ± — |
+Sin corrida de RF-DETR evaluada: la comparación es trabajo futuro (decisión del 2026-11-12).

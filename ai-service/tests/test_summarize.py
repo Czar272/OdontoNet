@@ -41,13 +41,24 @@ def test_learning_curve_groups_by_fraction_with_mean_and_sd(tmp_path):
     assert curve[1]["mask_map50"] == {"mean": 0.92, "sd": None, "n": 1}  # una sola semilla, sin el modelo principal
 
 
-def test_comparison_pairs_same_seed(tmp_path):
-    _write(tmp_path, _report("yolo11s-seg-f100-s0", 0.9, 0.97, 0.92))
-    _write(tmp_path, _report("rfdetr-seg-small-f100-s0", 0.85, 0.96, 0.88))
+def test_comparison_pairs_rfdetr_with_the_yolo_curve_point(tmp_path):
+    _write(tmp_path, _report("yolo11s-seg-f100-s0", 0.9, 0.97, 0.99))  # modelo principal: no es el par
+    _write(tmp_path, _report("yolo11s-seg-f100-s0-e30", 0.9, 0.97, 0.92))
+    _write(tmp_path, _report("rfdetr-seg-small-f100-s0-e20", 0.85, 0.96, 0.88))
     comp = comparison(load_reports(tmp_path))
-    assert len(comp["paired_by_seed"]) == 1
-    assert comp["paired_by_seed"][0]["specificity_diff"]["difference"] == 0  # mismos conteos por paciente
-    assert comp["paired_by_seed"][0]["mask_map50_diff"] == -0.04
+    assert len(comp["pairs"]) == 1
+    pair = comp["pairs"][0]
+    assert pair["yolo"]["name"] == "yolo11s-seg-f100-s0-e30" and pair["rfdetr"]["epochs"] == 20
+    assert pair["specificity_diff"]["difference"] == 0  # mismos conteos por paciente
+    assert pair["mask_map50_diff"] == -0.04
+    text = markdown(summarize(tmp_path))
+    assert "Anexo exploratorio" in text and "sin afirmar cuál modelo es mejor" in text
+
+
+def test_without_rfdetr_the_comparison_is_future_work(tmp_path):
+    _write(tmp_path, _report("yolo11s-seg-f100-s0-e30", 0.9, 0.97, 0.92))
+    assert comparison(load_reports(tmp_path))["pairs"] == []
+    assert "trabajo futuro" in markdown(summarize(tmp_path))
 
 
 def test_summary_marks_criterion_and_markdown(tmp_path):

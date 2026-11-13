@@ -51,7 +51,7 @@
 
 - **Partición:** IOP-Compass, 700 pacientes de entrenamiento y 200 de validación, fotos reducidas a 1280 px.
 - **Etiquetas:** contornos por pieza con FDI. Coherencia geométrica comprobada: en el 100 % de 968 fotos frontales la 11 queda a la izquierda de la 21 y por encima de la 41 (`results/auditoria-iop.json`).
-- **Curva de aprendizaje (solo YOLO):** subconjuntos anidados del 25, 50 y 100 % de los pacientes de entrenamiento. Se planeó con 5 semillas y luego con 2; se midió con 1 (ver §7.4).
+- **Curva de aprendizaje (solo YOLO):** subconjuntos anidados del 25, 50 y 100 % de los pacientes de entrenamiento. Se planeó con 5 semillas; se midió con 2 (ver §7.4).
 
 ## 7. Resultados
 
@@ -99,25 +99,30 @@ Por eso el servicio **nunca** los sugiere como «no visible» (`never_absent` en
 
 ### 7.4 Curva de aprendizaje y comparación
 
-**Curva (medida el 2026-11-12):** semilla 0, 30 épocas por corrida, cada punto con su propio umbral congelado en validación y evaluado una vez en prueba. Fuentes: `results/evaluacion/yolo11s-seg-f{25,50,100}-s0-e30-*.json` y `results/resumen-odon267.md`.
+**Curva (medida el 2026-11-12):** semillas 0 y 1, 30 épocas por corrida, cada corrida con su propio umbral congelado en validación y evaluada una vez en prueba. La semilla cambia el subconjunto de pacientes (anidado) y la inicialización del entrenamiento. Fuentes: `results/evaluacion/yolo11s-seg-f{25,50,100}-s{0,1}-e30-*.json` y `results/resumen-odon267.md`.
 
-| % de pacientes | Umbral | mAP50 de máscara | Numeración | Sensibilidad «no visible» (IC 95 %) | Especificidad (IC 95 %) | Especificidad terceros molares (IC 95 %) |
-| --- | --- | --- | --- | --- | --- | --- |
-| 25 (175) | 0,920 | 0,89 | 0,98 | 0,80 (0,62–0,97) | 0,960 (0,948–0,970) | 0,28 (0,17–0,37) |
-| 50 (350) | 0,927 | 0,91 | 0,98 | 0,90 (0,76–1,00) | 0,947 (0,931–0,961) | 0,41 (0,28–0,54) |
-| 100 (700) | 0,926 | 0,92 | 0,99 | 0,87 (0,74–1,00) | 0,953 (0,938–0,967) | 0,50 (0,36–0,62) |
+| % de pacientes | Semilla | Umbral | mAP50 de máscara | Numeración | Sensibilidad «no visible» (IC 95 %) | Especificidad (IC 95 %) | Especif. terceros molares | Criterio |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 25 (175) | 0 | 0,920 | 0,89 | 0,98 | 0,80 (0,62–0,97) | 0,960 (0,948–0,970) | 0,28 | Cumple |
+| 25 (175) | 1 | 0,911 | 0,89 | 0,98 | 0,80 (0,64–0,93) | 0,954 (0,941–0,966) | 0,38 | Cumple |
+| 50 (350) | 0 | 0,927 | 0,91 | 0,98 | 0,90 (0,76–1,00) | 0,947 (0,931–0,961) | 0,41 | No (especificidad) |
+| 50 (350) | 1 | 0,931 | 0,91 | 0,98 | 0,90 (0,79–1,00) | 0,943 (0,927–0,958) | 0,41 | No (especificidad) |
+| 100 (700) | 0 | 0,926 | 0,92 | 0,99 | 0,87 (0,74–1,00) | 0,953 (0,938–0,967) | 0,50 | Cumple |
+| 100 (700) | 1 | 0,848 | 0,93 | 0,97 | 0,80 (0,65–0,94) | 0,982 (0,973–0,988) | 0,59 | Cumple |
 
-Nota de trazabilidad: la prueba del punto de 100 % pudo calcularse dos veces en paralelo (el script de la curva siguió activo tras su corte y coincidió con la evaluación manual), con los mismos pesos, el mismo umbral congelado, el bootstrap con semilla fija y sin decisiones intermedias. El JSON guardado es el de la última escritura; la inferencia en GPU puede variar mínimamente entre ejecuciones.
+Media ± DE entre semillas (2 semillas): mAP50 0,89 ± 0,00 / 0,91 ± 0,00 / 0,93 ± 0,00; sensibilidad 0,80 ± 0,00 / 0,90 ± 0,00 / 0,83 ± 0,05; especificidad 0,957 ± 0,004 / 0,945 ± 0,003 / 0,968 ± 0,02; especificidad de terceros molares 0,33 / 0,41 / 0,55.
+
+Nota de trazabilidad: la prueba del punto de 100 % con semilla 0 pudo calcularse dos veces en paralelo (el script de la curva siguió activo tras su corte y coincidió con la evaluación manual), con los mismos pesos, el mismo umbral congelado, el bootstrap con semilla fija y sin decisiones intermedias. El JSON guardado es el de la última escritura; la inferencia en GPU puede variar mínimamente entre ejecuciones.
 
 **Lectura:**
-- La segmentación (mAP50) y la especificidad de los terceros molares mejoran con más pacientes en los tres puntos.
-- Para el criterio de presencia (piezas 11–47) no se ve una tendencia: las diferencias entre puntos son de 1 a 3 falsos «no visible» y todos los IC se solapan.
-- El modelo principal (100 %, 89 épocas, §7.1) supera al punto de 100 % a 30 épocas en especificidad (0,963 frente a 0,953), lo que sugiere que el número de épocas pesa tanto como el de pacientes. Es una observación, no una comparación pareada.
+- **Segmentación y terceros molares:** mejoran con más pacientes en las dos semillas (mAP50 0,89 → 0,93; especificidad de terceros molares 0,33 → 0,55 de media), con poca variación entre semillas en mAP50.
+- **Criterio de presencia (piezas 11–47): sin tendencia.** Al 100 %, las dos semillas eligen puntos de operación distintos en validación (umbral 0,926 frente a 0,848): una gana sensibilidad y la otra especificidad. La variación entre semillas en el mismo punto es tan grande como la diferencia entre fracciones.
+- **Al 50 %, ninguna semilla cumple el criterio** (especificidad 0,947 y 0,943 frente a 0,95), aunque sí al 25 % y al 100 %. No es una tendencia: las dos quedan a menos de 0,01 del mínimo y sus IC lo incluyen.
+- El modelo principal (100 %, 89 épocas, §7.1) tiene sensibilidad 0,90 y especificidad 0,963; los puntos de 100 % a 30 épocas quedan cerca (0,87/0,953 y 0,80/0,982). Es una observación, no una comparación pareada.
 
-**Por qué se detuvo y qué falta:**
-- **Medido:** 3 puntos con 1 semilla. Es una curva **exploratoria**: sin una segunda semilla no hay estimación de la variabilidad entre entrenamientos.
-- **No medido:** la semilla 1 (unas 2,5 h en la RTX 4050 del portátil). La primera ejecución de la curva se detuvo por falta de memoria RAM del equipo durante la corrida de 100 %, y el cierre del proyecto se fijó para el 2026-11-12.
-- **Proyectado, con su base:** no se afirma si más pacientes mejorarían el criterio de presencia. Con 30 posiciones no visibles en prueba, un falso «no visible» mueve la sensibilidad 0,033, así que para distinguir tendencias haría falta un conjunto de prueba con más piezas ausentes, no solo más semillas.
+**Alcance y qué falta:**
+- **Medido:** 3 fracciones × 2 semillas a 30 épocas. Se planeó con 4 fracciones × 5 repeticiones; se redujo el 2026-11-12, antes de ver la curva, por tiempo de cómputo. La primera ejecución se cortó por falta de RAM y la semilla 1 se completó por la tarde.
+- **Proyectado, con su base:** no se afirma que más pacientes mejoren el criterio de presencia. Con 30 posiciones no visibles en prueba, un falso «no visible» mueve la sensibilidad 0,033, y el punto de operación varía entre semillas; para distinguir tendencias haría falta un conjunto de prueba con más piezas ausentes, no solo más semillas.
 
 **Comparación con RF-DETR Seg Small:** trabajo futuro, por cómputo (unas 40 h de GPU). No se afirma cuál de los dos es mejor.
 

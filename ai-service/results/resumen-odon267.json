@@ -2,8 +2,11 @@
   "reports": [
     "yolo11s-seg-f100-s0",
     "yolo11s-seg-f100-s0-e30",
+    "yolo11s-seg-f100-s1-e30",
     "yolo11s-seg-f25-s0-e30",
-    "yolo11s-seg-f50-s0-e30"
+    "yolo11s-seg-f25-s1-e30",
+    "yolo11s-seg-f50-s0-e30",
+    "yolo11s-seg-f50-s1-e30"
   ],
   "criterion": {
     "threshold": 0.927,
@@ -120,117 +123,79 @@
   "learning_curve": [
     {
       "fraction_percent": 25,
-      "seeds": 1,
+      "seeds": 2,
       "mask_map50": {
-        "mean": 0.8858,
-        "sd": null,
-        "n": 1
+        "mean": 0.8893,
+        "sd": 0.0049,
+        "n": 2
       },
       "numbering_accuracy": {
-        "mean": 0.9771,
-        "sd": null,
-        "n": 1
+        "mean": 0.9776,
+        "sd": 0.0008,
+        "n": 2
       },
       "sensitivity_not_visible": {
         "mean": 0.8,
-        "sd": null,
-        "n": 1
+        "sd": 0.0,
+        "n": 2
       },
       "specificity": {
-        "mean": 0.9596,
-        "sd": null,
-        "n": 1
+        "mean": 0.9569,
+        "sd": 0.0038,
+        "n": 2
       }
     },
     {
       "fraction_percent": 50,
-      "seeds": 1,
+      "seeds": 2,
       "mask_map50": {
-        "mean": 0.9126,
-        "sd": null,
-        "n": 1
+        "mean": 0.9131,
+        "sd": 0.0008,
+        "n": 2
       },
       "numbering_accuracy": {
-        "mean": 0.9803,
-        "sd": null,
-        "n": 1
+        "mean": 0.981,
+        "sd": 0.0011,
+        "n": 2
       },
       "sensitivity_not_visible": {
         "mean": 0.9,
-        "sd": null,
-        "n": 1
+        "sd": 0.0,
+        "n": 2
       },
       "specificity": {
-        "mean": 0.9469,
-        "sd": null,
-        "n": 1
+        "mean": 0.9451,
+        "sd": 0.0026,
+        "n": 2
       }
     },
     {
       "fraction_percent": 100,
-      "seeds": 1,
+      "seeds": 2,
       "mask_map50": {
-        "mean": 0.9235,
-        "sd": null,
-        "n": 1
+        "mean": 0.9267,
+        "sd": 0.0045,
+        "n": 2
       },
       "numbering_accuracy": {
-        "mean": 0.9855,
-        "sd": null,
-        "n": 1
+        "mean": 0.9798,
+        "sd": 0.008,
+        "n": 2
       },
       "sensitivity_not_visible": {
-        "mean": 0.8667,
-        "sd": null,
-        "n": 1
+        "mean": 0.8333,
+        "sd": 0.0471,
+        "n": 2
       },
       "specificity": {
-        "mean": 0.9531,
-        "sd": null,
-        "n": 1
+        "mean": 0.9673,
+        "sd": 0.0202,
+        "n": 2
       }
     }
   ],
   "comparison": {
-    "per_model": {
-      "yolo11s-seg": {
-        "seeds": 1,
-        "mask_map50": {
-          "mean": 0.9192,
-          "sd": null,
-          "n": 1
-        },
-        "sensitivity_not_visible": {
-          "mean": 0.9,
-          "sd": null,
-          "n": 1
-        },
-        "specificity": {
-          "mean": 0.9632,
-          "sd": null,
-          "n": 1
-        }
-      },
-      "rfdetr-seg-small": {
-        "seeds": 0,
-        "mask_map50": {
-          "mean": null,
-          "sd": null,
-          "n": 0
-        },
-        "sensitivity_not_visible": {
-          "mean": null,
-          "sd": null,
-          "n": 0
-        },
-        "specificity": {
-          "mean": null,
-          "sd": null,
-          "n": 0
-        }
-      }
-    },
-    "paired_by_seed": [],
-    "note": "Descriptiva: sin hipótesis de superioridad."
+    "pairs": [],
+    "note": "Exploratoria, añadida después del cambio de alcance: sin hipótesis de superioridad."
   }
 }

@@ -69,28 +69,42 @@ def _counts(rep: dict) -> dict[str, Counts]:
     return {p: Counts(*v) for p, v in rep["per_patient_counts"].items()}
 
 
-def comparison(reports: dict[str, dict], seeds=(0, 1, 2)) -> dict:
-    """RF-DETR − YOLO al 100 %: diferencia pareada por paciente (misma semilla) y media entre semillas."""
+def _model_row(name: str, rep: dict, epochs: int | None) -> dict:
+    p = rep["presence"]
+    return {
+        "name": name, "epochs": epochs, "mask_map50": rep["mask"]["all"]["mask_map50"],
+        "sensitivity_not_visible": p[MAIN]["sensitivity_not_visible"], "sensitivity_ci95": p[MAIN]["sensitivity_ci95"],
+        "specificity": p[MAIN]["specificity"], "specificity_ci95": p[MAIN]["specificity_ci95"],
+        "third_molars_specificity": p["third_molars"]["specificity"],
+    }
+
+
+def comparison(reports: dict[str, dict], yolo_epochs: int = CURVE_EPOCHS) -> dict:
+    """Anexo exploratorio: RF-DETR al 100 % frente al punto de YOLO al 100 % de la curva (misma semilla).
+
+    La comparación planeada pasó a trabajo futuro el 2026-11-12, antes de ver resultados. Lo que se
+    agregue después es descriptivo: 1 semilla y presupuestos de épocas distintos, sin hipótesis de
+    superioridad. La diferencia es RF-DETR − YOLO, pareada por paciente.
+    """
     pairs = []
-    for s in seeds:
-        y, r = reports.get(f"yolo11s-seg-f100-s{s}"), reports.get(f"rfdetr-seg-small-f100-s{s}")
-        if y and r:
-            pairs.append({
-                "seed": s,
-                "sensitivity_diff": paired_bootstrap_diff(_counts(y), _counts(r), "sensitivity", seed=s),
-                "specificity_diff": paired_bootstrap_diff(_counts(y), _counts(r), "specificity", seed=s),
-                "mask_map50_diff": round(r["mask"]["all"]["mask_map50"] - y["mask"]["all"]["mask_map50"], 4),
-            })
-    per_model = {}
-    for model in ("yolo11s-seg", "rfdetr-seg-small"):
-        reps = [reports[f"{model}-f100-s{s}"] for s in seeds if f"{model}-f100-s{s}" in reports]
-        per_model[model] = {
-            "seeds": len(reps),
-            "mask_map50": _mean_sd([r["mask"]["all"]["mask_map50"] for r in reps]),
-            "sensitivity_not_visible": _mean_sd([r["presence"][MAIN]["sensitivity_not_visible"] for r in reps]),
-            "specificity": _mean_sd([r["presence"][MAIN]["specificity"] for r in reps]),
-        }
-    return {"per_model": per_model, "paired_by_seed": pairs, "note": "Descriptiva: sin hipótesis de superioridad."}
+    for name in sorted(reports):
+        m = NAME.match(name)
+        if not m or m["model"] != "rfdetr-seg-small" or int(m["fraction"]) != 100:
+            continue
+        seed = int(m["seed"])
+        yolo_name = f"yolo11s-seg-f100-s{seed}-e{yolo_epochs}"
+        y, r = reports.get(yolo_name), reports[name]
+        if not y:
+            continue
+        pairs.append({
+            "seed": seed,
+            "yolo": _model_row(yolo_name, y, yolo_epochs),
+            "rfdetr": _model_row(name, r, int(m["epochs"]) if m["epochs"] else None),
+            "sensitivity_diff": paired_bootstrap_diff(_counts(y), _counts(r), "sensitivity", seed=seed),
+            "specificity_diff": paired_bootstrap_diff(_counts(y), _counts(r), "specificity", seed=seed),
+            "mask_map50_diff": round(r["mask"]["all"]["mask_map50"] - y["mask"]["all"]["mask_map50"], 4),
+        })
+    return {"pairs": pairs, "note": "Exploratoria, añadida después del cambio de alcance: sin hipótesis de superioridad."}
 
 
 def _fmt(v, digits=2):
@@ -128,14 +142,26 @@ def markdown(summary: dict) -> str:
         cell = lambda k: f"{_fmt(row[k]['mean'])} ± {_fmt(row[k]['sd'])}"  # noqa: E731
         lines.append(f"| {row['fraction_percent']} | {row['seeds']} | {cell('mask_map50')} | {cell('numbering_accuracy')} | "
                      f"{cell('sensitivity_not_visible')} | {cell('specificity')} |")
-    lines += ["", "## YOLO11s-seg frente a RF-DETR Seg Small (100 %, prueba)", "",
-              "| Modelo | Semillas | mAP50 de máscara | Sensibilidad «no visible» | Especificidad |", "| --- | --- | --- | --- | --- |"]
-    for model, row in summary["comparison"]["per_model"].items():
-        cell = lambda k: f"{_fmt(row[k]['mean'])} ± {_fmt(row[k]['sd'])}"  # noqa: E731
-        lines.append(f"| {model} | {row['seeds']} | {cell('mask_map50')} | {cell('sensitivity_not_visible')} | {cell('specificity')} |")
-    for pair in summary["comparison"]["paired_by_seed"]:
-        d = pair["specificity_diff"]
-        lines.append(f"\nSemilla {pair['seed']}: especificidad RF-DETR − YOLO = {_fmt(d['difference'], 3)} (IC 95 % {_ci(d['ci95'])}).")
+    lines += ["", "## Anexo exploratorio: RF-DETR Seg Small frente a YOLO11s-seg (100 %, prueba)", ""]
+    pairs = summary["comparison"]["pairs"]
+    if not pairs:
+        lines.append("Sin corrida de RF-DETR evaluada: la comparación es trabajo futuro (decisión del 2026-11-12).")
+    else:
+        lines += ["Añadido después de pasar la comparación planeada a trabajo futuro: 1 semilla y épocas distintas; "
+                  "descriptivo, sin afirmar cuál modelo es mejor.", "",
+                  "| Modelo | Épocas | mAP50 de máscara | Sensibilidad «no visible» (IC 95 %) | Especificidad (IC 95 %) | Especificidad terceros molares |",
+                  "| --- | --- | --- | --- | --- | --- |"]
+        for pair in pairs:
+            for key in ("yolo", "rfdetr"):
+                row = pair[key]
+                lines.append(f"| `{row['name']}` | {row['epochs'] or '—'} | {_fmt(row['mask_map50'])} | "
+                             f"{_fmt(row['sensitivity_not_visible'])} ({_ci(row['sensitivity_ci95'])}) | "
+                             f"{_fmt(row['specificity'], 3)} ({_ci(row['specificity_ci95'])}) | {_fmt(row['third_molars_specificity'])} |")
+        for pair in pairs:
+            s, e = pair["sensitivity_diff"], pair["specificity_diff"]
+            lines.append(f"\nSemilla {pair['seed']}, RF-DETR − YOLO (pareado por paciente): sensibilidad {_fmt(s['difference'], 3)} "
+                         f"(IC 95 % {_ci(s['ci95'])}), especificidad {_fmt(e['difference'], 3)} (IC 95 % {_ci(e['ci95'])}), "
+                         f"mAP50 {_fmt(pair['mask_map50_diff'], 3)}.")
     return "\n".join(lines) + "\n"
 
 

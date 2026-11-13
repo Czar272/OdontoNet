@@ -1,0 +1,13 @@
+{
+  "name": "yolo11s-seg-f25-s1-e30",
+  "model": "yolo11s-seg",
+  "weights": "runs/yolo11s-seg-f25-s1-e30/weights/best.pt",
+  "weights_sha256": "20b9dcd807313ecee8854668649d3797521fd9d5798d23f64d88a976707f06db",
+  "rule": "máxima sensibilidad con especificidad ≥ 0,95 en validación (piezas 11–47 sin terceros molares)",
+  "threshold": 0.911,
+  "sensitivity": 0.8461538461538461,
+  "specificity": 0.9509733237202596,
+  "met_specificity_target": true,
+  "specificity_target": 0.95,
+  "limit": null
+}
